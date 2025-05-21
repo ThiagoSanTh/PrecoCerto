@@ -21,4 +21,6 @@ from inicialPrecoCerto import views
 urlpatterns = [
     path('', views.home, name='home'),
     path('admin/', admin.site.urls),
-]   
+    path('criar-cliente/', views.criar_cliente, name='criar_cliente'),
+    path('criar-empresa/', views.criar_empresa, name='criar_empresa'),
+]
