@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -20,3 +21,16 @@
             </div>
         </div>
     </nav>
+    <div class="container mt-4">
+        <h2>Cadastrar Produto</h2>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <p>{{ form.nome.label_tag }} {{ form.nome }}</p>
+            <p>{{ form.descricao.label_tag }} {{ form.descricao }}</p>
+            <p>{{ form.preco.label_tag }} {{ form.preco }}</p>
+            <p>{{ form.imagem.label_tag }} {{ form.imagem }}</p>
+            <button type="submit" class="btn btn-primary">Cadastrar</button>
+        </form>
+    </div>
+</body>
+</html>

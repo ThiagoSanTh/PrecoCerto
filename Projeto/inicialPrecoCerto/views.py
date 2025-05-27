@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.views import View
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
 from django.urls import reverse_lazy
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login
@@ -11,17 +11,19 @@ from .models import Produto, Cliente, Empresa
 
 class paginaInicial(View):
     def get(self, request):
-        return render(request, 'precocerto/interface/home.html')
+        produtos = Produto.objects.all()
+        return render(request, 'precocerto/interface/home.html', {'produtos': produtos})
 
     def post(self, request):
-        return render(request, 'precocerto/interface/home.html')
+        produtos = Produto.objects.all()
+        return render(request, 'precocerto/interface/home.html', {'produtos': produtos})
 
 # Clientes
 
 class criarCliente(CreateView):
     model = Cliente
     fields = ['nome', 'usuario', 'email', 'telefone']
-    template_name = 'precocerto/interface/criar_cliente.html'
+    template_name = 'precocerto/cliente/criar_cliente.html'
     success_url = reverse_lazy('home')
 
     def get_context_data(self, **kwargs):
@@ -70,29 +72,55 @@ class logarCliente(View):
             return render(request, 'precocerto/interface/home.html', {'message': 'Login realizado com sucesso!'})
         else:
             return render(request, 'precocerto/cliente/logarCliente.html', {'error': 'Usuário ou senha inválidos.'})
+        
+
+    #corrigir 
+class perfilCliente(ListView):
+    model = Cliente
+    template_name = 'precocerto/cliente/perfilCliente.html'
+    context_object_name = 'clientes'
 
 # Empresas
 
+    #corrigir
 class criarEmpresa(CreateView):
     model = Empresa
     fields = ['nome', 'cnpj', 'endereco']
-    template_name = 'precocerto/interface/criar_empresa.html'
+    template_name = 'precocerto/empresa/criar_empresa.html'
     success_url = reverse_lazy('home')
+    
+    #corrigir
+class logarEmpresa(View):
+    def get(self, request):
+        return render(request, 'precocerto/empresa/logarEmpresa.html')
+    
+    def post(self, request):
+        cnpj = request.POST.get('cnpj')
+        senha = request.POST.get('senha')
+        try:
+            empresa = Empresa.objects.get(cnpj=cnpj, senha=senha)
+            return render(request, 'precocerto/interface/home.html', {'message': 'Login realizado com sucesso!'})
+        except Empresa.DoesNotExist:
+            return render(request, 'precocerto/empresa/logarEmpresa.html', {'error': 'CNPJ ou senha inválidos.'})
 
-class listarEmpresas(ListView):
+    #corrigir
+class perfilEmpresa(ListView):
     model = Empresa
-    template_name = '#'
+    template_name = 'precocerto/empresa/perfilEmpresa.html'
     context_object_name = 'empresas'
+
+
 
 # Produtos
 
+    # vincular o produto a empresa
 class criarProduto(CreateView):
     model = Produto
     fields = ['nome', 'descricao', 'preco', 'imagem']
-    template_name = 'precocerto/interface/criar_produto.html'
+    template_name = 'precocerto/produto/criar_produto.html'
     success_url = reverse_lazy('home')
 
-class listarProdutos(ListView):
+class detalheProduto(DetailView):
     model = Produto
-    template_name = '#'
-    context_object_name = 'produtos'
+    template_name = 'precocerto/produto/detalheProduto.html'
+    context_object_name = 'produto'

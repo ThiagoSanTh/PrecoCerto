@@ -22,7 +22,7 @@
                 <a href="{% url 'criar_cliente' %}" class="btn btn-warning text-dark me-2">Criar Cliente</a>
                 <a href="{% url 'logar_cliente' %}" class="btn btn-light text-primary me-2">Login Cliente</a>
                 <a href="{% url 'criar_empresa' %}" class="btn btn-warning text-dark me-2">Criar Empresa</a>
-                <a href="#" class="btn btn-light text-primary">Login Empresa</a>
+                <a href="{% url 'criar_produto'%}" class="btn btn-light text-primary">Login Empresa</a>
             </div>
         </div>
     </nav>
@@ -32,8 +32,8 @@
             {% for produto in produtos %}
             <div class="col-md-4 mb-4">
                 <div class="card h-100">
-                    {% if produto.imagem %}
-                    <img src="{{ produto.imagem }}" class="card-img-top" alt="{{ produto.nome }}">
+                   {% if produto.imagem %}
+                    <img src="{{ produto.imagem.url }}" class="card-img-top" alt="{{ produto.nome }}" width="150">
                     {% else %}
                     <img src="{% static 'img/placeholder.png' %}" class="card-img-top" alt="Sem imagem">
                     {% endif %}
@@ -41,7 +41,7 @@
                         <h5 class="card-title">{{ produto.nome }}</h5>
                         <p class="card-text">{{ produto.descricao|truncatechars:80 }}</p>
                         <p class="card-text fw-bold text-success">R$ {{ produto.preco }}</p>
-                        <a href="#" class="btn btn-outline-primary">Ver detalhes</a>
+                        <a href="{% url 'detalhe_produto' pk=produto.id %}" class="btn btn-outline-primary">Ver detalhes</a>
                     </div>
                 </div>
             </div>

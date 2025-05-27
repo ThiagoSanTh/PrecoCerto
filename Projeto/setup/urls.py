@@ -17,7 +17,18 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from inicialPrecoCerto import views
-from inicialPrecoCerto.views import paginaInicial, criarCliente, logarCliente, criarEmpresa,  listarEmpresas, criarProduto, listarProdutos
+from django.conf.urls.static import static
+from django.conf import settings
+from inicialPrecoCerto.views import (#Interface
+                                        paginaInicial, 
+                                    #Cliente    
+                                        criarCliente, logarCliente, perfilCliente,
+                                    #Empresa    
+                                        criarEmpresa, logarEmpresa, perfilEmpresa, 
+                                    #Produto    
+                                        criarProduto, detalheProduto
+
+)
 
 urlpatterns = [
 
@@ -29,12 +40,16 @@ urlpatterns = [
     #cliente
     path('criar-cliente/', criarCliente.as_view(), name='criar_cliente'),
     path('logar-cliente/', logarCliente.as_view(), name='logar_cliente'),
+    #path('perfil-cliente/', perfilCliente.as_view(), name='perfil_cliente'),
 
     #empresa
     path('criar-empresa/', criarEmpresa.as_view(), name='criar_empresa'),
-    path('listar-empresas/', listarEmpresas.as_view(), name='listar_empresas'),
+    path('perfil-empresas/', perfilEmpresa.as_view(), name='perfil_empresas'),
     
     #produto
     path('criar-produto/', criarProduto.as_view(), name='criar_produto'),
-    path('listar-produtos/', listarProdutos.as_view(), name='listar_produtos'),
+    path('detalhe-produto/<int:pk>/', detalheProduto.as_view(), name='detalhe_produto'),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
