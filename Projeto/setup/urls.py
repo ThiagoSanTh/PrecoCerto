@@ -17,7 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from inicialPrecoCerto import views
-from inicialPrecoCerto.views import paginaInicial, criarCliente, listarClientes, criarEmpresa,  listarEmpresas, criarProduto, listarProdutos
+from inicialPrecoCerto.views import paginaInicial, criarCliente, logarCliente, criarEmpresa,  listarEmpresas, criarProduto, listarProdutos
 
 urlpatterns = [
 
@@ -28,7 +28,7 @@ urlpatterns = [
     
     #cliente
     path('criar-cliente/', criarCliente.as_view(), name='criar_cliente'),
-    path('listar-clientes/', listarClientes.as_view(), name='listar_clientes'),
+    path('logar-cliente/', logarCliente.as_view(), name='logar_cliente'),
 
     #empresa
     path('criar-empresa/', criarEmpresa.as_view(), name='criar_empresa'),
