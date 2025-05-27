@@ -84,10 +84,34 @@ class perfilCliente(ListView):
 
     #corrigir
 class criarEmpresa(CreateView):
-    model = Empresa
-    fields = ['nome', 'cnpj', 'endereco']
     template_name = 'precocerto/empresa/criar_empresa.html'
-    success_url = reverse_lazy('home')
+
+    def get(self, request):
+        return render(request, self.template_name)
+
+    def post(self, request):
+        usuario = request.POST.get('usuario')
+        cnpj = request.POST.get('cnpj')
+        endereco = request.POST.get('endereco')
+        senha = request.POST.get('senha')
+
+        if User.objects.filter(username=usuario).exists():
+            return render(request, self.template_name, {
+                'error': 'Nome de usuário já existe. Escolha outro.'
+            })
+
+        usuario = User.objects.create_user(
+            username=usuario,
+            password=senha,
+            first_name=usuario
+        )
+
+        Empresa.objects.create(
+            usuario=usuario,
+            cnpj=cnpj,
+            endereco=endereco
+        )
+        return render(request, 'precocerto/interface/home.html', {'message': 'Empresa criada com sucesso!'})
     
     #corrigir
 class logarEmpresa(View):
@@ -97,10 +121,12 @@ class logarEmpresa(View):
     def post(self, request):
         cnpj = request.POST.get('cnpj')
         senha = request.POST.get('senha')
-        try:
-            empresa = Empresa.objects.get(cnpj=cnpj, senha=senha)
+        usuario = authenticate(request, username=usuario, password=senha)
+
+        if usuario is not None and hasattr(usuario, 'empresa'):
+            login(request, usuario)
             return render(request, 'precocerto/interface/home.html', {'message': 'Login realizado com sucesso!'})
-        except Empresa.DoesNotExist:
+        else:
             return render(request, 'precocerto/empresa/logarEmpresa.html', {'error': 'CNPJ ou senha inválidos.'})
 
     #corrigir

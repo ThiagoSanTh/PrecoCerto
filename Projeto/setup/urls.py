@@ -27,7 +27,6 @@ from inicialPrecoCerto.views import (#Interface
                                         criarEmpresa, logarEmpresa, perfilEmpresa, 
                                     #Produto    
                                         criarProduto, detalheProduto
-
 )
 
 urlpatterns = [
@@ -40,11 +39,13 @@ urlpatterns = [
     #cliente
     path('criar-cliente/', criarCliente.as_view(), name='criar_cliente'),
     path('logar-cliente/', logarCliente.as_view(), name='logar_cliente'),
-    #path('perfil-cliente/', perfilCliente.as_view(), name='perfil_cliente'),
+    path('perfil-cliente/', perfilCliente.as_view(), name='perfil_cliente'),
 
     #empresa
     path('criar-empresa/', criarEmpresa.as_view(), name='criar_empresa'),
+    path('logar-empresa/', logarEmpresa.as_view(), name='logar_empresa'),
     path('perfil-empresas/', perfilEmpresa.as_view(), name='perfil_empresas'),
+    
     
     #produto
     path('criar-produto/', criarProduto.as_view(), name='criar_produto'),

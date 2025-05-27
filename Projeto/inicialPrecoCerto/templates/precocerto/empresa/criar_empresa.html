@@ -24,16 +24,24 @@
     <div class="container mt-4">
         <h2>Criar Empresa</h2>
         <form method="post">
-            {% csrf_token %}
-            <div class="mb-3">
-                <label for="nome_empresa" class="form-label">Nome da Empresa</label>
-                <input type="text" class="form-control" id="nome_empresa" name="nome_empresa" required>
-            </div>
-            <div class="mb-3">
-                <label for="cnpj" class="form-label">CNPJ</label>
-                <input type="text" class="form-control" id="cnpj" name="cnpj" required>
-            </div>
-            <button type="submit" class="btn btn-primary">Cadastrar</button>
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="usuario" class="form-label">Nome da Empresa</label>
+            <input type="text" class="form-control" id="usuario" name="usuario" required>
+        </div>
+        <div class="mb-3">
+            <label for="senha" class="form-label">Senha</label>
+            <input type="password" class="form-control" id="senha" name="senha" required>
+        </div>
+        <div class="mb-3">
+            <label for="cnpj" class="form-label">CNPJ</label>
+            <input type="text" class="form-control" id="cnpj" name="cnpj" required>
+        </div>
+        <div class="mb-3">
+            <label for="endereco" class="form-label">Endereço</label>
+            <input type="text" class="form-control" id="endereco" name="endereco" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Cadastrar</button>
         </form>
     </div>
 </body>
