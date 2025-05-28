@@ -1,4 +1,5 @@
 {% load static %}
+{% load widget_tweaks %}
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -22,15 +23,33 @@
         </div>
     </nav>
     <div class="container mt-4">
-        <h2>Cadastrar Produto</h2>
-        <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            <p>{{ form.nome.label_tag }} {{ form.nome }}</p>
-            <p>{{ form.descricao.label_tag }} {{ form.descricao }}</p>
-            <p>{{ form.preco.label_tag }} {{ form.preco }}</p>
-            <p>{{ form.imagem.label_tag }} {{ form.imagem }}</p>
-            <button type="submit" class="btn btn-primary">Cadastrar</button>
-        </form>
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-5">
+                <h2 class="text-center mb-4">Cadastrar Produto</h2>
+                <form method="post" enctype="multipart/form-data" class="p-4 border rounded bg-white shadow-sm">
+                    {% csrf_token %}
+                    <div class="form-floating mb-3">
+                        {{ form.nome|add_class:"form-control" }}
+                        <label for="{{ form.nome.id_for_label }}">{{ form.nome.label }}</label>
+                    </div>
+                    <div class="form-floating mb-3">
+                        {{ form.descricao|add_class:"form-control" }}
+                        <label for="{{ form.descricao.id_for_label }}">{{ form.descricao.label }}</label>
+                    </div>
+                    <div class="form-floating mb-3">
+                        {{ form.preco|add_class:"form-control" }}
+                        <label for="{{ form.preco.id_for_label }}">{{ form.preco.label }}</label>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ form.imagem.id_for_label }}">{{ form.imagem.label }}</label>
+                        {{ form.imagem|add_class:"form-control" }}
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">Cadastrar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 </body>
 </html>
