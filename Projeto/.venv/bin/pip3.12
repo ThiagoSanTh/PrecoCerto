@@ -1,4 +1,4 @@
-#!/workspaces/Site/Projeto/.venv/bin/python
+#!/workspaces/PrecoCerto/Projeto/.venv/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys
