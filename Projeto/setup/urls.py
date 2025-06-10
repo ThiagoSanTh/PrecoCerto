@@ -21,12 +21,20 @@ from django.conf.urls.static import static
 from django.conf import settings
 from inicialPrecoCerto.views import (#Interface
                                         paginaInicial, 
+                                    
                                     #Cliente    
-                                        criarCliente, logarCliente, perfilCliente,
+                                        criarCliente, logarCliente, 
+                                        perfilCliente,
+                                    
                                     #Empresa    
-                                        criarEmpresa, logarEmpresa, perfilEmpresa, 
+                                        criarEmpresa, deletarEmpresa,
+                                        logarEmpresa, perfilEmpresa,
+                                        logoutEmpresa,
+
                                     #Produto    
-                                        criarProduto, detalheProduto
+                                        criarProduto, detalheProduto,
+                                        editarProduto, deletarProduto,
+                                        editarEmpresa
 )
 
 urlpatterns = [
@@ -44,13 +52,17 @@ urlpatterns = [
     #empresa
     path('criar-empresa/', criarEmpresa.as_view(), name='criar_empresa'),
     path('logar-empresa/', logarEmpresa.as_view(), name='logar_empresa'),
+    path('logout/', logoutEmpresa.as_view(), name='logout'),
     path('perfil-empresas/', perfilEmpresa.as_view(), name='perfil_empresas'),
-    
+    path('deletar-empresa/<int:pk>/', deletarEmpresa.as_view(), name='deletar_empresa'),
+    path('editar-empresa/<int:pk>/', editarEmpresa.as_view(), name='editar_empresa'),
     
     #produto
     path('criar-produto/', criarProduto.as_view(), name='criar_produto'),
+    path('editar-produto/<int:pk>/', editarProduto.as_view(), name='editar_produto'),
+    path('deletar-produto/<int:pk>/', deletarProduto.as_view(), name='deletar_produto'),
     path('detalhe-produto/<int:pk>/', detalheProduto.as_view(), name='detalhe_produto'),
+
+
 ]
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -6,30 +6,36 @@
     <title>{{ produto.nome }} - Detalhes do Produto</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="{% static 'css/cores.css' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body>
-    <div class="container mt-4">
-        <h2>{{ produto.nome }}</h2>
-        <div class="row">
-            <div class="col-md-6">
-                    {% if produto.imagem %}
-                    <img src="{{ produto.imagem.url }}" class="card-img-top" alt="{{ produto.nome }}" width="150">
-                    {% else %}
-                    <img src="{% static 'img/placeholder.png' %}" class="card-img-top" alt="Sem imagem">
-                    {% endif %}
-            </div>
-            <div class="col-md-6">
-                <h4>Descrição</h4>
-                <p>{{ produto.descricao }}</p>
-                <h4>Preço</h4>
-                <p class="text-success fw-bold fs-4">R$ {{ produto.preco }}</p>
-                <form method="post">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-primary">Adicionar ao Carrinho</button>
-                </form>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card p-4 shadow">
+                    <div class="row">
+                        <div class="col-md-5 d-flex align-items-center justify-content-center">
+                            {% if produto.imagem %}
+                            <img src="{{ produto.imagem.url }}" class="card-img-top rounded" alt="{{ produto.nome }}" style="max-width: 220px; max-height: 220px;">
+                            {% else %}
+                            <img src="{% static 'img/placeholder.png' %}" class="card-img-top rounded" alt="Sem imagem" style="max-width: 220px; max-height: 220px;">
+                            {% endif %}
+                        </div>
+                        <div class="col-md-7">
+                            <h2 class="mb-3 text-primary">{{ produto.nome }}</h2>
+                            <h5 class="mb-2 text-muted">Descrição</h5>
+                            <p>{{ produto.descricao }}</p>
+                            <h5 class="mb-2 text-muted">Preço</h5>
+                            <p class="text-success fw-bold fs-4">R$ {{ produto.preco }}</p>
+                            <form method="post" class="mb-3">{% csrf_token %}
+                                <button type="submit" class="btn btn-primary">Adicionar ao Carrinho</button>
+                            </form>
+                            <a href="{% url 'home' %}" class="btn btn-secondary">Voltar</a>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-        <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Voltar</a>
     </div>
 </body>
 </html>

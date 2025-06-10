@@ -33,6 +33,7 @@ class Produto(models.Model):
     descricao = models.TextField()
     preco = models.DecimalField(max_digits=10, decimal_places=2)
     imagem = models.ImageField(blank=True)
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='produtos', null=True, blank=True)
 
     def __str__(self):
-        return self.nome
+        return f"{self.nome} ({self.empresa.usuario.username if self.empresa else 'Sem empresa'})"
