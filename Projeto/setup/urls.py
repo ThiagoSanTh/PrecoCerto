@@ -19,28 +19,24 @@ from django.urls import path
 from inicialPrecoCerto import views
 from django.conf.urls.static import static
 from django.conf import settings
-from inicialPrecoCerto.views import (#Interface
-                                        paginaInicial, 
-                                    
-                                    #Cliente    
-                                        criarCliente, logarCliente, 
-                                        perfilCliente,
-                                    
-                                    #Empresa    
-                                        criarEmpresa, deletarEmpresa,
-                                        logarEmpresa, perfilEmpresa,
-                                        logoutEmpresa,
 
-                                    #Produto    
-                                        criarProduto, detalheProduto,
-                                        editarProduto, deletarProduto,
-                                        editarEmpresa
+from inicialPrecoCerto.views import (
+    
+    paginaInicial,
+    
+    criarCliente, logarCliente, perfilCliente,
+
+    criarEmpresa, deletarEmpresa, logarEmpresa, perfilEmpresa, logoutEmpresa, editarEmpresa,
+    
+    criarProduto, detalheProduto, editarProduto, deletarProduto, 
+    
+    adicionarCarrinho, verCarrinho, alterarQuantidade, removerCarrinho, confirmarCompra
 )
 
 urlpatterns = [
-
-    path('admin/', admin.site.urls),
     
+    path('admin/', admin.site.urls),
+        
     #interface
     path('', paginaInicial.as_view(), name='home'),
     
@@ -63,6 +59,16 @@ urlpatterns = [
     path('deletar-produto/<int:pk>/', deletarProduto.as_view(), name='deletar_produto'),
     path('detalhe-produto/<int:pk>/', detalheProduto.as_view(), name='detalhe_produto'),
 
+    #carrinho
+    path('adicionar-carrinho/<int:produto_id>/', adicionarCarrinho.as_view(), name='adicionar_carrinho'),
+    path('carrinho/', verCarrinho.as_view(), name='ver_carrinho'),
+    path('alterar-quantidade/<int:produto_id>/', alterarQuantidade.as_view(), name='alterar_quantidade'),
+    path('remover-carrinho/<int:produto_id>/', removerCarrinho.as_view(), name='remover_carrinho'),
+    path('confirmar-compra/', confirmarCompra.as_view(), name='confirmar_compra'),
+
 
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

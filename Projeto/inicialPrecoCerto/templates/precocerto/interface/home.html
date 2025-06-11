@@ -21,8 +21,8 @@
                 </div>
             {% elif usuario_cliente %}
                 <div class="d-flex ms-auto">
-                    <a href="#" class="btn btn-success me-2">Carrinho</a>
-                    <span class="btn btn-outline-secondary disabled me-2">Bem-vindo, {{ usuario_cliente.nome }}</span>
+                    <a href="{% url 'ver_carrinho' %}" class="btn btn-success me-2">Carrinho</a>
+                    <span class="btn btn-warning text-primary fw-bold me-2" style="opacity:1; cursor:default;">Bem-vindo, {{ usuario_cliente.nome }}</span>
                     <a href="{% url 'logout' %}" class="btn btn-outline-light">Logout</a>
                 </div>
             {% else %}
@@ -56,7 +56,15 @@
                             <h5 class="card-title">{{ produto.nome }}</h5>
                             <p class="card-text">{{ produto.descricao|truncatechars:80 }}</p>
                             <p class="card-text fw-bold text-success">R$ {{ produto.preco }}</p>
-                            <a href="{% url 'detalhe_produto' pk=produto.id %}" class="btn btn-outline-primary mt-auto">Ver detalhes</a>
+                            <div class="d-flex gap-2 mt-auto">
+                                <a href="{% url 'detalhe_produto' pk=produto.id %}" class="btn btn-outline-primary">Ver detalhes</a>
+                                {% if usuario_cliente %}
+                                <form method="post" action="{% url 'adicionar_carrinho' produto.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-success">Adicionar ao carrinho</button>
+                                </form>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>

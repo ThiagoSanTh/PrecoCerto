@@ -265,7 +265,7 @@ class editarProduto(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     model = Produto
     fields = ['nome', 'descricao', 'preco', 'imagem'
     ]
-    template_name = 'precocerto/produto/criar_produto.html'
+    template_name = 'precocerto/produto/editar_produto.html'
     success_url = reverse_lazy('home')
 
     def test_func(self):
@@ -309,3 +309,60 @@ class deletarProduto(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
                 pass
         return super().form_valid(form)
 
+# Carrinho
+class adicionarCarrinho(View):
+    def post(self, request, produto_id):
+        if not request.user.is_authenticated:
+            return redirect('logar_cliente')
+        produto = Produto.objects.get(id=produto_id)
+        carrinho = request.session.get('carrinho', {})
+        if str(produto_id) in carrinho:
+            carrinho[str(produto_id)]['quantidade'] += 1
+        else:
+            carrinho[str(produto_id)] = {
+                'nome': produto.nome,
+                'preco': float(produto.preco),
+                'imagem': produto.imagem.url if produto.imagem else '',
+                'quantidade': 1
+            }
+        request.session['carrinho'] = carrinho
+        return redirect('ver_carrinho')
+
+class verCarrinho(View):
+    def get(self, request):
+        if not request.user.is_authenticated:
+            return redirect('logar_cliente')
+        carrinho = request.session.get('carrinho', {})
+        total = sum(item['preco'] * item['quantidade'] for item in carrinho.values())
+        return render(request, 'precocerto/cliente/carrinho.html', {'carrinho': carrinho, 'total': total})
+
+class alterarQuantidade(View):
+    def post(self, request, produto_id):
+        if not request.user.is_authenticated:
+            return redirect('ver_carrinho')
+        nova_qtd = int(request.POST.get('quantidade', 1))
+        carrinho = request.session.get('carrinho', {})
+        if str(produto_id) in carrinho:
+            if nova_qtd > 0:
+                carrinho[str(produto_id)]['quantidade'] = nova_qtd
+            else:
+                del carrinho[str(produto_id)]
+        request.session['carrinho'] = carrinho
+        return redirect('ver_carrinho')
+
+class removerCarrinho(View):
+    def post(self, request, produto_id):
+        if not request.user.is_authenticated:
+            return redirect('ver_carrinho')
+        carrinho = request.session.get('carrinho', {})
+        if str(produto_id) in carrinho:
+            del carrinho[str(produto_id)]
+        request.session['carrinho'] = carrinho
+        return redirect('ver_carrinho')
+
+class confirmarCompra(View):
+    def post(self, request):
+        if not request.user.is_authenticated:
+            return redirect('logar_cliente')
+        request.session['carrinho'] = {}
+        return render(request, 'precocerto/cliente/carrinho.html', {'carrinho': {}, 'total': 0, 'mensagem': 'Compra confirmada com sucesso!'})

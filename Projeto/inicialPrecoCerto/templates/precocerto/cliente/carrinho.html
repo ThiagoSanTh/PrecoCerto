@@ -1,0 +1,56 @@
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Carrinho de Compras</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+<div class="container mt-5">
+    <h2 class="mb-4">Seu Carrinho</h2>
+    {% if mensagem %}
+        <div class="alert alert-success">{{ mensagem }}</div>
+    {% endif %}
+    {% if carrinho %}
+        <div class="row">
+            {% for id, item in carrinho.items %}
+            <div class="col-md-6 mb-4">
+                <div class="card h-100 d-flex flex-column align-items-stretch">
+                    {% if item.imagem %}
+                    <img src="{{ item.imagem }}" class="card-img-top mx-auto d-block mt-3" alt="{{ item.nome }}" style="height: 120px; width: auto; object-fit: contain; max-width: 80%;">
+                    {% else %}
+                    <img src="{% static 'img/placeholder.png' %}" class="card-img-top mx-auto d-block mt-3" alt="Sem imagem" style="height: 120px; width: auto; object-fit: contain; max-width: 80%;">
+                    {% endif %}
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">{{ item.nome }}</h5>
+                        <p class="card-text fw-bold text-success">R$ {{ item.preco }}</p>
+                        <form method="post" action="{% url 'alterar_quantidade' id %}" class="d-flex align-items-center mb-2">
+                            {% csrf_token %}
+                            <input type="number" name="quantidade" value="{{ item.quantidade }}" min="1" class="form-control me-2" style="width: 80px;">
+                            <button type="submit" class="btn btn-primary btn-sm">Alterar</button>
+                        </form>
+                        <form method="post" action="{% url 'remover_carrinho' id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger btn-sm">Remover</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="mt-4">
+            <h4>Total: <span class="text-success">R$ {{ total }}</span></h4>
+            <form method="post" action="{% url 'confirmar_compra' %}">
+                <button type="submit" class="btn btn-success btn-lg mt-2">Confirmar Compra</button>
+            </form>
+        </div>
+    {% else %}
+        <div class="alert alert-info">Seu carrinho está vazio.</div>
+    {% endif %}
+    <a href="{% url 'home' %}" class="btn btn-secondary mt-4">Voltar para a loja</a>
+</div>
+</body>
+</html>
