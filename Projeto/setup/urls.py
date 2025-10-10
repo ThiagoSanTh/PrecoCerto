@@ -67,6 +67,7 @@ urlpatterns = [
     path('confirmar-compra/', confirmarCompra.as_view(), name='confirmar_compra'),
 
 
+
 ]
 
 if settings.DEBUG:

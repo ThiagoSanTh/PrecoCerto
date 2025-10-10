@@ -1,22 +1,23 @@
 from django.shortcuts import render, redirect
 from django.views import View
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
-from django.urls import reverse_lazy
-from django.contrib.auth.models import User
-from django.contrib.auth import authenticate, login
+from django.db.models import Q
 from .models import Produto, Cliente, Empresa
+from django.contrib.auth.models import User
+from .forms import ClienteCreationForm
+from django.contrib.auth import authenticate, login, logout
+from django.urls import reverse_lazy
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.contrib.auth import logout
 
 
-# Pagina Inicial
-
+# Página Inicial
 class paginaInicial(View):
     def get(self, request):
         produtos = Produto.objects.all()
         usuario_empresa = None
         usuario_cliente = None
         produtos_empresa = None
+
         if request.user.is_authenticated:
             try:
                 usuario_empresa = Empresa.objects.get(usuario=request.user)
@@ -26,6 +27,7 @@ class paginaInicial(View):
                     usuario_cliente = Cliente.objects.get(usuario=request.user)
                 except Cliente.DoesNotExist:
                     pass
+
         return render(request, 'precocerto/interface/home.html', {
             'produtos': produtos,
             'usuario_empresa': usuario_empresa,
@@ -34,10 +36,15 @@ class paginaInicial(View):
         })
 
     def post(self, request):
-        produtos = Produto.objects.all()
+        termo = request.POST.get('search', '')  # pega o valor do input name="search"
+        produtos = Produto.objects.filter(
+            Q(nome__icontains=termo) | Q(descricao__icontains=termo)
+        )
+
         usuario_empresa = None
         usuario_cliente = None
         produtos_empresa = None
+
         if request.user.is_authenticated:
             try:
                 usuario_empresa = Empresa.objects.get(usuario=request.user)
@@ -47,6 +54,7 @@ class paginaInicial(View):
                     usuario_cliente = Cliente.objects.get(usuario=request.user)
                 except Cliente.DoesNotExist:
                     pass
+
         return render(request, 'precocerto/interface/home.html', {
             'produtos': produtos,
             'usuario_empresa': usuario_empresa,
@@ -56,53 +64,36 @@ class paginaInicial(View):
 
 # Clientes
 
-class criarCliente(CreateView):
-    model = Cliente
-    fields = ['nome', 'usuario', 'email', 'telefone']
+class criarCliente(View):
     template_name = 'precocerto/cliente/criar_cliente.html'
-    success_url = reverse_lazy('home')
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['senha_field'] = True
-        return context
-    
-    def post(self, request, *args, **kwargs):
-        nome =  request.POST.get('nome')
-        usuario = request.POST.get('usuario')
-        email = request.POST.get('email')
-        senha = request.POST.get('senha')
-        telefone = request.POST.get('telefone')
+    def get(self, request):
+        form = ClienteCreationForm()
+        return render(request, self.template_name, {'form': form})
 
-        if User.objects.filter(username=usuario).exists():
-            user = User.objects.get(username=usuario)
-            # Garante que o cliente seja criado se não existir
-            if not Cliente.objects.filter(usuario=user).exists():
-                Cliente.objects.create(
-                    nome=nome,
-                    usuario=user,
-                    email=email,
-                    telefone=telefone
-                )
-            return render(request, self.template_name, {
-                'form': self.get_form(),
-                'error': 'Nome de usuário já existe. Escolha outro.'
-            })
+    def post(self, request):
+        form = ClienteCreationForm(request.POST)
+        # Debugging: print POST and validation
+        print('--- criarCliente POST received ---')
+        print(request.POST)
+        print('form is bound?', form.is_bound)
+        is_valid = form.is_valid()
+        print('form.is_valid() =>', is_valid)
+        if not is_valid:
+            print('form.errors:', form.errors)
 
-        user = User.objects.create_user(
-            username=usuario,
-            password=senha,
-            email=email,
-            first_name=nome
-        )
-
-        Cliente.objects.create(
-            nome=nome,
-            usuario=user,
-            email=email,
-            telefone=telefone
-        )
-        return render(request, 'precocerto/interface/home.html', {'message': 'Cliente criado com sucesso!'})
+        if is_valid:
+            cliente = form.save()
+            # log in the newly created user
+            user = cliente.usuario
+            # Set backend so login() accepts the user object (using default ModelBackend)
+            try:
+                user.backend = 'django.contrib.auth.backends.ModelBackend'
+            except Exception:
+                pass
+            login(request, user)
+            return redirect('home')
+        return render(request, self.template_name, {'form': form})
 
 class logarCliente(View):
     def get(self, request):
@@ -129,37 +120,28 @@ class perfilCliente(ListView):
 # Empresas
 
     #corrigir
-class criarEmpresa(CreateView):
+class criarEmpresa(View):
     template_name = 'precocerto/empresa/criar_empresa.html'
 
     def get(self, request):
-        return render(request, self.template_name)
+        from .forms import EmpresaCreationForm
+        form = EmpresaCreationForm()
+        return render(request, self.template_name, {'form': form})
 
     def post(self, request):
-        usuario = request.POST.get('usuario')
-        cnpj = request.POST.get('cnpj')
-        endereco = request.POST.get('endereco')
-        senha = request.POST.get('senha')
-        nome = usuario  # nome da empresa igual ao usuário
-
-        if User.objects.filter(username=usuario).exists():
-            return render(request, self.template_name, {
-                'error': 'Nome de usuário já existe. Escolha outro.'
-            })
-
-        user = User.objects.create_user(
-            username=usuario,
-            password=senha,
-            first_name=nome
-        )
-
-        Empresa.objects.create(
-            nome=nome,
-            usuario=user,
-            cnpj=cnpj,
-            endereco=endereco
-        )
-        return render(request, 'precocerto/interface/home.html', {'message': 'Empresa criada com sucesso!'})
+        from .forms import EmpresaCreationForm
+        form = EmpresaCreationForm(request.POST)
+        if form.is_valid():
+            empresa = form.save()
+            # login newly created user
+            user = empresa.usuario
+            try:
+                user.backend = 'django.contrib.auth.backends.ModelBackend'
+            except Exception:
+                pass
+            login(request, user)
+            return redirect('home')
+        return render(request, self.template_name, {'form': form})
     
 
 class deletarEmpresa(DeleteView):
@@ -366,3 +348,4 @@ class confirmarCompra(View):
             return redirect('logar_cliente')
         request.session['carrinho'] = {}
         return render(request, 'precocerto/cliente/carrinho.html', {'carrinho': {}, 'total': 0, 'mensagem': 'Compra confirmada com sucesso!'})
+

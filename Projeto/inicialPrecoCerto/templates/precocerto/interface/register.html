@@ -1,0 +1,51 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Registro</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-left">
+            <a href="{% url 'home' %}" class="navbar-logo">
+                <img src="{% static 'img/logo_precocerto.png' %}" alt="Logo Preço Certo">
+            </a>
+        </div>
+    </nav>
+
+    <div class="auth-container">
+        <div class="form-card">
+            <h2>Registro {{ tipo|title }}</h2>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="tipo" value="{{ tipo }}">
+                <div class="form-row">
+                    <label for="nome">Nome</label>
+                    <input type="text" id="nome" name="nome" required>
+                </div>
+                <div class="form-row">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                <div class="form-row">
+                    <label for="senha">Senha</label>
+                    <input type="password" id="senha" name="senha" required>
+                </div>
+                {% if tipo == "empresa" %}
+                    <div class="form-row">
+                        <label for="endereco">Endereço</label>
+                        <input type="text" id="endereco" name="endereco" required>
+                    </div>
+                {% endif %}
+                <div class="form-actions">
+                    <a href="?tipo=cliente" class="button-secondary">Registrar Cliente</a>
+                    <a href="?tipo=empresa" class="button-secondary">Registrar Empresa</a>
+                    <button type="submit" class="button">Registrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

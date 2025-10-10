@@ -4,67 +4,98 @@
 <head>
     <meta charset="UTF-8">
     <title>Marketplace - Página Inicial</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="{% static 'css/cores.css' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container-fluid">
-            <h1 class="navbar-brand mb-0 fw-bold fs-2 text-light d-flex align-items-center">
-                <a href="{% url 'home' %}" class="bg-warning text-primary px-3 py-1 rounded me-2">Preço certo</a>
-            </h1>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="navbar-left">
+            <a href="{% url 'home' %}" class="navbar-logo">
+                <img src="{% static 'img/logo_precocerto.png' %}" alt="Logo Preço Certo">
+            </a>
+            {# Show search for clients and anonymous users; hide for logged-in companies #}
             {% if usuario_empresa %}
-                <div class="d-flex ms-auto">
-                    <a href="{% url 'editar_empresa' usuario_empresa.id %}" class="btn btn-warning text-dark me-2">Editar Empresa</a>
-                    <a href="{% url 'deletar_empresa' usuario_empresa.id %}" class="btn btn-danger me-2">Deletar Conta</a>
-                    <a href="{% url 'logout' %}" class="btn btn-outline-light">Logout</a>
-                </div>
-            {% elif usuario_cliente %}
-                <div class="d-flex ms-auto">
-                    <a href="{% url 'ver_carrinho' %}" class="btn btn-success me-2">Carrinho</a>
-                    <span class="btn btn-warning text-primary fw-bold me-2" style="opacity:1; cursor:default;">Bem-vindo, {{ usuario_cliente.nome }}</span>
-                    <a href="{% url 'logout' %}" class="btn btn-outline-light">Logout</a>
-                </div>
+                {# company logged in - no search bar #}
             {% else %}
-                <form method="post" class="d-flex ms-auto me-3" role="search">
+                <form method="post" role="search" class="search-form">
                     {% csrf_token %}
-                    <input class="form-control me-2" type="search" placeholder="Buscar produtos..." aria-label="Search">
-                    <button class="btn btn-light text-primary" type="submit">Buscar</button>
+                    <input type="search" name="search" placeholder="Buscar produtos..." aria-label="Search">
+                    <button type="submit">Buscar</button>
                 </form>
-                <div class="d-flex">
-                    <a href="{% url 'criar_cliente' %}" class="btn btn-warning text-dark me-2">Criar Cliente</a>
-                    <a href="{% url 'logar_cliente' %}" class="btn btn-light text-primary me-2">Login Cliente</a>
-                    <a href="{% url 'criar_empresa' %}" class="btn btn-warning text-dark me-2">Criar Empresa</a>
-                    <a href="{% url 'logar_empresa'%}" class="btn btn-light text-primary">Login Empresa</a>
-                </div>
+            {% endif %}
+        </div>
+        <div class="navbar-right">
+            {# If logged in as client show cart + logout #}
+            {% if usuario_cliente %}
+                <form action="{% url 'ver_carrinho' %}" method="get">
+                    <button type="submit" title="Carrinho">
+                        <img src="{% static 'img/cart.png' %}" alt="Carrinho" style="height:20px;vertical-align:middle;margin-right:6px"> Carrinho
+                    </button>
+                </form>
+                <form action="{% url 'logout' %}" method="get">
+                    <button type="submit">Logout</button>
+                </form>
+
+            {# If logged in as company show create product, edit company and logout #}
+            {% elif usuario_empresa %}
+                <form action="{% url 'criar_produto' %}" method="get">
+                    <button type="submit" class="btn-register">Criar Produto</button>
+                </form>
+                <form action="{% url 'editar_empresa' pk=usuario_empresa.id %}" method="get">
+                    <button type="submit">Editar Empresa</button>
+                </form>
+                <form action="{% url 'logout' %}" method="get">
+                    <button type="submit">Logout</button>
+                </form>
+
+            {# Not logged in: show login/register options #}
+            {% else %}
+                <form action="{% url 'logar_cliente' %}" method="get">
+                    <button type="submit">Login Cliente</button>
+                </form>
+                <form action="{% url 'criar_cliente' %}" method="get">
+                    <button type="submit" class="btn-register">Registrar Cliente</button>
+                </form>
+                <form action="{% url 'logar_empresa' %}" method="get">
+                    <button type="submit">Login Empresa</button>
+                </form>
+                <form action="{% url 'criar_empresa' %}" method="get">
+                    <button type="submit" class="btn-register">Registrar Empresa</button>
+                </form>
             {% endif %}
         </div>
     </nav>
-    <div class="container mt-4">
+
+    <!-- Conteúdo principal -->
+    <div class="main-container">
         {% if usuario_cliente or not usuario_empresa %}
-            <h2 class="mb-4">Produtos em destaque</h2>
-            <div class="row">
+            <h2>Produtos em destaque</h2>
+            <div class="products-grid">
                 {% for produto in produtos %}
-                <div class="col-md-4 mb-4">
-                    <div class="card h-100 d-flex flex-column align-items-stretch">
-                       {% if produto.imagem %}
-                        <img src="{{ produto.imagem.url }}" class="card-img-top mx-auto d-block mt-3" alt="{{ produto.nome }}" style="height: 160px; width: auto; object-fit: contain; max-width: 80%;">
-                        {% else %}
-                        <img src="{% static 'img/placeholder.png' %}" class="card-img-top mx-auto d-block mt-3" alt="Sem imagem" style="height: 160px; width: auto; object-fit: contain; max-width: 80%;">
-                        {% endif %}
-                        <div class="card-body d-flex flex-column">
-                            <h5 class="card-title">{{ produto.nome }}</h5>
-                            <p class="card-text">{{ produto.descricao|truncatechars:80 }}</p>
-                            <p class="card-text fw-bold text-success">R$ {{ produto.preco }}</p>
-                            <div class="d-flex gap-2 mt-auto">
-                                <a href="{% url 'detalhe_produto' pk=produto.id %}" class="btn btn-outline-primary">Ver detalhes</a>
+                <div class="card">
+                    {% if produto.imagem %}
+                        <img src="{{ produto.imagem.url }}" alt="{{ produto.nome }}">
+                    {% else %}
+                        <img src="{% static 'img/placeholder.png' %}" alt="Sem imagem">
+                    {% endif %}
+                    <div class="card-content">
+                        <h5>{{ produto.nome }}</h5>
+                        <p>{{ produto.descricao|truncatechars:80 }}</p>
+                        <p class="preco">R$ {{ produto.preco }}</p>
+                        <p class="endereco">📍 {{ produto.empresa.endereco }}</p>
+                        <div class="card-actions">
+                            <a href="{% url 'detalhe_produto' pk=produto.id %}">Ver detalhes</a>
                                 {% if usuario_cliente %}
-                                <form method="post" action="{% url 'adicionar_carrinho' produto.id %}">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-success">Adicionar ao carrinho</button>
-                                </form>
+                                    <form method="post" action="{% url 'adicionar_carrinho' produto.id %}">
+                                        {% csrf_token %}
+                                        <button type="submit">Adicionar ao carrinho</button>
+                                    </form>
                                 {% endif %}
-                            </div>
+                                {# If logged in as the empresa that owns this product, show edit/delete #}
+                                {% if usuario_empresa and produto.empresa == usuario_empresa %}
+                                    <a href="{% url 'editar_produto' pk=produto.id %}">Editar</a>
+                                    <a href="{% url 'deletar_produto' pk=produto.id %}">Excluir</a>
+                                {% endif %}
                         </div>
                     </div>
                 </div>
@@ -73,29 +104,29 @@
                 {% endfor %}
             </div>
         {% elif usuario_empresa %}
-            <div class="d-flex justify-content-end mb-3">
-                <a href="{% url 'criar_produto' %}" class="btn btn-warning text-dark me-2">Adicionar Produto</a>
+            <div class="empresa-header">
+                <a href="{% url 'criar_produto' %}" class="btn-primary">Adicionar Produto</a>
             </div>
-            <h2 class="mb-4">Produtos da sua empresa</h2>
-            <div class="row">
+            <h2>Produtos da sua empresa</h2>
+            <div class="products-grid">
                 {% if produtos_empresa %}
                     {% for produto in produtos_empresa %}
-                    <div class="col-md-4 mb-4">
-                        <div class="card h-100 d-flex flex-column align-items-stretch">
-                            {% if produto.imagem %}
-                            <img src="{{ produto.imagem.url }}" class="card-img-top mx-auto d-block mt-3" alt="{{ produto.nome }}" style="height: 160px; width: auto; object-fit: contain; max-width: 80%;">
-                            {% else %}
-                            <img src="{% static 'img/placeholder.png' %}" class="card-img-top mx-auto d-block mt-3" alt="Sem imagem" style="height: 160px; width: auto; object-fit: contain; max-width: 80%;">
-                            {% endif %}
-                            <div class="card-body d-flex flex-column">
-                                <h5 class="card-title">{{ produto.nome }}</h5>
-                                <p class="card-text">{{ produto.descricao|truncatechars:80 }}</p>
-                                <p class="card-text fw-bold text-success">R$ {{ produto.preco }}</p>
-                                <div class="mt-auto d-flex justify-content-between">
-                                    <a href="{% url 'detalhe_produto' pk=produto.id %}" class="btn btn-outline-primary">Ver detalhes</a>
-                                    <a href="{% url 'editar_produto' pk=produto.id %}" class="btn btn-outline-warning ms-2">Editar</a>
-                                    <a href="{% url 'deletar_produto' pk=produto.id %}" class="btn btn-outline-danger ms-2">Excluir</a>
-                                </div>
+                    <div class="card">
+                        {% if produto.imagem %}
+                            <img src="{{ produto.imagem.url }}" alt="{{ produto.nome }}">
+                        {% else %}
+                            <img src="{% static 'img/placeholder.png' %}" alt="Sem imagem">
+                        {% endif %}
+                        <div class="card-content">
+                            <h5>{{ produto.nome }}</h5>
+                            <p>{{ produto.descricao|truncatechars:80 }}</p>
+                            <p class="preco">R$ {{ produto.preco }}</p>
+                            <div class="card-actions">
+                                <a href="{% url 'detalhe_produto' pk=produto.id %}">Ver detalhes</a>
+                                {% if usuario_empresa and produto.empresa == usuario_empresa %}
+                                    <a href="{% url 'editar_produto' pk=produto.id %}">Editar</a>
+                                    <a href="{% url 'deletar_produto' pk=produto.id %}">Excluir</a>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -103,8 +134,8 @@
                     <p>Nenhum produto cadastrado para sua empresa.</p>
                     {% endfor %}
                 {% else %}
-                    <h2 class="mb-4">Bem-vindo, {{ usuario_empresa.nome }}</h2>
-                    <div class="alert alert-info mt-4">Você está logado como empresa. Utilize os botões acima para gerenciar seus produtos ou deletar sua conta.</div>
+                    <h2>Bem-vindo, {{ usuario_empresa.nome }}</h2>
+                    <p>Você está logado como empresa. Utilize os botões acima para gerenciar seus produtos ou deletar sua conta.</p>
                 {% endif %}
             </div>
         {% endif %}
