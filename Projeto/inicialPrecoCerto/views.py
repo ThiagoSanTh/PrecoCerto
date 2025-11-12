@@ -3,11 +3,69 @@ from django.views import View
 from django.db.models import Q
 from .models import Produto, Cliente, Empresa
 from django.contrib.auth.models import User
-from .forms import ClienteCreationForm
+from .forms import RegistroForm
+from django.contrib.auth import get_user_model
+from django.contrib import messages
+from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+
+
+# Interface
+
+
+class register(View):
+    """View de registro unificada que usa `RegistroForm`.
+
+    - GET: exibe o formulário
+    - POST: valida, cria Cliente ou Empresa via form.save(), autentica e faz login
+    """
+    template_name = 'precocerto/interface/register.html'
+
+    def get(self, request):
+        # allow optional preset of tipo via URL kwargs or querystring (e.g. ?tipo=empresa)
+        tipo = request.GET.get('tipo')
+        # If URL dispatcher passes a tipo kwarg, it will be in request.resolver_match.kwargs
+        if not tipo:
+            tipo = request.resolver_match.kwargs.get('tipo') if request.resolver_match else None
+
+        initial = {}
+        if tipo in ('cliente', 'empresa'):
+            initial['tipo'] = tipo
+
+        form = RegistroForm(initial=initial)
+        return render(request, self.template_name, {'form': form})
+
+    def post(self, request):
+        form = RegistroForm(request.POST)
+        if form.is_valid():
+            obj = form.save()
+            # `obj` é Cliente ou Empresa; ambos têm o campo `usuario` (User)
+            user = obj.usuario
+
+            # Autentica pelo username e senha fornecidos (mais seguro/compatível que setar backend diretamente)
+            username = user.username
+            senha = request.POST.get('senha')
+            user_auth = authenticate(request, username=username, password=senha)
+            if user_auth is not None:
+                login(request, user_auth)
+                messages.success(request, 'Registro realizado com sucesso.')
+                return redirect('home')
+            else:
+                # Caso raro: o usuário foi criado mas não conseguiu autenticar; faz login manualmente como fallback
+                try:
+                    user.backend = 'django.contrib.auth.backends.ModelBackend'
+                    login(request, user)
+                    messages.warning(request, 'Usuário criado, login efetuado via fallback.')
+                    return redirect('home')
+                except Exception:
+                    messages.error(request, 'Erro ao realizar login automático. Faça login manualmente.')
+                    return redirect(reverse('logar') + '?tipo=cliente')
+
+        # Se inválido, reexibe o form com erros
+        return render(request, self.template_name, {'form': form})
 
 
 # Página Inicial
@@ -64,51 +122,51 @@ class paginaInicial(View):
 
 # Clientes
 
-class criarCliente(View):
-    template_name = 'precocerto/cliente/criar_cliente.html'
+class logar(View):
+    """Unified login view for Cliente and Empresa.
+
+    - GET: renderiza template `precocerto/interface/login.html` (usa query param `tipo` para exibir texto)
+    - POST: tenta autenticar por username ou email, determina se o user é Empresa ou Cliente e realiza login
+    """
+    template_name = 'precocerto/interface/login.html'
 
     def get(self, request):
-        form = ClienteCreationForm()
-        return render(request, self.template_name, {'form': form})
+        tipo = request.GET.get('tipo', 'cliente')
+        return render(request, self.template_name, {'tipo': tipo})
 
     def post(self, request):
-        form = ClienteCreationForm(request.POST)
-        # Debugging: print POST and validation
-        print('--- criarCliente POST received ---')
-        print(request.POST)
-        print('form is bound?', form.is_bound)
-        is_valid = form.is_valid()
-        print('form.is_valid() =>', is_valid)
-        if not is_valid:
-            print('form.errors:', form.errors)
-
-        if is_valid:
-            cliente = form.save()
-            # log in the newly created user
-            user = cliente.usuario
-            # Set backend so login() accepts the user object (using default ModelBackend)
-            try:
-                user.backend = 'django.contrib.auth.backends.ModelBackend'
-            except Exception:
-                pass
-            login(request, user)
-            return redirect('home')
-        return render(request, self.template_name, {'form': form})
-
-class logarCliente(View):
-    def get(self, request):
-        return render(request, 'precocerto/cliente/logarCliente.html')
-    
-    def post(self, request):
-        usuario = request.POST.get('usuario')
+        usuario_input = request.POST.get('usuario')
         senha = request.POST.get('senha')
-        user = authenticate(request, username=usuario, password=senha)
 
-        if user is not None:
+        # Tenta autenticar diretamente por username
+        user = authenticate(request, username=usuario_input, password=senha)
+        if user is None:
+            # tenta localizar por email e autenticar pelo username
+            UserModel = get_user_model()
+            try:
+                user_obj = UserModel.objects.get(email=usuario_input)
+                user = authenticate(request, username=user_obj.username, password=senha)
+            except UserModel.DoesNotExist:
+                user = None
+
+        if user is None:
+            messages.error(request, 'Usuário ou senha inválidos.')
+            return render(request, self.template_name, {'tipo': request.POST.get('tipo', 'cliente')})
+
+        # Determina tipo de conta: Empresa tem prioridade se existir
+        if Empresa.objects.filter(usuario=user).exists():
             login(request, user)
+            messages.success(request, 'Login de empresa efetuado.')
             return redirect('home')
-        else:
-            return render(request, 'precocerto/cliente/logarCliente.html', {'error': 'Usuário ou senha inválidos.'})
+
+        if Cliente.objects.filter(usuario=user).exists():
+            login(request, user)
+            messages.success(request, 'Login de cliente efetuado.')
+            return redirect('home')
+
+        # Usuário autenticado, mas sem relação Cliente/Empresa
+        messages.error(request, 'Conta não vinculada como cliente ou empresa.')
+        return render(request, self.template_name, {'tipo': request.POST.get('tipo', 'cliente')})
         
 
 
@@ -117,33 +175,10 @@ class perfilCliente(ListView):
     template_name = 'precocerto/cliente/perfilCliente.html'
     context_object_name = 'clientes'
 
-# Empresas
-
-    #corrigir
-class criarEmpresa(View):
-    template_name = 'precocerto/empresa/criar_empresa.html'
-
-    def get(self, request):
-        from .forms import EmpresaCreationForm
-        form = EmpresaCreationForm()
-        return render(request, self.template_name, {'form': form})
-
-    def post(self, request):
-        from .forms import EmpresaCreationForm
-        form = EmpresaCreationForm(request.POST)
-        if form.is_valid():
-            empresa = form.save()
-            # login newly created user
-            user = empresa.usuario
-            try:
-                user.backend = 'django.contrib.auth.backends.ModelBackend'
-            except Exception:
-                pass
-            login(request, user)
-            return redirect('home')
-        return render(request, self.template_name, {'form': form})
-    
-
+#            return redirect('home')
+#        return render(request, self.template_name, {'form': form})
+#    
+#
 class deletarEmpresa(DeleteView):
     model = Empresa
     template_name = 'precocerto/empresa/deletar_empresa.html'
@@ -158,23 +193,7 @@ class deletarEmpresa(DeleteView):
         return response
 
 
-class logarEmpresa(View):
-    def get(self, request):
-        return render(request, 'precocerto/empresa/logarEmpresa.html')
-    
-    def post(self, request):
-        usuario = request.POST.get('usuario')
-        senha = request.POST.get('senha')
-        user = authenticate(request, username=usuario, password=senha)
-
-        if user is not None:
-            try:
-                empresa = Empresa.objects.get(usuario=user)
-                login(request, user)
-                return redirect('home')
-            except Empresa.DoesNotExist:
-                pass
-        return render(request, 'precocerto/empresa/logarEmpresa.html', {'error': 'Usuário ou senha inválidos.'})
+# removed separate logarEmpresa and logarCliente in favor of unified `login` class above
 
 
 class logoutEmpresa(View):
@@ -295,7 +314,7 @@ class deletarProduto(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
 class adicionarCarrinho(View):
     def post(self, request, produto_id):
         if not request.user.is_authenticated:
-            return redirect('logar_cliente')
+            return redirect(reverse('logar') + '?tipo=cliente')
         produto = Produto.objects.get(id=produto_id)
         carrinho = request.session.get('carrinho', {})
         if str(produto_id) in carrinho:
@@ -313,7 +332,7 @@ class adicionarCarrinho(View):
 class verCarrinho(View):
     def get(self, request):
         if not request.user.is_authenticated:
-            return redirect('logar_cliente')
+            return redirect(reverse('logar') + '?tipo=cliente')
         carrinho = request.session.get('carrinho', {})
         total = sum(item['preco'] * item['quantidade'] for item in carrinho.values())
         return render(request, 'precocerto/cliente/carrinho.html', {'carrinho': carrinho, 'total': total})
@@ -345,7 +364,7 @@ class removerCarrinho(View):
 class confirmarCompra(View):
     def post(self, request):
         if not request.user.is_authenticated:
-            return redirect('logar_cliente')
+            return redirect(reverse('logar') + '?tipo=cliente')
         request.session['carrinho'] = {}
         return render(request, 'precocerto/cliente/carrinho.html', {'carrinho': {}, 'total': 0, 'mensagem': 'Compra confirmada com sucesso!'})
 

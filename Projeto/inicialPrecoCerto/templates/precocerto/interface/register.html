@@ -17,34 +17,94 @@
 
     <div class="auth-container">
         <div class="form-card">
-            <h2>Registro {{ tipo|title }}</h2>
-            <form method="post">
+            <h2>Registro</h2>
+
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="message {{ message.tags }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <form method="post" novalidate class="register-form">
                 {% csrf_token %}
-                <input type="hidden" name="tipo" value="{{ tipo }}">
-                <div class="form-row">
-                    <label for="nome">Nome</label>
-                    <input type="text" id="nome" name="nome" required>
-                </div>
-                <div class="form-row">
-                    <label for="email">Email</label>
-                    <input type="email" id="email" name="email" required>
-                </div>
-                <div class="form-row">
-                    <label for="senha">Senha</label>
-                    <input type="password" id="senha" name="senha" required>
-                </div>
-                {% if tipo == "empresa" %}
-                    <div class="form-row">
-                        <label for="endereco">Endereço</label>
-                        <input type="text" id="endereco" name="endereco" required>
+
+                {% if form.non_field_errors %}
+                    <div class="form-errors">
+                        {{ form.non_field_errors }}
                     </div>
                 {% endif %}
+
+                <div class="form-row tipo-row">
+                    <label>{{ form.tipo.label }}</label>
+                    <div class="form-field tipo-options">
+                        {% for radio in form.tipo %}
+                            <div class="{% if forloop.first %}tipo-left{% else %}tipo-right{% endif %}">{{ radio }}</div>
+                        {% endfor %}
+                    </div>
+                    {{ form.tipo.errors }}
+                </div>
+
+                <!-- Campos Cliente -->
+                <div id="cliente-fields">
+                    <div class="form-row">
+                        <label for="id_nome">{{ form.nome.label }}</label>
+                        <div class="form-field">{{ form.nome }}</div>
+                        {{ form.nome.errors }}
+                    </div>
+                    <div class="form-row">
+                        <label for="id_email">{{ form.email.label }}</label>
+                        <div class="form-field">{{ form.email }}</div>
+                        {{ form.email.errors }}
+                    </div>
+                </div>
+
+                <!-- Campos Empresa -->
+                <div id="empresa-fields" style="display:none;">
+                    <div class="form-row">
+                        <label for="id_cnpj">{{ form.cnpj.label }}</label>
+                        <div class="form-field">{{ form.cnpj }}</div>
+                        {{ form.cnpj.errors }}
+                    </div>
+                    <div class="form-row">
+                        <label for="id_endereco">{{ form.endereco.label }}</label>
+                        <div class="form-field">{{ form.endereco }}</div>
+                        {{ form.endereco.errors }}
+                    </div>
+                </div>
+
+                <!-- Campos comuns -->
+                <div class="form-row">
+                    <label for="id_usuario">{{ form.usuario.label }}</label>
+                    <div class="form-field">{{ form.usuario }}</div>
+                    {{ form.usuario.errors }}
+                </div>
+                <div class="form-row">
+                    <label for="id_senha">{{ form.senha.label }}</label>
+                    <div class="form-field">{{ form.senha }}</div>
+                    {{ form.senha.errors }}
+                </div>
+
                 <div class="form-actions">
-                    <a href="?tipo=cliente" class="button-secondary">Registrar Cliente</a>
-                    <a href="?tipo=empresa" class="button-secondary">Registrar Empresa</a>
                     <button type="submit" class="button">Registrar</button>
                 </div>
             </form>
+
+            <script>
+                function toggleFields() {
+                    const checked = document.querySelector('input[name="tipo"]:checked');
+                    const tipo = checked ? checked.value : 'cliente';
+                    document.getElementById('cliente-fields').style.display = tipo === 'cliente' ? 'block' : 'none';
+                    document.getElementById('empresa-fields').style.display = tipo === 'empresa' ? 'block' : 'none';
+                }
+
+                document.addEventListener('DOMContentLoaded', function() {
+                    const radios = document.querySelectorAll('input[name="tipo"]');
+                    radios.forEach(r => r.addEventListener('change', toggleFields));
+                    toggleFields();
+                });
+            </script>
         </div>
     </div>
 </body>

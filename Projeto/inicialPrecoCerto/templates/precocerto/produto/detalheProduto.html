@@ -52,8 +52,8 @@
                                 <button type="submit" class="secondary-buy">Adicionar ao carrinho</button>
                             </form>
                         {% else %}
-                            <a href="{% url 'logar_cliente' %}" class="primary-buy">Entrar para comprar</a>
-                            <a href="{% url 'logar_cliente' %}" class="secondary-buy">Adicionar ao carrinho</a>
+                            <a href="{% url 'logar' %}?tipo=cliente" class="primary-buy">Entrar para comprar</a>
+                            <a href="{% url 'logar' %}?tipo=cliente" class="secondary-buy">Adicionar ao carrinho</a>
                         {% endif %}
 
                         <div class="seller-card">

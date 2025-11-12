@@ -21,16 +21,12 @@ from django.conf.urls.static import static
 from django.conf import settings
 
 from inicialPrecoCerto.views import (
-    
     paginaInicial,
-    
-    criarCliente, logarCliente, perfilCliente,
-
-    criarEmpresa, deletarEmpresa, logarEmpresa, perfilEmpresa, logoutEmpresa, editarEmpresa,
-    
-    criarProduto, detalheProduto, editarProduto, deletarProduto, 
-    
-    adicionarCarrinho, verCarrinho, alterarQuantidade, removerCarrinho, confirmarCompra
+    perfilCliente,
+    deletarEmpresa, perfilEmpresa, logoutEmpresa, editarEmpresa,
+    criarProduto, detalheProduto, editarProduto, deletarProduto,
+    adicionarCarrinho, verCarrinho, alterarQuantidade, removerCarrinho, confirmarCompra,
+    register, logar,
 )
 
 urlpatterns = [
@@ -39,15 +35,13 @@ urlpatterns = [
         
     #interface
     path('', paginaInicial.as_view(), name='home'),
+    path('register/', register.as_view(), name='register'),
+    path('login/', logar.as_view(), name='logar'),
+    # cliente (use unified register/login)
     
-    #cliente
-    path('criar-cliente/', criarCliente.as_view(), name='criar_cliente'),
-    path('logar-cliente/', logarCliente.as_view(), name='logar_cliente'),
     path('perfil-cliente/', perfilCliente.as_view(), name='perfil_cliente'),
 
-    #empresa
-    path('criar-empresa/', criarEmpresa.as_view(), name='criar_empresa'),
-    path('logar-empresa/', logarEmpresa.as_view(), name='logar_empresa'),
+    # empresa (use unified register/login)
     path('logout/', logoutEmpresa.as_view(), name='logout'),
     path('perfil-empresas/', perfilEmpresa.as_view(), name='perfil_empresas'),
     path('deletar-empresa/<int:pk>/', deletarEmpresa.as_view(), name='deletar_empresa'),

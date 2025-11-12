@@ -471,3 +471,46 @@ h2 {
     .form-actions { justify-content: stretch; flex-direction: column-reverse; }
     .button { width: 100%; }
 }
+
+/* Register form specific styling: center form content, position radio options left/right and center submit */
+.register-form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.register-form .form-row {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+.register-form .form-row .form-field input[type="text"],
+.register-form .form-row .form-field input[type="email"],
+.register-form .form-row .form-field input[type="password"],
+.register-form .form-row .form-field input[type="tel"],
+.register-form .form-row .form-field textarea {
+    width: 100%;
+    max-width: 420px;
+}
+.register-form .tipo-options {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 420px;
+    padding: 6px 0;
+}
+.register-form .tipo-left,
+.register-form .tipo-right {
+    display: flex;
+    align-items: center;
+}
+.register-form .tipo-left { justify-content: flex-start; }
+.register-form .tipo-right { justify-content: flex-end; }
+.register-form .form-actions { justify-content: center; width: 100%; max-width: 480px; }
+
+@media (max-width: 480px) {
+    .register-form .tipo-options { flex-direction: column; gap: 8px; }
+    .register-form .tipo-left, .register-form .tipo-right { justify-content: center; }
+}

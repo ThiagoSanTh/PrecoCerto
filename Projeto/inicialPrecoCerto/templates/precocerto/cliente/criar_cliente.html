@@ -16,7 +16,7 @@
         </div>
         <div class="navbar-right">
             <!-- optional right-side items (kept minimal) -->
-            <a href="{% url 'logar_cliente' %}" class="button">Entrar</a>
+            <a href="{% url 'logar' %}?tipo=cliente" class="button">Entrar</a>
         </div>
     </nav>
 
@@ -65,7 +65,7 @@
                 </div>
 
                 <div class="form-actions">
-                    <a href="{% url 'logar_cliente' %}" class="button-secondary">Já tenho conta</a>
+                    <a href="{% url 'logar' %}?tipo=cliente" class="button-secondary">Já tenho conta</a>
                     <button type="submit" class="button">Criar Conta</button>
                 </div>
             </form>

@@ -50,17 +50,11 @@
 
             {# Not logged in: show login/register options #}
             {% else %}
-                <form action="{% url 'logar_cliente' %}" method="get">
-                    <button type="submit">Login Cliente</button>
+                <form action="{% url 'register' %}" method="get">
+                    <button type="submit">Register</button>
                 </form>
-                <form action="{% url 'criar_cliente' %}" method="get">
-                    <button type="submit" class="btn-register">Registrar Cliente</button>
-                </form>
-                <form action="{% url 'logar_empresa' %}" method="get">
-                    <button type="submit">Login Empresa</button>
-                </form>
-                <form action="{% url 'criar_empresa' %}" method="get">
-                    <button type="submit" class="btn-register">Registrar Empresa</button>
+                <form action="{% url 'logar' %}" method="get">
+                    <button type="submit">Logar</button>
                 </form>
             {% endif %}
         </div>
