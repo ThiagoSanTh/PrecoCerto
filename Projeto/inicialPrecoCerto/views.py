@@ -301,13 +301,6 @@ class deletarProduto(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
             return False
         
     def form_valid(self, form):
-    # Vincula o produto à empresa logada
-        if self.request.user.is_authenticated:
-            try:
-                empresa = Empresa.objects.get(usuario=self.request.user)
-                form.instance.empresa = empresa
-            except Empresa.DoesNotExist:
-                pass
         return super().form_valid(form)
 
 # Carrinho
