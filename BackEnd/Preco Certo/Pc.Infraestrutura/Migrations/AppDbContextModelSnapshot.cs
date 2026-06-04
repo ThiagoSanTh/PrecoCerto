@@ -87,6 +87,9 @@ namespace Pc.Infraestrutura.Migrations
                     b.Property<string>("Descricao")
                         .HasColumnType("text");
 
+                    b.Property<string>("ImagemUrl")
+                        .HasColumnType("text");
+
                     b.Property<string>("Marca")
                         .HasColumnType("text");
 

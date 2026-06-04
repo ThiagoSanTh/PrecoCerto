@@ -10,7 +10,7 @@ namespace Pc.Dominio.Entities.Base
         public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
         public DateTime? DataAtualizacao { get; set; }
         public bool Ativo { get; set; } = true;
-
+        
 
     }
 }

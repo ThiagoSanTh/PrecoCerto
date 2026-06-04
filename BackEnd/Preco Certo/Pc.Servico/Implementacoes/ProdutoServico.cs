@@ -1,5 +1,6 @@
 ﻿using Pc.Dominio.Entities.Catalogo;
 using Pc.Repositorio.Interfaces;
+using Pc.Servico.Excecoes;
 using Pc.Servico.Interfaces;
 
 namespace Pc.Servico.Implementacoes
@@ -51,5 +52,56 @@ namespace Pc.Servico.Implementacoes
         {
             await _produtoRepositorio.RemoverAsync(id);
         }
+
+        public async Task AtualizarPorLojaAsync(Guid id, Produto dados, Guid lojaId)
+        {
+            ValidarDadosProduto(dados);
+
+            var existente = await _produtoRepositorio.ObterPorIdAsync(id);
+            if (existente is null)
+                throw new ProdutoOperacaoException("Produto não encontrado.");
+
+            if (!PertenceALoja(existente, lojaId))
+                throw new ProdutoOperacaoException(
+                    "Somente a loja que cadastrou este produto pode editá-lo.",
+                    acessoNegado: true);
+
+            existente.NomeProduto = dados.NomeProduto;
+            existente.Descricao = dados.Descricao;
+            existente.Marca = dados.Marca;
+            existente.CodigoBarras = dados.CodigoBarras;
+            existente.Preco = dados.Preco;
+            if (dados.ImagemUrl != null)
+                existente.ImagemUrl = dados.ImagemUrl;
+
+            var atualizado = await _produtoRepositorio.AtualizarCamposAsync(existente);
+            if (!atualizado)
+                throw new ProdutoOperacaoException("Produto não encontrado.");
+        }
+
+        public async Task RemoverPorLojaAsync(Guid id, Guid lojaId)
+        {
+            var existente = await _produtoRepositorio.ObterPorIdAsync(id);
+            if (existente is null)
+                throw new ProdutoOperacaoException("Produto não encontrado.");
+
+            if (!PertenceALoja(existente, lojaId))
+                throw new ProdutoOperacaoException(
+                    "Somente a loja que cadastrou este produto pode excluí-lo.",
+                    acessoNegado: true);
+
+            var removido = await _produtoRepositorio.RemoverPorIdAsync(id);
+            if (!removido)
+                throw new ProdutoOperacaoException("Produto não encontrado.");
+        }
+
+        private static void ValidarDadosProduto(Produto produto)
+        {
+            if (string.IsNullOrWhiteSpace(produto.NomeProduto))
+                throw new Exception("O nome do produto é obrigatório.");
+        }
+
+        private static bool PertenceALoja(Produto produto, Guid lojaId) =>
+            produto.LojaId.HasValue && produto.LojaId.Value == lojaId;
     }
 }

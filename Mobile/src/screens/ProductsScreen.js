@@ -1,4 +1,4 @@
-import { FlatList, Alert, ActivityIndicator } from 'react-native';
+import { FlatList, Alert, ActivityIndicator, Pressable } from 'react-native';
 import { useCallback, useState, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { listarProdutosParaFeed, buscarProdutosPorNome } from '../services/productService';
@@ -12,7 +12,7 @@ import {
   formStyles,
 } from '../components/form';
 import { colors } from '../style';
-import { filtrarProdutosPorTermo, nomeProduto } from '../utils/produtoUtils';
+import { filtrarProdutosPorTermo, nomeProduto, produtoPertenceALoja } from '../utils/produtoUtils';
 
 export default function ProductsScreen({ navigation }) {
   const { session } = useAuth();
@@ -133,13 +133,29 @@ export default function ProductsScreen({ navigation }) {
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          renderItem={({ item }) => (
-            <ListCard title={nomeProduto(item)}>
-              <ListCardText>{item.marca}</ListCardText>
-              <ListCardText>{item.descricao}</ListCardText>
-              <ListCardText>{formatarPreco(item.preco)}</ListCardText>
-            </ListCard>
-          )}
+          renderItem={({ item }) => {
+            const editavel = produtoPertenceALoja(item, lojaId);
+
+            return (
+              <Pressable
+                disabled={!editavel}
+                onPress={() =>
+                  navigation.navigate('EditProduct', { productId: item.id })
+                }
+              >
+                <ListCard title={nomeProduto(item)}>
+                  <ListCardText>{item.marca}</ListCardText>
+                  <ListCardText>{item.descricao}</ListCardText>
+                  <ListCardText>{formatarPreco(item.preco)}</ListCardText>
+                  {editavel ? (
+                    <ListCardText style={{ marginTop: 4, color: colors.primary }}>
+                      Toque para editar
+                    </ListCardText>
+                  ) : null}
+                </ListCard>
+              </Pressable>
+            );
+          }}
           ListEmptyComponent={
             <ListCardText>
               {termoBusca.trim()

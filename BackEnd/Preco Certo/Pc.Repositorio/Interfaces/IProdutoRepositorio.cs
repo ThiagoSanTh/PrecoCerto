@@ -6,5 +6,7 @@ namespace Pc.Repositorio.Interfaces
     {
         Task<List<Produto>> BuscarPorNomeAsync(string nome, Guid? lojaId = null);
         Task<List<Produto>> ListarPorLojaAsync(Guid? lojaId = null);
+        Task<bool> AtualizarCamposAsync(Produto produto);
+        Task<bool> RemoverPorIdAsync(Guid id);
     }
 }

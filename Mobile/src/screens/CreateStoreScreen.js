@@ -5,6 +5,7 @@ import { atualizarLojista } from '../services/lojistaService';
 import { useAuth } from '../context/AuthContext';
 import { buscarEnderecoPorCep, geocodificarEndereco } from '../services/enderecoService';
 import { obterLocalizacaoAtual } from '../services/locationService';
+import StoreLocationMapView from '../components/StoreLocationMapView';
 import {
   FormScreen,
   FormField,
@@ -310,8 +311,8 @@ export default function CreateStoreScreen({ navigation }) {
       {step === 2 && (
         <View style={formStyles.section}>
           <Text style={formStyles.sectionHint}>
-            Opcional: ajuda clientes a encontrar sua loja no mapa. Se pular, tentamos pelo endereço
-            ao salvar.
+            Toque no mapa ou arraste o pin para marcar onde a loja fica. Também pode usar o endereço
+            ou o GPS.
           </Text>
           <View style={formStyles.summaryCard}>
             <Text style={formStyles.summaryTitle}>{nomeFantasia || '—'}</Text>
@@ -323,13 +324,32 @@ export default function CreateStoreScreen({ navigation }) {
               {cidade}/{estado} · CEP {cep}
             </Text>
           </View>
+
+          {loadingCoords ? (
+            <ActivityIndicator
+              color={colors.primary}
+              style={{ marginVertical: 12 }}
+            />
+          ) : null}
+
+          <StoreLocationMapView
+            latitude={latitude}
+            longitude={longitude}
+            titulo={nomeFantasia || 'Sua loja'}
+            onCoordsChange={({ latitude: lat, longitude: lng }) => {
+              setLatitude(lat);
+              setLongitude(lng);
+            }}
+            style={{ marginBottom: 12 }}
+          />
+
           <Text style={[formStyles.sectionHint, { color: colors.primaryDark, marginBottom: 12 }]}>
             {coordsOk
               ? `Coordenadas: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
-              : 'Coordenadas ainda não definidas'}
+              : 'Toque no mapa para definir a localização'}
           </Text>
           <SecondaryButton
-            label="Buscar pelo endereço"
+            label="Centralizar pelo endereço"
             onPress={handleGeocodificar}
             disabled={loadingCoords}
           />

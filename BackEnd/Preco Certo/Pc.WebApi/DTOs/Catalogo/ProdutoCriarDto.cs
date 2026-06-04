@@ -8,5 +8,6 @@ namespace Pc.WebApi.DTOs.Catalogo
         public string CodigoBarras { get; set; } = string.Empty;
         public decimal Preco { get; set; }
         public Guid? LojaId { get; set; }
+        public string? ImagemUrl { get; set; }
     }
 }

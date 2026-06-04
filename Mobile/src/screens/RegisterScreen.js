@@ -1,4 +1,4 @@
-import { Alert } from 'react-native';
+import { Alert, Text } from 'react-native';
 import { useState } from 'react';
 import { registrarCliente } from '../services/clienteService';
 import { registrarLojista } from '../services/lojistaService';

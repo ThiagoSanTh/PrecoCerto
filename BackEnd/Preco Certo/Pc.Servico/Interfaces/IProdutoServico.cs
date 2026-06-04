@@ -10,5 +10,11 @@ namespace Pc.Servico.Interfaces
         Task<List<Produto>> BuscarPorNomeAsync(string nome, Guid? lojaId = null);
         Task AtualizarAsync(Produto produto);
         Task RemoverAsync(Guid id);
+
+        /// <summary>Atualiza produto somente se pertencer à loja informada.</summary>
+        Task AtualizarPorLojaAsync(Guid id, Produto dados, Guid lojaId);
+
+        /// <summary>Remove produto somente se pertencer à loja informada.</summary>
+        Task RemoverPorLojaAsync(Guid id, Guid lojaId);
     }
 }

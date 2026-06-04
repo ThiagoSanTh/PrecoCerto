@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Pc.Dominio.Entities.Catalogo;
+using Pc.Servico.Excecoes;
 using Pc.Servico.Interfaces;
 using Pc.WebApi.DTOs.Catalogo;
+using Pc.WebApi.Mappings;
 
 namespace Pc.WebApi.Controllers
 {
@@ -20,7 +22,7 @@ namespace Pc.WebApi.Controllers
         public async Task<IActionResult> Listar([FromQuery] Guid? lojaId)
         {
             var produtos = await _produtoServico.ListarProdutosAsync(lojaId);
-            return Ok(produtos.Select(MapearResposta));
+            return Ok(produtos.Select(ProdutoMapper.ParaRespostaDto));
         }
 
         [HttpGet("{id:guid}")]
@@ -31,14 +33,14 @@ namespace Pc.WebApi.Controllers
             if (produto is null)
                 return NotFound("Produto não encontrado.");
 
-            return Ok(MapearResposta(produto));
+            return Ok(ProdutoMapper.ParaRespostaDto(produto));
         }
 
         [HttpPost("Buscar")]
         public async Task<IActionResult> BuscarPorNome([FromBody] ProdutoBuscarDto dto)
         {
             var produtos = await _produtoServico.BuscarPorNomeAsync(dto.Nome, dto.LojaId);
-            return Ok(produtos.Select(MapearResposta));
+            return Ok(produtos.Select(ProdutoMapper.ParaRespostaDto));
         }
 
         [HttpPost]
@@ -51,57 +53,65 @@ namespace Pc.WebApi.Controllers
                 Marca = dto.Marca,
                 CodigoBarras = dto.CodigoBarras,
                 Preco = dto.Preco,
-                LojaId = dto.LojaId
+                LojaId = dto.LojaId,
+                ImagemUrl = dto.ImagemUrl
             };
 
             var novoProduto = await _produtoServico.AdicionarAsync(produto);
-            return CreatedAtAction(nameof(ObterPorId), new { id = novoProduto.Id }, MapearResposta(novoProduto));
+            var recarregado = await _produtoServico.ObterPorIdAsync(novoProduto.Id);
+            return CreatedAtAction(
+                nameof(ObterPorId),
+                new { id = novoProduto.Id },
+                ProdutoMapper.ParaRespostaDto(recarregado ?? novoProduto));
         }
 
+        /// <summary>PUT /api/Produtos/{id} — atualiza produto (somente loja dona).</summary>
         [HttpPut("{id:guid}")]
-        public async Task<IActionResult> Atualizar(Guid id, [FromBody] ProdutoCriarDto dto)
+        public async Task<IActionResult> Atualizar(Guid id, [FromBody] ProdutoAtualizarDto dto)
         {
-            var produtoExistente = await _produtoServico.ObterPorIdAsync(id);
+            try
+            {
+                var dados = new Produto
+                {
+                    NomeProduto = dto.NomeProduto,
+                    Descricao = dto.Descricao,
+                    Marca = dto.Marca,
+                    CodigoBarras = dto.CodigoBarras,
+                    Preco = dto.Preco,
+                    ImagemUrl = dto.ImagemUrl
+                };
 
-            if (produtoExistente is null)
-                return NotFound("Produto não encontrado.");
-
-            produtoExistente.NomeProduto = dto.NomeProduto;
-            produtoExistente.Descricao = dto.Descricao;
-            produtoExistente.Marca = dto.Marca;
-            produtoExistente.CodigoBarras = dto.CodigoBarras;
-            produtoExistente.Preco = dto.Preco;
-            if (dto.LojaId.HasValue)
-                produtoExistente.LojaId = dto.LojaId;
-
-            await _produtoServico.AtualizarAsync(produtoExistente);
-
-            return NoContent();
+                await _produtoServico.AtualizarPorLojaAsync(id, dados, dto.LojaId);
+                return NoContent();
+            }
+            catch (ProdutoOperacaoException ex) when (ex.AcessoNegado)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, ex.Message);
+            }
+            catch (ProdutoOperacaoException ex)
+            {
+                return NotFound(ex.Message);
+            }
         }
 
+        /// <summary>DELETE /api/Produtos/{id}?lojaId=... — exclui produto (somente loja dona).</summary>
         [HttpDelete("{id:guid}")]
-        public async Task<IActionResult> Deletar(Guid id)
+        public async Task<IActionResult> Deletar(Guid id, [FromQuery] Guid lojaId)
         {
-            var produtoExistente = await _produtoServico.ObterPorIdAsync(id);
-
-            if (produtoExistente is null)
-                return NotFound("Produto não encontrado.");
-
-            await _produtoServico.RemoverAsync(id);
-
-            return NoContent();
+            try
+            {
+                await _produtoServico.RemoverPorLojaAsync(id, lojaId);
+                return NoContent();
+            }
+            catch (ProdutoOperacaoException ex) when (ex.AcessoNegado)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, ex.Message);
+            }
+            catch (ProdutoOperacaoException ex)
+            {
+                return NotFound(ex.Message);
+            }
         }
-
-        private static ProdutoRespostaDto MapearResposta(Produto p) => new()
-        {
-            Id = p.Id,
-            Nome = p.NomeProduto,
-            Descricao = p.Descricao,
-            Marca = p.Marca ?? string.Empty,
-            CodigoBarras = p.CodigoBarras ?? string.Empty,
-            Preco = p.Preco,
-            LojaId = p.LojaId
-        };
     }
 }
 
