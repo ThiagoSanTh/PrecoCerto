@@ -1,6 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Pc.Dominio.Entities.Catalogo;
 using Pc.Servico.Interfaces;
+using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs;
 
 namespace Pc.WebApi.Controllers
@@ -16,6 +19,7 @@ namespace Pc.WebApi.Controllers
             _produtoServico = produtoServico;
         }
 
+        [AllowAnonymous]
         [HttpGet]
         public async Task<IActionResult> Listar()
         {
@@ -34,7 +38,8 @@ namespace Pc.WebApi.Controllers
             return Ok(resposta);
         }
 
-        [HttpGet("{id}")]
+        [AllowAnonymous]
+        [HttpGet("{id:guid}")]
         public async Task<IActionResult> ObterPorId(Guid id)
         {
             var produto = await _produtoServico.ObterPorIdAsync(id);
@@ -55,10 +60,15 @@ namespace Pc.WebApi.Controllers
             return Ok(resposta);
         }
 
+        [AllowAnonymous]
+        [EnableRateLimiting("busca")]
         [HttpPost("Buscar")]
-        public async Task<IActionResult> BuscarPorNome([FromBody] string nome)
+        public async Task<IActionResult> BuscarPorNome([FromBody] ProdutoBuscarDto dto)
         {
-            var produtos = await _produtoServico.BuscarPorNomeAsync(nome);
+            if (!ModelState.IsValid)
+                return ValidationProblem(ModelState);
+
+            var produtos = await _produtoServico.BuscarPorNomeAsync(dto.Nome);
 
             var resposta = produtos.Select(p => new ProdutoRespostaDto
             {
@@ -73,9 +83,13 @@ namespace Pc.WebApi.Controllers
             return Ok(resposta);
         }
 
+        [Authorize(Policy = PoliticasAutorizacao.LojistaOuAdmin)]
         [HttpPost]
         public async Task<IActionResult> Adicionar([FromBody] ProdutoCriarDto dto)
         {
+            if (!ModelState.IsValid)
+                return ValidationProblem(ModelState);
+
             var produto = new Produto
             {
                 NomeProduto = dto.NomeProduto,
@@ -100,9 +114,13 @@ namespace Pc.WebApi.Controllers
             return CreatedAtAction(nameof(ObterPorId), new { id = resposta.Id }, resposta);
         }
 
-        [HttpPut("{id}")]
+        [Authorize(Policy = PoliticasAutorizacao.LojistaOuAdmin)]
+        [HttpPut("{id:guid}")]
         public async Task<IActionResult> Atualizar(Guid id, [FromBody] ProdutoCriarDto dto)
         {
+            if (!ModelState.IsValid)
+                return ValidationProblem(ModelState);
+
             var produtoExistente = await _produtoServico.ObterPorIdAsync(id);
 
             if (produtoExistente is null)
@@ -119,7 +137,8 @@ namespace Pc.WebApi.Controllers
             return NoContent();
         }
 
-        [HttpDelete("{id}")]
+        [Authorize(Policy = PoliticasAutorizacao.LojistaOuAdmin)]
+        [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Deletar(Guid id)
         {
             var produtoExistente = await _produtoServico.ObterPorIdAsync(id);

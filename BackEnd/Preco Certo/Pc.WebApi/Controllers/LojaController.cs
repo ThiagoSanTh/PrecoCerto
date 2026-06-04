@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Pc.Dominio.Entities.Estabelecimentos;
 using Pc.Servico.Interfaces;
+using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs;
 
 namespace Pc.WebApi.Controllers
@@ -16,6 +18,7 @@ namespace Pc.WebApi.Controllers
             _lojaServico = lojaServico;
         }
 
+        [AllowAnonymous]
         [HttpGet("Listar")]
         public async Task<IActionResult> Listar()
         {
@@ -43,6 +46,7 @@ namespace Pc.WebApi.Controllers
             });
             return Ok(resposta);
         }
+        [AllowAnonymous]
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> ObterPorId(Guid id)
         {
@@ -72,6 +76,7 @@ namespace Pc.WebApi.Controllers
             };
             return Ok(resposta);
         }
+        [AllowAnonymous]
         [HttpPost("Buscar")]
         public async Task<IActionResult> BuscarPorNome([FromBody] string nome)
         {
@@ -98,6 +103,7 @@ namespace Pc.WebApi.Controllers
             });
             return Ok(resposta);
         }
+        [Authorize(Policy = PoliticasAutorizacao.LojistaOuAdmin)]
         [HttpPost]
         public async Task<IActionResult> Adicionar([FromBody] LojaCriarDto lojaDto)
 
@@ -133,7 +139,8 @@ namespace Pc.WebApi.Controllers
             };
             return CreatedAtAction(nameof(ObterPorId), new { id = resposta.Id }, resposta);
         }
-        [HttpPost("{id}")]
+        [Authorize(Policy = PoliticasAutorizacao.LojistaOuAdmin)]
+        [HttpPost("{id:guid}")]
         public async Task<IActionResult> Atualizar(Guid id, [FromBody] LojaCriarDto lojaDto)
         {
             var lojaExistente = await _lojaServico.ObterLojaPorIdAsync(id);
@@ -152,7 +159,8 @@ namespace Pc.WebApi.Controllers
             await _lojaServico.AtualizarLojaAsync(lojaExistente);
             return NoContent();
         }
-        [HttpDelete("{id}")]
+        [Authorize(Policy = PoliticasAutorizacao.LojistaOuAdmin)]
+        [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Remover(Guid id)
         {
             var lojaExistente = await _lojaServico.ObterLojaPorIdAsync(id);

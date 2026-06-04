@@ -1,13 +1,110 @@
-# Visual Studio
+﻿# =============================================================================
+# PrecoCerto ÔÇö n├úo commitar secrets, builds, deps ou configs locais
+# =============================================================================
+
+# --- Secrets e vari├íveis de ambiente -----------------------------------------
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# ASP.NET ÔÇö configs com credenciais reais (manter apenas *Exemplo* / templates)
+**/Pc.WebApi/appsettings.json
+**/Pc.WebApi/appsettings.Development.json
+**/Pc.WebApi/appsettings.*.local.json
+**/secrets.json
+
+# Chaves e certificados
+*.pem
+*.key
+*.pfx
+*.p12
+*.jks
+credentials.json
+serviceAccount*.json
+
+# --- .NET / Visual Studio ----------------------------------------------------
 .vs/
 bin/
 obj/
-/BackEnd/Pc.WebApi/appsettings.json
-*/BackEnd/Pc.WebApi/appsettings.json
-
-# User-specific files
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
 *.user
-*.suo
 *.userosscache
+*.suo
 *.sln.docstates
-**/BackEnd/Pc.WebApi/appsettings.json
+*.rsuser
+project.lock.json
+project.fragment.lock.json
+artifacts/
+*.nupkg
+*.snupkg
+TestResults/
+*.DotSettings.user
+
+# --- Node / Expo / React Native ----------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+.expo/
+.expo-shared/
+dist/
+web-build/
+.metro-health-check*
+*.tsbuildinfo
+
+# Expo / RN caches locais
+.expo/
+.expo-shared/
+android/app/build/
+android/.gradle/
+android/local.properties
+ios/Pods/
+ios/build/
+*.hprof
+
+# --- IDEs e editores ---------------------------------------------------------
+.idea/
+*.swp
+*.swo
+*~
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+
+# --- Sistema operacional -----------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# --- Logs, temp, dumps -------------------------------------------------------
+*.log
+*.tmp
+*.temp
+*.cache
+*.bak
+*.orig
+
+# --- Supabase / Docker local (se usar no futuro) -------------------------------
+.supabase/
+docker-compose.override.yml
+
+# --- Cursor / ferramentas locais (opcional ÔÇö evita ru├¡do em PRs) -------------
+.cursor/plans/

@@ -1,26 +1,21 @@
 import { View, Text, TextInput, Pressable, Alert } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useState } from 'react';
-import { styles } from '../style';  
+import { styles } from '../style';
 
-export default function ForgotPasswordScreen({navigation}) {
+export default function ForgotPasswordScreen({ navigation }) {
   const [email, setEmail] = useState('');
 
-  async function handleRecover() {
-    const data = await AsyncStorage.getItem('@user');
-
-    if (!data) {
-      Alert.alert('Erro', 'Nenhum usuário cadastrado');
+  function handleRecover() {
+    if (!email.trim()) {
+      Alert.alert('Erro', 'Informe o e-mail da conta');
       return;
     }
 
-    const user = JSON.parse(data);
-
-    if (user.email === email) {
-      Alert.alert('Senha encontrada', `Sua senha é: ${user.senha}`);
-    } else {
-      Alert.alert('Erro', 'Email não encontrado');
-    }
+    Alert.alert(
+      'Recuperação de senha',
+      'Por segurança, a senha não pode ser exibida no app. Entre em contato com o suporte ou, se já estiver logado, altere a senha nas configurações da conta.',
+      [{ text: 'OK', onPress: () => navigation.goBack() }]
+    );
   }
 
   return (
@@ -30,11 +25,14 @@ export default function ForgotPasswordScreen({navigation}) {
       <TextInput
         style={styles.formInput}
         placeholder="Digite seu email"
+        autoCapitalize="none"
+        keyboardType="email-address"
+        value={email}
         onChangeText={setEmail}
       />
 
       <Pressable style={styles.formButton} onPress={handleRecover}>
-        <Text style={styles.textButton}>Recuperar</Text>
+        <Text style={styles.textButton}>Continuar</Text>
       </Pressable>
 
       <Pressable style={styles.formButton} onPress={() => navigation.goBack()}>

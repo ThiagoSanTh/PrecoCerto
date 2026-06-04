@@ -2,8 +2,10 @@ import { View, Text, TextInput, Pressable, Alert } from 'react-native';
 import { styles } from '../style';
 import { useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../context/AuthContext';
 
 export default function CreateStoreScreen({ navigation }) {
+  const { session } = useAuth();
   const [nomeFantasia, setNomeFantasia] = useState('');
   const [cnpj, setCnpj] = useState('');
   const [telefone, setTelefone] = useState('');
@@ -16,16 +18,13 @@ export default function CreateStoreScreen({ navigation }) {
       return;
     }
   
-    // 🔐 pega usuário logado
-    const loggedData = await AsyncStorage.getItem('@loggedUser');
-    const loggedUser = JSON.parse(loggedData);
-  
-    if (!loggedUser) {
-      Alert.alert('Erro', 'Usuário não encontrado');
+    const userEmail = session?.perfil?.email;
+
+    if (!userEmail) {
+      Alert.alert('Erro', 'Usuário não autenticado');
       return;
     }
-  
-    // 🏪 cria loja vinculada ao usuário
+
     const newStore = {
       id: Date.now().toString(),
       nomeFantasia,
@@ -33,7 +32,7 @@ export default function CreateStoreScreen({ navigation }) {
       telefone,
       email,
       descricao,
-      userEmail: loggedUser.email // 🔥 vínculo aqui
+      userEmail,
     };
   
     // 💾 salva normalmente

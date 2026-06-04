@@ -1,5 +1,10 @@
+import { AuthProvider } from './src/context/AuthContext';
 import Routes from './src/navigation';
 
-export default function App({ navigation }) {
-  return <Routes />;
+export default function App() {
+  return (
+    <AuthProvider>
+      <Routes />
+    </AuthProvider>
+  );
 }

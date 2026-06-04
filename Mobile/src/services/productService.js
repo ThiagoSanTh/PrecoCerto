@@ -6,7 +6,7 @@ export async function listarProdutos() {
 }
 
 export async function buscarProdutosPorNome(nome) {
-  const response = await api.post('/Produtos/buscar', JSON.stringify(nome));
+  const response = await api.post('/Produtos/Buscar', { nome });
   return response.data;
 }
 
