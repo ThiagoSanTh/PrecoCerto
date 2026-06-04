@@ -1,17 +1,15 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pc.Dominio.Entities.Interacoes;
 using Pc.Servico.Interfaces;
+using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Interacoes;
 
 namespace Pc.WebApi.Controllers
 {
-    /// <summary>
-    /// Controller para operações com Histórico de Pesquisa
-    /// Endpoints para registrar, listar e gerenciar histórico de buscas
-    /// Rota base: /api/historicopesquisa
-    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Policy = PoliticasAutorizacao.QualquerAutenticado)]
     public class HistoricoPesquisaController : ControllerBase
     {
         private readonly IHistoricoPesquisaServico _historicoPesquisaServico;

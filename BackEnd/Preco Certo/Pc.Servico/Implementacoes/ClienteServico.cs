@@ -12,10 +12,12 @@ namespace Pc.Servico.Implementacoes
     public class ClienteServico : IClienteServico
     {
         private readonly IClienteRepositorio _clienteRepositorio;
+        private readonly ISenhaServico _senhaServico;
 
-        public ClienteServico(IClienteRepositorio clienteRepositorio)
+        public ClienteServico(IClienteRepositorio clienteRepositorio, ISenhaServico senhaServico)
         {
             _clienteRepositorio = clienteRepositorio;
+            _senhaServico = senhaServico;
         }
 
         /// <summary>
@@ -37,6 +39,7 @@ namespace Pc.Servico.Implementacoes
             if (clientes.Exists(c => c.Email.ToLower() == cliente.Email.ToLower()))
                 throw new Exception("Email já registrado.");
 
+            cliente.SenhaHash = _senhaServico.Hash(cliente.SenhaHash);
             cliente.Ativo = true;
             cliente.DataCriacao = DateTime.UtcNow;
             cliente.Tipo = Pc.Dominio.Enums.TipoUsuario.Cliente;
@@ -56,8 +59,11 @@ namespace Pc.Servico.Implementacoes
 
             var cliente = await _clienteRepositorio.ObterPorEmailAsync(email);
 
-            if (cliente == null || cliente.SenhaHash != senha) // TODO: bcrypt
+            if (cliente == null || !_senhaServico.Verificar(senha, cliente.SenhaHash))
                 return null;
+
+            if (!cliente.SenhaHash.StartsWith("$2"))
+                cliente.SenhaHash = _senhaServico.Hash(senha);
 
             cliente.UltimoLogin = DateTime.UtcNow;
             await _clienteRepositorio.AtualizarAsync(cliente);
@@ -146,10 +152,10 @@ namespace Pc.Servico.Implementacoes
             if (cliente == null)
                 throw new Exception("Cliente não encontrado.");
 
-            if (cliente.SenhaHash != senhaAtual) // TODO: bcrypt
+            if (!_senhaServico.Verificar(senhaAtual, cliente.SenhaHash))
                 throw new Exception("Senha atual incorreta.");
 
-            cliente.SenhaHash = novaSenha;
+            cliente.SenhaHash = _senhaServico.Hash(novaSenha);
             await _clienteRepositorio.AtualizarAsync(cliente);
         }
 

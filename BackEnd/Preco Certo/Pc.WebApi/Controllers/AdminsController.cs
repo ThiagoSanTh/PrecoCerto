@@ -1,35 +1,30 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Pc.Dominio.Entities.Usuarios;
+using Pc.Dominio.Enums;
 using Pc.Servico.Interfaces;
+using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Comum;
 using Pc.WebApi.DTOs.Usuarios;
 
 namespace Pc.WebApi.Controllers
 {
-    /// <summary>
-    /// Controller para operações com Administradores
-    /// Endpoints para autenticação, gerenciar permissões e acesso do sistema
-    /// Rota base: /api/admins
-    /// Consolidado - sem intermediário Usuario
-    /// NOTA: Apenas superadmins podem criar/gerenciar outros admins
-    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class AdminsController : ControllerBase
     {
         private readonly IAdminServico _adminServico;
+        private readonly IJwtTokenServico _jwtTokenServico;
 
-        public AdminsController(IAdminServico adminServico)
+        public AdminsController(IAdminServico adminServico, IJwtTokenServico jwtTokenServico)
         {
             _adminServico = adminServico;
+            _jwtTokenServico = jwtTokenServico;
         }
 
-        /// <summary>
-        /// POST: /api/admins/registrar
-        /// Registra um novo administrador (apenas superadmins)
-        /// Body: AdminCriarDto
-        /// TODO: Implementar verificação de permissão de superadmin
-        /// </summary>
+        [Authorize(Policy = PoliticasAutorizacao.Admin)]
         [HttpPost("registrar")]
         public async Task<IActionResult> Registrar([FromBody] AdminCriarDto dto)
         {
@@ -37,7 +32,7 @@ namespace Pc.WebApi.Controllers
             {
                 NomeUsuario = dto.NomeUsuario,
                 Email = dto.Email,
-                SenhaHash = dto.Senha, // TODO: Hash com bcrypt
+                SenhaHash = dto.Senha,
                 Telefone = dto.Telefone,
                 NivelAcesso = dto.NivelAcesso
             };
@@ -61,20 +56,20 @@ namespace Pc.WebApi.Controllers
             return CreatedAtAction(nameof(ObterPorId), new { id = resposta.Id }, resposta);
         }
 
-        /// <summary>
-        /// POST: /api/admins/login
-        /// Valida credenciais de login
-        /// Body: { "email": "admin@email.com", "senha": "123456" }
-        /// </summary>
+        [AllowAnonymous]
+        [EnableRateLimiting("login")]
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
+            if (!ModelState.IsValid)
+                return ValidationProblem(ModelState);
+
             var admin = await _adminServico.ValidarLoginAsync(dto.Email, dto.Senha);
 
             if (admin == null)
                 return Unauthorized("Email ou senha incorretos.");
 
-            var resposta = new AdminRespostaDto
+            var perfil = new AdminRespostaDto
             {
                 Id = admin.Id,
                 NomeUsuario = admin.NomeUsuario,
@@ -88,7 +83,14 @@ namespace Pc.WebApi.Controllers
                 DataCriacao = admin.DataCriacao
             };
 
-            return Ok(resposta);
+            var token = _jwtTokenServico.GerarToken(admin.Id, admin.Email, TipoUsuario.Admin);
+
+            return Ok(new LoginRespostaDto<AdminRespostaDto>
+            {
+                Token = token,
+                Tipo = "admin",
+                Perfil = perfil,
+            });
         }
 
         /// <summary>

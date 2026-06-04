@@ -12,10 +12,12 @@ namespace Pc.Servico.Implementacoes
     public class LojistaServico : ILojistaServico
     {
         private readonly ILojistaRepositorio _lojistaRepositorio;
+        private readonly ISenhaServico _senhaServico;
 
-        public LojistaServico(ILojistaRepositorio lojistaRepositorio)
+        public LojistaServico(ILojistaRepositorio lojistaRepositorio, ISenhaServico senhaServico)
         {
             _lojistaRepositorio = lojistaRepositorio;
+            _senhaServico = senhaServico;
         }
 
         /// <summary>
@@ -37,6 +39,7 @@ namespace Pc.Servico.Implementacoes
             if (lojistas.Exists(l => l.Email.ToLower() == lojista.Email.ToLower()))
                 throw new Exception("Email já registrado.");
 
+            lojista.SenhaHash = _senhaServico.Hash(lojista.SenhaHash);
             lojista.Ativo = true;
             lojista.DataCriacao = DateTime.UtcNow;
             lojista.Tipo = Pc.Dominio.Enums.TipoUsuario.Lojista;
@@ -56,8 +59,11 @@ namespace Pc.Servico.Implementacoes
 
             var lojista = await _lojistaRepositorio.ObterPorEmailAsync(email);
 
-            if (lojista == null || lojista.SenhaHash != senha) // TODO: bcrypt
+            if (lojista == null || !_senhaServico.Verificar(senha, lojista.SenhaHash))
                 return null;
+
+            if (!lojista.SenhaHash.StartsWith("$2"))
+                lojista.SenhaHash = _senhaServico.Hash(senha);
 
             lojista.UltimoLogin = DateTime.UtcNow;
             await _lojistaRepositorio.AtualizarAsync(lojista);
@@ -127,10 +133,10 @@ namespace Pc.Servico.Implementacoes
             if (lojista == null)
                 throw new Exception("Lojista não encontrado.");
 
-            if (lojista.SenhaHash != senhaAtual) // TODO: bcrypt
+            if (!_senhaServico.Verificar(senhaAtual, lojista.SenhaHash))
                 throw new Exception("Senha atual incorreta.");
 
-            lojista.SenhaHash = novaSenha;
+            lojista.SenhaHash = _senhaServico.Hash(novaSenha);
             await _lojistaRepositorio.AtualizarAsync(lojista);
         }
 
