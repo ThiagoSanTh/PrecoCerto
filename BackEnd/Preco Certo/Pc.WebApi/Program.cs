@@ -42,26 +42,25 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AppPolicy", policy =>
     {
-        var cors = policy.AllowAnyHeader().AllowAnyMethod();
-
-        if (builder.Environment.IsDevelopment())
-        {
-            cors.SetIsOriginAllowed(origin =>
+        policy
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .SetIsOriginAllowed(origin =>
             {
                 if (string.IsNullOrWhiteSpace(origin)) return false;
                 if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri)) return false;
 
-                if (uri.Host is "localhost" or "127.0.0.1") return true;
-                if (uri.Host.StartsWith("192.168.") || uri.Host.StartsWith("10.")) return true;
-                if (uri.Host.StartsWith("172.")) return true;
+                if (builder.Environment.IsDevelopment())
+                {
+                    if (uri.Host is "localhost" or "127.0.0.1") return true;
+                    if (uri.Host.StartsWith("192.168.") || uri.Host.StartsWith("10.")) return true;
+                    if (uri.Host.StartsWith("172.")) return true;
+                }
+
+                if (uri.Host.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase)) return true;
 
                 return corsOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase);
             });
-        }
-        else
-        {
-            cors.WithOrigins(corsOrigins);
-        }
     });
 });
 
@@ -154,8 +153,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseRateLimiter();
 app.UseCors("AppPolicy");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
