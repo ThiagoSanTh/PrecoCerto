@@ -1,4 +1,4 @@
-const CACHE_NAME = 'preco-certo-v1';
+const CACHE_NAME = 'preco-certo-v2';
 const SHELL_ASSETS = ['/', '/index.html', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
@@ -24,6 +24,12 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
 
   if (url.pathname.includes('/api/') || url.hostname !== self.location.hostname) {
+    return;
+  }
+
+  // Bundles JS: sempre buscar na rede (evita API URL antiga em cache após redeploy).
+  if (url.pathname.startsWith('/_expo/')) {
+    event.respondWith(fetch(request));
     return;
   }
 
