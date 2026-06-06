@@ -36,18 +36,25 @@ namespace Pc.WebApi.Controllers
         [EnableRateLimiting("login")]
         public async Task<IActionResult> Login([FromBody] AuthLoginDto dto)
         {
-            if (!ModelState.IsValid)
-                return ValidationProblem(ModelState);
-
-            var tipo = dto.Tipo.Trim().ToLowerInvariant();
-
-            return tipo switch
+            try
             {
-                "cliente" => await LoginClienteAsync(dto),
-                "lojista" => await LoginLojistaAsync(dto),
-                "admin" => await LoginAdminAsync(dto),
-                _ => BadRequest("Tipo inválido. Use: cliente, lojista ou admin.")
-            };
+                if (!ModelState.IsValid)
+                    return ValidationProblem(ModelState);
+
+                var tipo = (dto.Tipo ?? "cliente").Trim().ToLowerInvariant();
+
+                return tipo switch
+                {
+                    "cliente" => await LoginClienteAsync(dto),
+                    "lojista" => await LoginLojistaAsync(dto),
+                    "admin" => await LoginAdminAsync(dto),
+                    _ => BadRequest("Tipo inválido. Use: cliente, lojista ou admin.")
+                };
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Erro ao processar login.", detail = ex.Message });
+            }
         }
 
         private async Task<IActionResult> LoginClienteAsync(AuthLoginDto dto)
