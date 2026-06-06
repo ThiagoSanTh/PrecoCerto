@@ -16,10 +16,11 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
 ENV ASPNETCORE_ENVIRONMENT=Production
-ENV ASPNETCORE_URLS=http://0.0.0.0:8080
+
+COPY --from=build /app/publish .
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 EXPOSE 8080
 
-COPY --from=build /app/publish .
-
-ENTRYPOINT ["dotnet", "Pc.WebApi.dll"]
+ENTRYPOINT ["/app/entrypoint.sh"]
