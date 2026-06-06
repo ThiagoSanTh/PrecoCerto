@@ -62,9 +62,16 @@ namespace Pc.Servico.Implementacoes
             if (cliente == null || !await VerificarSenhaAsync(cliente, senha))
                 return null;
 
-            var ultimoLogin = DateTime.UtcNow;
-            await _clienteRepositorio.AtualizarUltimoLoginAsync(cliente.Id, ultimoLogin);
-            cliente.UltimoLogin = ultimoLogin;
+            try
+            {
+                var ultimoLogin = DateTime.UtcNow;
+                await _clienteRepositorio.AtualizarUltimoLoginAsync(cliente.Id, ultimoLogin);
+                cliente.UltimoLogin = ultimoLogin;
+            }
+            catch
+            {
+                // Não impede login se atualização de UltimoLogin falhar
+            }
 
             return cliente;
         }

@@ -12,8 +12,15 @@ namespace Pc.Servico.Implementacoes
             if (string.IsNullOrEmpty(storedHash))
                 return false;
 
-            if (IsBcryptHash(storedHash))
-                return BCrypt.Net.BCrypt.Verify(password, storedHash);
+            try
+            {
+                if (IsBcryptHash(storedHash))
+                    return BCrypt.Net.BCrypt.Verify(password, storedHash);
+            }
+            catch
+            {
+                return false;
+            }
 
             return false;
         }

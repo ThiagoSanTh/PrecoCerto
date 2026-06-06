@@ -19,6 +19,13 @@ if (builder.Environment.IsDevelopment())
     builder.WebHost.UseUrls("http://0.0.0.0:5132");
 }
 
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(connectionString) && !builder.Environment.IsDevelopment())
+{
+    throw new InvalidOperationException(
+        "Configure ConnectionStrings__DefaultConnection nas variáveis de ambiente (Railway/Render).");
+}
+
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
