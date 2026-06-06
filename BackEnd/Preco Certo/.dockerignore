@@ -1,0 +1,8 @@
+# Build context: BackEnd/Preco Certo
+**/bin/
+**/obj/
+**/.vs/
+**/*.user
+**/appsettings.json
+**/appsettings.Development.json
+**/appsettings.*.local.json
