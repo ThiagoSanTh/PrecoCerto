@@ -1,7 +1,7 @@
 import { Alert, Text } from 'react-native';
 import { useState } from 'react';
-import { registrarCliente, loginCliente } from '../services/clienteService';
-import { registrarLojista, loginLojista } from '../services/lojistaService';
+import { registrarCliente } from '../services/clienteService';
+import { registrarLojista } from '../services/lojistaService';
 import { obterLocalizacaoAtual } from '../services/locationService';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -51,7 +51,7 @@ export default function RegisterScreen({ navigation, route }) {
           );
         }
 
-        await registrarCliente({
+        const perfil = await registrarCliente({
           nomeUsuario: nomeUsuario.trim(),
           email: email.trim(),
           senha,
@@ -60,13 +60,13 @@ export default function RegisterScreen({ navigation, route }) {
           longitudeAtual,
         });
 
-        const { token, perfil } = await loginCliente(email.trim(), senha);
-        await salvarSessao({ tipo: 'cliente', perfil }, 'user', token);
+        await salvarSessao({ tipo: 'cliente', perfil }, 'user');
         Alert.alert('Sucesso', 'Conta de cliente criada!');
+        navigation.replace('Home');
         return;
       }
 
-      await registrarLojista({
+      const perfil = await registrarLojista({
         nomeUsuario: nomeUsuario.trim(),
         email: email.trim(),
         senha,
@@ -74,9 +74,9 @@ export default function RegisterScreen({ navigation, route }) {
         cargo: cargo.trim() || 'Gerente',
       });
 
-      const { token, perfil } = await loginLojista(email.trim(), senha);
-      await salvarSessao({ tipo: 'lojista', perfil }, 'store', token);
+      await salvarSessao({ tipo: 'lojista', perfil }, 'store');
       Alert.alert('Sucesso', 'Conta de lojista criada! Agora cadastre sua loja.');
+      navigation.replace('Home');
     } catch (error) {
       const msg = error.response?.data || error.message || 'Erro ao cadastrar';
       Alert.alert('Erro', String(msg));

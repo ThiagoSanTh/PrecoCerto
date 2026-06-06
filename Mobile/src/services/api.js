@@ -1,16 +1,17 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
-import { obterToken, removerToken } from './tokenStorage';
 
 const LOCALHOST_PC = 'http://localhost:5132/api';
+/** Fallback se EXPO_PUBLIC_API_URL não carregar (ipconfig → Wi-Fi → IPv4). Prefira definir no .env */
+const IP_REDE_LOCAL = 'http://172.20.10.7:5132/api';
 
 const baseURL =
   process.env.EXPO_PUBLIC_API_URL ||
   Platform.select({
     web: LOCALHOST_PC,
-    android: LOCALHOST_PC,
-    ios: LOCALHOST_PC,
-    default: LOCALHOST_PC,
+    android: IP_REDE_LOCAL,
+    ios: IP_REDE_LOCAL,
+    default: IP_REDE_LOCAL,
   });
 
 if (__DEV__) {
@@ -24,23 +25,5 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
-
-api.interceptors.request.use(async (config) => {
-  const token = await obterToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    if (error.response?.status === 401) {
-      await removerToken();
-    }
-    return Promise.reject(error);
-  }
-);
 
 export default api;

@@ -1,16 +1,19 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pc.Dominio.Entities.Interacoes;
 using Pc.Servico.Interfaces;
-using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Comum;
 using Pc.WebApi.DTOs.Interacoes;
 
 namespace Pc.WebApi.Controllers
 {
+    /// <summary>
+    /// Controller para operações com Preferências do Cliente
+    /// Endpoints para gerenciar configurações e preferências do usuário
+    /// Usa padrão chave-valor para máxima flexibilidade
+    /// Rota base: /api/preferenciascliente
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Policy = PoliticasAutorizacao.Cliente)]
     public class PreferenciasClienteController : ControllerBase
     {
         private readonly IPreferenciaClienteServico _preferenciaServico;

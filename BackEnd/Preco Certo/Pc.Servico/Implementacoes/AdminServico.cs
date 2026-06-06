@@ -15,12 +15,10 @@ namespace Pc.Servico.Implementacoes
     public class AdminServico : IAdminServico
     {
         private readonly IAdminRepositorio _adminRepositorio;
-        private readonly ISenhaServico _senhaServico;
 
-        public AdminServico(IAdminRepositorio adminRepositorio, ISenhaServico senhaServico)
+        public AdminServico(IAdminRepositorio adminRepositorio)
         {
             _adminRepositorio = adminRepositorio;
-            _senhaServico = senhaServico;
         }
 
         /// <summary>
@@ -43,7 +41,6 @@ namespace Pc.Servico.Implementacoes
             if (emailExiste.Exists(a => a.Email.ToLower() == admin.Email.ToLower()))
                 throw new Exception("Email já registrado.");
 
-            admin.SenhaHash = _senhaServico.Hash(admin.SenhaHash);
             admin.Ativo = true;
             admin.DataCriacao = DateTime.UtcNow;
             admin.Tipo = Pc.Dominio.Enums.TipoUsuario.Admin;
@@ -63,11 +60,8 @@ namespace Pc.Servico.Implementacoes
 
             var admin = await _adminRepositorio.ObterPorEmailAsync(email);
 
-            if (admin == null || !_senhaServico.Verificar(senha, admin.SenhaHash))
+            if (admin == null || admin.SenhaHash != senha) // TODO: bcrypt
                 return null;
-
-            if (!admin.SenhaHash.StartsWith("$2"))
-                admin.SenhaHash = _senhaServico.Hash(senha);
 
             admin.UltimoLogin = DateTime.UtcNow;
             await _adminRepositorio.AtualizarAsync(admin);
@@ -129,10 +123,10 @@ namespace Pc.Servico.Implementacoes
             if (admin == null)
                 throw new Exception("Admin não encontrado.");
 
-            if (!_senhaServico.Verificar(senhaAtual, admin.SenhaHash))
+            if (admin.SenhaHash != senhaAtual) // TODO: bcrypt
                 throw new Exception("Senha atual incorreta.");
 
-            admin.SenhaHash = _senhaServico.Hash(novaSenha);
+            admin.SenhaHash = novaSenha;
             await _adminRepositorio.AtualizarAsync(admin);
         }
 

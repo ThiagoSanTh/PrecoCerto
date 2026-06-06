@@ -7,11 +7,7 @@ export async function registrarLojista(dados) {
 
 export async function loginLojista(email, senha) {
   const { data } = await api.post('/Lojistas/login', { email, senha });
-  return {
-    token: data.token,
-    perfil: data.perfil,
-    tipo: data.tipo,
-  };
+  return data;
 }
 
 export async function obterLojista(id) {

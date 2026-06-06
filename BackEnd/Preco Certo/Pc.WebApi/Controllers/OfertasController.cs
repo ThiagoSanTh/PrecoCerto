@@ -1,9 +1,7 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Pc.Dominio.Entities.Catalogo;
 using Pc.Dominio.Entities.Estabelecimentos;
 using Pc.Servico.Interfaces;
-using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Estabelecimentos;
 
 namespace Pc.WebApi.Controllers
@@ -19,7 +17,6 @@ namespace Pc.WebApi.Controllers
             _ofertaServico = ofertaServico;
         }
 
-        [AllowAnonymous]
         [HttpGet]
         public async Task<IActionResult> Listar()
         {
@@ -45,7 +42,6 @@ namespace Pc.WebApi.Controllers
             return Ok(resposta);
         }
 
-        [AllowAnonymous]
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> ObterPorId(Guid id)
         {
@@ -74,7 +70,6 @@ namespace Pc.WebApi.Controllers
             return Ok(resposta);
         }
 
-        [AllowAnonymous]
         [HttpGet("produto/{produtoId:guid}")]
         public async Task<IActionResult> ObterPorProduto(Guid produtoId)
         {
@@ -100,7 +95,6 @@ namespace Pc.WebApi.Controllers
             return Ok(resposta);
         }
 
-        [Authorize(Policy = PoliticasAutorizacao.LojistaOuAdmin)]
         [HttpPost]
         public async Task<IActionResult> Adicionar([FromBody] OfertaCriarDto dto)
         {
@@ -136,7 +130,6 @@ namespace Pc.WebApi.Controllers
             return CreatedAtAction(nameof(ObterPorId), new { id = resposta.Id }, resposta);
         }
 
-        [Authorize(Policy = PoliticasAutorizacao.LojistaOuAdmin)]
         [HttpPut("{id:guid}")]
         public async Task<IActionResult> Atualizar(Guid id, [FromBody] OfertaCriarDto dto)
         {
@@ -160,7 +153,6 @@ namespace Pc.WebApi.Controllers
             return NoContent();
         }
 
-        [Authorize(Policy = PoliticasAutorizacao.LojistaOuAdmin)]
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Remover(Guid id)
         {

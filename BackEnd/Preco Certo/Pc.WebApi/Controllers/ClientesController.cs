@@ -1,41 +1,41 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 using Pc.Dominio.Entities.Usuarios;
-using Pc.Dominio.Enums;
 using Pc.Servico.Interfaces;
-using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Comum;
 using Pc.WebApi.DTOs.Usuarios;
 
 namespace Pc.WebApi.Controllers
 {
+    /// <summary>
+    /// Controller para operações com Clientes
+    /// Endpoints para autenticação, gerenciar perfil e localização
+    /// Rota base: /api/clientes
+    /// Consolidado - sem intermediário Usuario
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
     public class ClientesController : ControllerBase
     {
         private readonly IClienteServico _clienteServico;
-        private readonly IJwtTokenServico _jwtTokenServico;
 
-        public ClientesController(IClienteServico clienteServico, IJwtTokenServico jwtTokenServico)
+        public ClientesController(IClienteServico clienteServico)
         {
             _clienteServico = clienteServico;
-            _jwtTokenServico = jwtTokenServico;
         }
 
-        [AllowAnonymous]
+        /// <summary>
+        /// POST: /api/clientes/registrar
+        /// Registra um novo cliente (signup)
+        /// Body: ClienteCriarDto
+        /// </summary>
         [HttpPost("registrar")]
         public async Task<IActionResult> Registrar([FromBody] ClienteCriarDto dto)
         {
-            if (!ModelState.IsValid)
-                return ValidationProblem(ModelState);
-
             var cliente = new Cliente
             {
                 NomeUsuario = dto.NomeUsuario,
                 Email = dto.Email,
-                SenhaHash = dto.Senha,
+                SenhaHash = dto.Senha, // TODO: Hash com bcrypt
                 Telefone = dto.Telefone,
                 LatitudeAtual = dto.LatitudeAtual,
                 LongitudeAtual = dto.LongitudeAtual
@@ -60,45 +60,40 @@ namespace Pc.WebApi.Controllers
             return CreatedAtAction(nameof(ObterPorId), new { id = resposta.Id }, resposta);
         }
 
-        [AllowAnonymous]
-        [EnableRateLimiting("login")]
+        /// <summary>
+        /// POST: /api/clientes/login
+        /// Valida credenciais de login
+        /// Body: { "email": "user@email.com", "senha": "123456" }
+        /// </summary>
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
-            if (!ModelState.IsValid)
-                return ValidationProblem(ModelState);
-
             var cliente = await _clienteServico.ValidarLoginAsync(dto.Email, dto.Senha);
 
             if (cliente == null)
                 return Unauthorized("Email ou senha incorretos.");
 
-            var perfil = MapearResposta(cliente);
-            var token = _jwtTokenServico.GerarToken(cliente.Id, cliente.Email, TipoUsuario.Cliente);
-
-            return Ok(new LoginRespostaDto<ClienteRespostaDto>
+            var resposta = new ClienteRespostaDto
             {
-                Token = token,
-                Tipo = "cliente",
-                Perfil = perfil,
-            });
+                Id = cliente.Id,
+                NomeUsuario = cliente.NomeUsuario,
+                Email = cliente.Email,
+                Telefone = cliente.Telefone,
+                Tipo = (int)cliente.Tipo,
+                UltimoLogin = cliente.UltimoLogin,
+                LatitudeAtual = cliente.LatitudeAtual,
+                LongitudeAtual = cliente.LongitudeAtual,
+                Ativo = cliente.Ativo,
+                DataCriacao = cliente.DataCriacao
+            };
+
+            return Ok(resposta);
         }
 
-        private static ClienteRespostaDto MapearResposta(Cliente cliente) => new()
-        {
-            Id = cliente.Id,
-            NomeUsuario = cliente.NomeUsuario,
-            Email = cliente.Email,
-            Telefone = cliente.Telefone,
-            Tipo = (int)cliente.Tipo,
-            UltimoLogin = cliente.UltimoLogin,
-            LatitudeAtual = cliente.LatitudeAtual,
-            LongitudeAtual = cliente.LongitudeAtual,
-            Ativo = cliente.Ativo,
-            DataCriacao = cliente.DataCriacao,
-        };
-
-        [Authorize(Policy = PoliticasAutorizacao.QualquerAutenticado)]
+        /// <summary>
+        /// GET: /api/clientes/{id}
+        /// Retorna um cliente específico
+        /// </summary>
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> ObterPorId(Guid id)
         {
@@ -107,10 +102,27 @@ namespace Pc.WebApi.Controllers
             if (cliente == null)
                 return NotFound("Cliente não encontrado.");
 
-            return Ok(MapearResposta(cliente));
+            var resposta = new ClienteRespostaDto
+            {
+                Id = cliente.Id,
+                NomeUsuario = cliente.NomeUsuario,
+                Email = cliente.Email,
+                Telefone = cliente.Telefone,
+                Tipo = (int)cliente.Tipo,
+                UltimoLogin = cliente.UltimoLogin,
+                LatitudeAtual = cliente.LatitudeAtual,
+                LongitudeAtual = cliente.LongitudeAtual,
+                Ativo = cliente.Ativo,
+                DataCriacao = cliente.DataCriacao
+            };
+
+            return Ok(resposta);
         }
 
-        [Authorize(Policy = PoliticasAutorizacao.Admin)]
+        /// <summary>
+        /// GET: /api/clientes/email/{email}
+        /// Busca cliente por email
+        /// </summary>
         [HttpGet("email/{email}")]
         public async Task<IActionResult> BuscarPorEmail(string email)
         {
@@ -119,20 +131,54 @@ namespace Pc.WebApi.Controllers
             if (cliente == null)
                 return NotFound("Cliente não encontrado.");
 
-            return Ok(MapearResposta(cliente));
+            var resposta = new ClienteRespostaDto
+            {
+                Id = cliente.Id,
+                NomeUsuario = cliente.NomeUsuario,
+                Email = cliente.Email,
+                Telefone = cliente.Telefone,
+                Tipo = (int)cliente.Tipo,
+                UltimoLogin = cliente.UltimoLogin,
+                LatitudeAtual = cliente.LatitudeAtual,
+                LongitudeAtual = cliente.LongitudeAtual,
+                Ativo = cliente.Ativo,
+                DataCriacao = cliente.DataCriacao
+            };
+
+            return Ok(resposta);
         }
 
-        [Authorize(Policy = PoliticasAutorizacao.Admin)]
+        /// <summary>
+        /// GET: /api/clientes
+        /// Lista todos os clientes ativos
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> Listar()
         {
             var clientes = await _clienteServico.ListarAtivosAsync();
 
-            var resposta = clientes.Select(MapearResposta);
+            var resposta = clientes.Select(c => new ClienteRespostaDto
+            {
+                Id = c.Id,
+                NomeUsuario = c.NomeUsuario,
+                Email = c.Email,
+                Telefone = c.Telefone,
+                Tipo = (int)c.Tipo,
+                UltimoLogin = c.UltimoLogin,
+                LatitudeAtual = c.LatitudeAtual,
+                LongitudeAtual = c.LongitudeAtual,
+                Ativo = c.Ativo,
+                DataCriacao = c.DataCriacao
+            });
+
             return Ok(resposta);
         }
 
-        [Authorize(Policy = PoliticasAutorizacao.Cliente)]
+        /// <summary>
+        /// PUT: /api/clientes/{id}
+        /// Atualiza dados do cliente
+        /// Body: ClienteCriarDto
+        /// </summary>
         [HttpPut("{id:guid}")]
         public async Task<IActionResult> Atualizar(Guid id, [FromBody] ClienteCriarDto dto)
         {
@@ -146,10 +192,28 @@ namespace Pc.WebApi.Controllers
 
             await _clienteServico.AtualizarAsync(cliente);
 
-            return Ok(MapearResposta(cliente));
+            var resposta = new ClienteRespostaDto
+            {
+                Id = cliente.Id,
+                NomeUsuario = cliente.NomeUsuario,
+                Email = cliente.Email,
+                Telefone = cliente.Telefone,
+                Tipo = (int)cliente.Tipo,
+                UltimoLogin = cliente.UltimoLogin,
+                LatitudeAtual = cliente.LatitudeAtual,
+                LongitudeAtual = cliente.LongitudeAtual,
+                Ativo = cliente.Ativo,
+                DataCriacao = cliente.DataCriacao
+            };
+
+            return Ok(resposta);
         }
 
-        [Authorize(Policy = PoliticasAutorizacao.Cliente)]
+        /// <summary>
+        /// PUT: /api/clientes/{id}/localizacao
+        /// Atualiza a localização do cliente (geolocalização)
+        /// Body: { "latitude": -23.5505, "longitude": -46.6333 }
+        /// </summary>
         [HttpPut("{id:guid}/localizacao")]
         public async Task<IActionResult> AtualizarLocalizacao(Guid id, [FromBody] LocalizacaoDto dto)
         {
@@ -158,7 +222,10 @@ namespace Pc.WebApi.Controllers
             return Ok(new { mensagem = "Localização atualizada com sucesso" });
         }
 
-        [Authorize(Policy = PoliticasAutorizacao.Admin)]
+        /// <summary>
+        /// GET: /api/clientes/proximidade/buscar?latitude=-23.5505&longitude=-46.6333&raio=5
+        /// Busca clientes próximos em um raio especificado (em KM)
+        /// </summary>
         [HttpGet("proximidade/buscar")]
         public async Task<IActionResult> BuscarPorProximidade(
             [FromQuery] decimal latitude,
@@ -167,11 +234,28 @@ namespace Pc.WebApi.Controllers
         {
             var clientes = await _clienteServico.ObterPorProximidadeAsync(latitude, longitude, raio);
 
-            var resposta = clientes.Select(MapearResposta);
+            var resposta = clientes.Select(c => new ClienteRespostaDto
+            {
+                Id = c.Id,
+                NomeUsuario = c.NomeUsuario,
+                Email = c.Email,
+                Telefone = c.Telefone,
+                Tipo = (int)c.Tipo,
+                UltimoLogin = c.UltimoLogin,
+                LatitudeAtual = c.LatitudeAtual,
+                LongitudeAtual = c.LongitudeAtual,
+                Ativo = c.Ativo,
+                DataCriacao = c.DataCriacao
+            });
+
             return Ok(resposta);
         }
 
-        [Authorize(Policy = PoliticasAutorizacao.Cliente)]
+        /// <summary>
+        /// PUT: /api/clientes/{id}/senha
+        /// Altera a senha do cliente
+        /// Body: { "senhaAtual": "123456", "novaSenha": "654321" }
+        /// </summary>
         [HttpPut("{id:guid}/senha")]
         public async Task<IActionResult> AlterarSenha(Guid id, [FromBody] AlterarSenhaDto dto)
         {
@@ -180,7 +264,10 @@ namespace Pc.WebApi.Controllers
             return Ok(new { mensagem = "Senha alterada com sucesso" });
         }
 
-        [Authorize(Policy = PoliticasAutorizacao.Admin)]
+        /// <summary>
+        /// DELETE: /api/clientes/{id}
+        /// Remove/desativa um cliente
+        /// </summary>
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Remover(Guid id)
         {

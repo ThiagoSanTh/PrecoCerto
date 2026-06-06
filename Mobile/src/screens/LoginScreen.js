@@ -28,12 +28,14 @@ export default function LoginScreen({ navigation }) {
     setLoading(true);
     try {
       if (tipo === 'cliente') {
-        const { token, perfil } = await loginCliente(email.trim(), senha);
-        await salvarSessao({ tipo: 'cliente', perfil }, 'user', token);
+        const perfil = await loginCliente(email.trim(), senha);
+        await salvarSessao({ tipo: 'cliente', perfil }, 'user');
         await sincronizarGpsCliente();
+        navigation.replace('Home');
       } else {
-        const { token, perfil } = await loginLojista(email.trim(), senha);
-        await salvarSessao({ tipo: 'lojista', perfil }, 'store', token);
+        const perfil = await loginLojista(email.trim(), senha);
+        await salvarSessao({ tipo: 'lojista', perfil }, 'store');
+        navigation.replace('Home');
       }
     } catch (error) {
       const msg =

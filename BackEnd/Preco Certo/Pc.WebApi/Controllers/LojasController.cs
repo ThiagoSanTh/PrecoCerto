@@ -1,10 +1,7 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 using Pc.Dominio.Entities.Catalogo;
 using Pc.Dominio.Entities.Estabelecimentos;
 using Pc.Servico.Interfaces;
-using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Estabelecimentos;
 using Pc.WebApi.Mappings;
 
@@ -21,7 +18,6 @@ namespace Pc.WebApi.Controllers
             _lojaServico = lojaServico;
         }
 
-        [AllowAnonymous]
         [HttpGet]
         public async Task<IActionResult> Listar()
         {
@@ -29,7 +25,6 @@ namespace Pc.WebApi.Controllers
             return Ok(lojas.Select(LojaMapper.ParaRespostaDto));
         }
 
-        [AllowAnonymous]
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> ObterPorId(Guid id)
         {
@@ -40,8 +35,6 @@ namespace Pc.WebApi.Controllers
             return Ok(LojaMapper.ParaRespostaDto(loja));
         }
 
-        [AllowAnonymous]
-        [EnableRateLimiting("busca")]
         [HttpPost("buscar")]
         public async Task<IActionResult> BuscarPorNome([FromBody] string nome)
         {
@@ -49,7 +42,6 @@ namespace Pc.WebApi.Controllers
             return Ok(lojas.Select(LojaMapper.ParaRespostaDto));
         }
 
-        [Authorize(Policy = PoliticasAutorizacao.LojistaOuAdmin)]
         [HttpPost]
         public async Task<IActionResult> Adicionar([FromBody] LojaCriarDto dto)
         {
@@ -71,7 +63,6 @@ namespace Pc.WebApi.Controllers
             return CreatedAtAction(nameof(ObterPorId), new { id = resposta.Id }, resposta);
         }
 
-        [Authorize(Policy = PoliticasAutorizacao.LojistaOuAdmin)]
         [HttpPut("{id:guid}")]
         public async Task<IActionResult> Atualizar(Guid id, [FromBody] LojaCriarDto dto)
         {
@@ -99,7 +90,6 @@ namespace Pc.WebApi.Controllers
             return NoContent();
         }
 
-        [Authorize(Policy = PoliticasAutorizacao.LojistaOuAdmin)]
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Remover(Guid id)
         {

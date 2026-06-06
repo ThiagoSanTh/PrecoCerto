@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { View, Text, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
@@ -15,7 +15,7 @@ import {
 import { colors } from '../style';
 
 export default function UserScreen({ navigation }) {
-  const { session, logout, sincronizarGpsCliente, isCliente, isLojista, atualizarPerfilSessao } =
+  const { session, logout, sincronizarGpsCliente, isCliente, isLojista, salvarSessao } =
     useAuth();
 
   const [nomeUsuario, setNomeUsuario] = useState('');
@@ -57,7 +57,7 @@ export default function UserScreen({ navigation }) {
         telefone: telefone.trim() || null,
         senha: '',
       });
-      await atualizarPerfilSessao(atualizado);
+      await salvarSessao({ tipo: 'cliente', perfil: atualizado }, 'user');
       Alert.alert('Sucesso', 'Perfil atualizado');
     } catch (error) {
       Alert.alert('Erro', String(error.response?.data || error.message));
@@ -104,10 +104,11 @@ export default function UserScreen({ navigation }) {
 
   async function handleLogout() {
     await logout();
+    navigation.replace('Login');
   }
 
   async function goToUserMode() {
-    await AsyncStorage.setItem('@userMode', 'user');
+    await salvarSessao(session, 'user');
     navigation.replace('Home');
   }
 

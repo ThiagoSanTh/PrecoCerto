@@ -1,15 +1,17 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pc.Dominio.Entities.Interacoes;
 using Pc.Servico.Interfaces;
-using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Interacoes;
 
 namespace Pc.WebApi.Controllers
 {
+    /// <summary>
+    /// Controller para operações com Favoritos
+    /// Endpoints para criar, listar, remover favoritos
+    /// Rota base: /api/favoritos
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Policy = PoliticasAutorizacao.QualquerAutenticado)]
     public class FavoritosController : ControllerBase
     {
         private readonly IFavoritoServico _favoritoServico;

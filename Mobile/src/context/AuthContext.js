@@ -2,7 +2,6 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { atualizarLocalizacao } from '../services/clienteService';
 import { obterLocalizacaoAtual } from '../services/locationService';
-import { salvarToken, removerToken, obterToken } from '../services/tokenStorage';
 
 const AuthContext = createContext(null);
 
@@ -19,26 +18,14 @@ export function AuthProvider({ children }) {
 
   async function carregarSessao() {
     try {
-      const [raw, token] = await Promise.all([
-        AsyncStorage.getItem(SESSION_KEY),
-        obterToken(),
-      ]);
-
-      if (raw && token) {
-        setSession(JSON.parse(raw));
-      } else {
-        await AsyncStorage.multiRemove([SESSION_KEY, MODE_KEY]);
-        await removerToken();
-      }
+      const raw = await AsyncStorage.getItem(SESSION_KEY);
+      if (raw) setSession(JSON.parse(raw));
     } finally {
       setLoading(false);
     }
   }
 
-  async function salvarSessao(novaSessao, modo = 'user', token) {
-    if (!token) throw new Error('Token JWT é obrigatório para salvar sessão.');
-
-    await salvarToken(token);
+  async function salvarSessao(novaSessao, modo = 'user') {
     await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(novaSessao));
     await AsyncStorage.setItem(MODE_KEY, modo);
     setSession(novaSessao);
@@ -62,10 +49,10 @@ export function AuthProvider({ children }) {
 
   async function logout() {
     await AsyncStorage.multiRemove([SESSION_KEY, MODE_KEY]);
-    await removerToken();
     setSession(null);
   }
 
+  /** Sincroniza GPS com a API quando o perfil logado é cliente */
   async function sincronizarGpsCliente() {
     if (!session || session.tipo !== 'cliente' || !session.perfil?.id) return null;
 
@@ -99,7 +86,6 @@ export function AuthProvider({ children }) {
         sincronizarGpsCliente,
         isCliente: session?.tipo === 'cliente',
         isLojista: session?.tipo === 'lojista',
-        isAuthenticated: !!session,
       }}
     >
       {children}

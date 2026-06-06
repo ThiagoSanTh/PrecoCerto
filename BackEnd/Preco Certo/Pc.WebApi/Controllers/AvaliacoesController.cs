@@ -1,15 +1,17 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pc.Dominio.Entities.Interacoes;
 using Pc.Servico.Interfaces;
-using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Interacoes;
 
 namespace Pc.WebApi.Controllers
 {
+    /// <summary>
+    /// Controller para operações com Avaliações de Lojas
+    /// Endpoints para criar, listar, atualizar e remover avaliações
+    /// Rota base: /api/avaliacoes
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Policy = PoliticasAutorizacao.QualquerAutenticado)]
     public class AvaliacoesController : ControllerBase
     {
         private readonly IAvaliacaoServico _avaliacaoServico;

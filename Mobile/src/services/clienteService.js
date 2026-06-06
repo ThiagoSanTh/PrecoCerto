@@ -7,11 +7,7 @@ export async function registrarCliente(dados) {
 
 export async function loginCliente(email, senha) {
   const { data } = await api.post('/Clientes/login', { email, senha });
-  return {
-    token: data.token,
-    perfil: data.perfil,
-    tipo: data.tipo,
-  };
+  return data;
 }
 
 export async function obterCliente(id) {
