@@ -33,5 +33,10 @@ namespace Pc.Repositorio.Interfaces
         /// Lista todos os clientes ativos
         /// </summary>
         Task<List<Cliente>> ListarAtivosAsync();
+
+        /// <summary>
+        /// Atualiza apenas o UltimoLogin (evita UPDATE completo no login)
+        /// </summary>
+        Task AtualizarUltimoLoginAsync(Guid clienteId, DateTime ultimoLogin);
     }
 }

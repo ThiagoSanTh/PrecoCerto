@@ -15,10 +15,12 @@ namespace Pc.Servico.Implementacoes
     public class AdminServico : IAdminServico
     {
         private readonly IAdminRepositorio _adminRepositorio;
+        private readonly IPasswordHasher _passwordHasher;
 
-        public AdminServico(IAdminRepositorio adminRepositorio)
+        public AdminServico(IAdminRepositorio adminRepositorio, IPasswordHasher passwordHasher)
         {
             _adminRepositorio = adminRepositorio;
+            _passwordHasher = passwordHasher;
         }
 
         /// <summary>
@@ -44,6 +46,7 @@ namespace Pc.Servico.Implementacoes
             admin.Ativo = true;
             admin.DataCriacao = DateTime.UtcNow;
             admin.Tipo = Pc.Dominio.Enums.TipoUsuario.Admin;
+            admin.SenhaHash = _passwordHasher.Hash(admin.SenhaHash);
 
             return await _adminRepositorio.AdicionarAsync(admin);
         }
@@ -60,7 +63,7 @@ namespace Pc.Servico.Implementacoes
 
             var admin = await _adminRepositorio.ObterPorEmailAsync(email);
 
-            if (admin == null || admin.SenhaHash != senha) // TODO: bcrypt
+            if (admin == null || !await VerificarSenhaAsync(admin, senha))
                 return null;
 
             admin.UltimoLogin = DateTime.UtcNow;
@@ -123,11 +126,26 @@ namespace Pc.Servico.Implementacoes
             if (admin == null)
                 throw new Exception("Admin não encontrado.");
 
-            if (admin.SenhaHash != senhaAtual) // TODO: bcrypt
+            if (!await VerificarSenhaAsync(admin, senhaAtual))
                 throw new Exception("Senha atual incorreta.");
 
-            admin.SenhaHash = novaSenha;
+            admin.SenhaHash = _passwordHasher.Hash(novaSenha);
             await _adminRepositorio.AtualizarAsync(admin);
+        }
+
+        private async Task<bool> VerificarSenhaAsync(Admin admin, string senha)
+        {
+            if (_passwordHasher.Verify(senha, admin.SenhaHash))
+                return true;
+
+            if (!_passwordHasher.IsBcryptHash(admin.SenhaHash) && admin.SenhaHash == senha)
+            {
+                admin.SenhaHash = _passwordHasher.Hash(senha);
+                await _adminRepositorio.AtualizarAsync(admin);
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>

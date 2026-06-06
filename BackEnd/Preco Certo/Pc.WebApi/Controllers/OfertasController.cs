@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Pc.Dominio.Entities.Catalogo;
 using Pc.Dominio.Entities.Estabelecimentos;
 using Pc.Servico.Interfaces;
+using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Estabelecimentos;
 
 namespace Pc.WebApi.Controllers
@@ -18,6 +20,7 @@ namespace Pc.WebApi.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public async Task<IActionResult> Listar()
         {
             var ofertas = await _ofertaServico.ListarAsync();
@@ -43,6 +46,7 @@ namespace Pc.WebApi.Controllers
         }
 
         [HttpGet("{id:guid}")]
+        [AllowAnonymous]
         public async Task<IActionResult> ObterPorId(Guid id)
         {
             var oferta = await _ofertaServico.ObterPorIdAsync(id);
@@ -71,6 +75,7 @@ namespace Pc.WebApi.Controllers
         }
 
         [HttpGet("produto/{produtoId:guid}")]
+        [AllowAnonymous]
         public async Task<IActionResult> ObterPorProduto(Guid produtoId)
         {
             var ofertas = await _ofertaServico.ObterPorProdutoAsync(produtoId);
@@ -96,8 +101,11 @@ namespace Pc.WebApi.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Lojista,Admin")]
         public async Task<IActionResult> Adicionar([FromBody] OfertaCriarDto dto)
         {
+            if (!Authz.OwnsLoja(this, dto.LojaId))
+                return Forbid();
             var oferta = new Oferta
             {
                 ProdutoId = dto.ProdutoId,
@@ -131,8 +139,11 @@ namespace Pc.WebApi.Controllers
         }
 
         [HttpPut("{id:guid}")]
+        [Authorize(Roles = "Lojista,Admin")]
         public async Task<IActionResult> Atualizar(Guid id, [FromBody] OfertaCriarDto dto)
         {
+            if (!Authz.OwnsLoja(this, dto.LojaId))
+                return Forbid();
             var ofertaExistente = await _ofertaServico.ObterPorIdAsync(id);
 
             if (ofertaExistente == null)
@@ -154,12 +165,16 @@ namespace Pc.WebApi.Controllers
         }
 
         [HttpDelete("{id:guid}")]
+        [Authorize(Roles = "Lojista,Admin")]
         public async Task<IActionResult> Remover(Guid id)
         {
             var ofertaExistente = await _ofertaServico.ObterPorIdAsync(id);
 
             if (ofertaExistente == null)
                 return NotFound("Oferta não encontrada.");
+
+            if (!Authz.OwnsLoja(this, ofertaExistente.LojaId))
+                return Forbid();
 
             await _ofertaServico.RemoverAsync(id);
             return NoContent();

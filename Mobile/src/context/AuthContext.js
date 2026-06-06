@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { atualizarLocalizacao } from '../services/clienteService';
 import { obterLocalizacaoAtual } from '../services/locationService';
+import { clearToken, getToken } from '../services/tokenStorage';
 
 const AuthContext = createContext(null);
 
@@ -18,8 +19,13 @@ export function AuthProvider({ children }) {
 
   async function carregarSessao() {
     try {
+      const token = await getToken();
       const raw = await AsyncStorage.getItem(SESSION_KEY);
-      if (raw) setSession(JSON.parse(raw));
+      if (token && raw) {
+        setSession(JSON.parse(raw));
+      } else if (!token) {
+        await AsyncStorage.multiRemove([SESSION_KEY, MODE_KEY]);
+      }
     } finally {
       setLoading(false);
     }
@@ -48,26 +54,30 @@ export function AuthProvider({ children }) {
   }
 
   async function logout() {
+    await clearToken();
     await AsyncStorage.multiRemove([SESSION_KEY, MODE_KEY]);
     setSession(null);
   }
 
-  /** Sincroniza GPS com a API quando o perfil logado é cliente */
-  async function sincronizarGpsCliente() {
-    if (!session || session.tipo !== 'cliente' || !session.perfil?.id) return null;
+  async function sincronizarGpsCliente(clienteIdOverride = null) {
+    const id = clienteIdOverride ?? session?.perfil?.id;
+    if (!id || (session?.tipo !== 'cliente' && !clienteIdOverride)) return null;
 
     try {
       const { latitude, longitude } = await obterLocalizacaoAtual();
-      await atualizarLocalizacao(session.perfil.id, latitude, longitude);
+      await atualizarLocalizacao(id, latitude, longitude);
 
-      const perfilAtualizado = {
-        ...session.perfil,
-        latitudeAtual: latitude,
-        longitudeAtual: longitude,
-      };
-      const novaSessao = { ...session, perfil: perfilAtualizado };
-      await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(novaSessao));
-      setSession(novaSessao);
+      if (session?.tipo === 'cliente') {
+        const perfilAtualizado = {
+          ...session.perfil,
+          latitudeAtual: latitude,
+          longitudeAtual: longitude,
+        };
+        const novaSessao = { ...session, perfil: perfilAtualizado };
+        await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(novaSessao));
+        setSession(novaSessao);
+      }
+
       return { latitude, longitude };
     } catch (error) {
       console.warn('GPS:', error.message);

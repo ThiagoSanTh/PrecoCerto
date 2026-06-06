@@ -1,15 +1,13 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pc.Dominio.Entities.Interacoes;
 using Pc.Servico.Interfaces;
+using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Interacoes;
+using Pc.WebApi.Extensions;
 
 namespace Pc.WebApi.Controllers
 {
-    /// <summary>
-    /// Controller para operações com Avaliações de Lojas
-    /// Endpoints para criar, listar, atualizar e remover avaliações
-    /// Rota base: /api/avaliacoes
-    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     public class AvaliacoesController : ControllerBase
@@ -31,8 +29,11 @@ namespace Pc.WebApi.Controllers
         /// Valida: nota entre 1-5, evita duplicatas
         /// </summary>
         [HttpPost]
+        [Authorize(Roles = "Cliente")]
         public async Task<IActionResult> Adicionar([FromBody] AvaliacaoCriarDto dto)
         {
+            if (User.GetUserId() != dto.ClienteId)
+                return Forbid();
             var avaliacao = new Avaliacao
             {
                 ClienteId = dto.ClienteId,
@@ -88,6 +89,7 @@ namespace Pc.WebApi.Controllers
         /// Retorna todas as avaliações de uma loja
         /// </summary>
         [HttpGet("loja/{lojaId:guid}")]
+        [AllowAnonymous]
         public async Task<IActionResult> ListarPorLoja(Guid lojaId)
         {
             var avaliacoes = await _avaliacaoServico.ListarPorLojaAsync(lojaId);
@@ -134,6 +136,7 @@ namespace Pc.WebApi.Controllers
         /// Retorna a nota média de uma loja
         /// </summary>
         [HttpGet("loja/{lojaId:guid}/media")]
+        [AllowAnonymous]
         public async Task<IActionResult> ObterMediaAvaliacao(Guid lojaId)
         {
             var media = await _avaliacaoServico.ObterMediaAvaliacaoAsync(lojaId);
@@ -148,12 +151,16 @@ namespace Pc.WebApi.Controllers
         /// Body: AvaliacaoCriarDto
         /// </summary>
         [HttpPut("{id:guid}")]
+        [Authorize(Roles = "Cliente,Admin")]
         public async Task<IActionResult> Atualizar(Guid id, [FromBody] AvaliacaoCriarDto dto)
         {
             var avaliacao = await _avaliacaoServico.ObterPorIdAsync(id);
 
             if (avaliacao == null)
                 return NotFound("Avaliação não encontrada.");
+
+            if (!Authz.IsSelfOrAdmin(this, avaliacao.ClienteId))
+                return Forbid();
 
             avaliacao.Nota = dto.Nota;
             avaliacao.Comentario = dto.Comentario;
@@ -179,8 +186,16 @@ namespace Pc.WebApi.Controllers
         /// Remove uma avaliação
         /// </summary>
         [HttpDelete("{id:guid}")]
+        [Authorize(Roles = "Cliente,Admin")]
         public async Task<IActionResult> Remover(Guid id)
         {
+            var avaliacao = await _avaliacaoServico.ObterPorIdAsync(id);
+            if (avaliacao == null)
+                return NotFound("Avaliação não encontrada.");
+
+            if (!Authz.IsSelfOrAdmin(this, avaliacao.ClienteId))
+                return Forbid();
+
             await _avaliacaoServico.RemoverAsync(id);
             return NoContent();
         }

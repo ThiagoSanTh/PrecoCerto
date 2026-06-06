@@ -1,26 +1,16 @@
 import { Alert } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useState } from 'react';
 import { FormScreen, FormField, PrimaryButton, SecondaryButton } from '../components/form';
 
 export default function ForgotPasswordScreen({ navigation }) {
   const [email, setEmail] = useState('');
 
-  async function handleRecover() {
-    const data = await AsyncStorage.getItem('@user');
-
-    if (!data) {
-      Alert.alert('Erro', 'Nenhum usuário cadastrado');
-      return;
-    }
-
-    const user = JSON.parse(data);
-
-    if (user.email === email) {
-      Alert.alert('Senha encontrada', `Sua senha é: ${user.senha}`);
-    } else {
-      Alert.alert('Erro', 'Email não encontrado');
-    }
+  function handleRecover() {
+    Alert.alert(
+      'Recuperação indisponível',
+      'A redefinição de senha por e-mail ainda não está disponível. Entre em contato com o suporte ou crie uma nova conta.',
+      [{ text: 'OK', onPress: () => navigation.goBack() }]
+    );
   }
 
   return (
@@ -30,7 +20,7 @@ export default function ForgotPasswordScreen({ navigation }) {
       onBack={() => navigation.goBack()}
       footer={
         <>
-          <PrimaryButton label="Recuperar" onPress={handleRecover} />
+          <PrimaryButton label="Solicitar recuperação" onPress={handleRecover} />
           <SecondaryButton label="Voltar ao login" onPress={() => navigation.goBack()} />
         </>
       }

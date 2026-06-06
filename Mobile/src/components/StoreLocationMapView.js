@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { WebView } from 'react-native-webview';
 import { buildLeafletPickerMapHtml } from '../utils/leafletMapHtml';
+import LeafletMapFrame from './LeafletMapFrame';
 
 export default function StoreLocationMapView({
   latitude,
@@ -20,6 +20,8 @@ export default function StoreLocationMapView({
     [latitude, longitude, titulo]
   );
 
+  const mapKey = `${latitude ?? 'x'}-${longitude ?? 'y'}`;
+
   function handleMessage(event) {
     try {
       const msg = JSON.parse(event.nativeEvent.data);
@@ -35,15 +37,11 @@ export default function StoreLocationMapView({
   }
 
   return (
-    <WebView
+    <LeafletMapFrame
+      mapKey={mapKey}
       style={[styles.map, style]}
-      originWhitelist={['*']}
-      source={{ html: mapHtml }}
-      javaScriptEnabled
-      domStorageEnabled
+      html={mapHtml}
       onMessage={handleMessage}
-      scrollEnabled={false}
-      setSupportMultipleWindows={false}
     />
   );
 }

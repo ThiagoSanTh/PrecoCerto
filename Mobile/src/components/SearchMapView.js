@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { WebView } from 'react-native-webview';
+import LeafletMapFrame from './LeafletMapFrame';
 import { obterLocalizacaoAtual } from '../services/locationService';
 import {
   contarProdutosSemCoordenadas,
@@ -13,7 +13,7 @@ import {
 } from '../utils/leafletMapHtml';
 import { styles as appStyles } from '../style';
 
-export default function SearchMapView({ produtos }) {
+export default function SearchMapView({ produtos, onProductPress }) {
   const [localizacaoCliente, setLocalizacaoCliente] = useState(null);
   const [erroGps, setErroGps] = useState(null);
 
@@ -61,6 +61,18 @@ export default function SearchMapView({ produtos }) {
     [localizacaoCliente, produtosNoMapa]
   );
 
+  function handleMessage(event) {
+    if (!onProductPress) return;
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.type === 'product' && data.productId) {
+        onProductPress(data.productId);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
   return (
     <View style={styles.container}>
       {semCoordenadas > 0 ? (
@@ -71,15 +83,12 @@ export default function SearchMapView({ produtos }) {
       {erroGps ? (
         <Text style={appStyles.hint}>{erroGps}</Text>
       ) : null}
-      <WebView
+      <LeafletMapFrame
         key={mapKey}
+        mapKey={mapKey}
         style={styles.map}
-        originWhitelist={['*']}
-        source={{ html: mapHtml }}
-        javaScriptEnabled
-        domStorageEnabled
-        scrollEnabled={false}
-        setSupportMultipleWindows={false}
+        html={mapHtml}
+        onMessage={handleMessage}
       />
     </View>
   );

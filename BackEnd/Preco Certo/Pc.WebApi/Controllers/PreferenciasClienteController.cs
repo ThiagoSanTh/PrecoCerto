@@ -1,19 +1,17 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pc.Dominio.Entities.Interacoes;
 using Pc.Servico.Interfaces;
+using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Comum;
 using Pc.WebApi.DTOs.Interacoes;
+using Pc.WebApi.Extensions;
 
 namespace Pc.WebApi.Controllers
 {
-    /// <summary>
-    /// Controller para operações com Preferências do Cliente
-    /// Endpoints para gerenciar configurações e preferências do usuário
-    /// Usa padrão chave-valor para máxima flexibilidade
-    /// Rota base: /api/preferenciascliente
-    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class PreferenciasClienteController : ControllerBase
     {
         private readonly IPreferenciaClienteServico _preferenciaServico;
@@ -33,8 +31,11 @@ namespace Pc.WebApi.Controllers
         /// Padrão chave-valor: permite flexibilidade na adição de novas configurações
         /// </summary>
         [HttpPost]
+        [Authorize(Roles = "Cliente")]
         public async Task<IActionResult> Salvar([FromBody] PreferenciaClienteCriarDto dto)
         {
+            if (User.GetUserId() != dto.ClienteId)
+                return Forbid();
             var preferencia = new PreferenciaCliente
             {
                 ClienteId = dto.ClienteId,
@@ -85,8 +86,11 @@ namespace Pc.WebApi.Controllers
         /// Retorna todas as preferências de um cliente
         /// </summary>
         [HttpGet("cliente/{clienteId:guid}")]
+        [Authorize(Roles = "Cliente,Admin")]
         public async Task<IActionResult> ListarPorCliente(Guid clienteId)
         {
+            if (!Authz.IsSelfOrAdmin(this, clienteId))
+                return Forbid();
             var preferencias = await _preferenciaServico.ListarPorClienteAsync(clienteId);
 
             var resposta = preferencias.Select(p => new PreferenciaClienteRespostaDto
@@ -106,8 +110,11 @@ namespace Pc.WebApi.Controllers
         /// Retorna o valor de uma preferência específica
         /// </summary>
         [HttpGet("cliente/{clienteId:guid}/valor")]
+        [Authorize(Roles = "Cliente,Admin")]
         public async Task<IActionResult> ObterValor(Guid clienteId, [FromQuery] string chave)
         {
+            if (!Authz.IsSelfOrAdmin(this, clienteId))
+                return Forbid();
             var valor = await _preferenciaServico.ObterValorAsync(clienteId, chave);
 
             if (valor == null)
@@ -122,8 +129,11 @@ namespace Pc.WebApi.Controllers
         /// Body: { "valor": "desabilitado" }
         /// </summary>
         [HttpPut("cliente/{clienteId:guid}")]
+        [Authorize(Roles = "Cliente")]
         public async Task<IActionResult> Atualizar(Guid clienteId, [FromQuery] string chave, [FromBody] PreferenciaValorDto dto)
         {
+            if (User.GetUserId() != clienteId)
+                return Forbid();
             if (string.IsNullOrEmpty(dto.Valor))
                 return BadRequest("Valor é obrigatório.");
 
@@ -148,8 +158,11 @@ namespace Pc.WebApi.Controllers
         /// Remove uma preferência específica por chave
         /// </summary>
         [HttpDelete("cliente/{clienteId:guid}")]
+        [Authorize(Roles = "Cliente")]
         public async Task<IActionResult> RemoverPorChave(Guid clienteId, [FromQuery] string chave)
         {
+            if (User.GetUserId() != clienteId)
+                return Forbid();
             await _preferenciaServico.RemoverPorChaveAsync(clienteId, chave);
             return NoContent();
         }
@@ -160,8 +173,11 @@ namespace Pc.WebApi.Controllers
         /// CUIDADO: Operação irreversível
         /// </summary>
         [HttpDelete("cliente/{clienteId:guid}/limpar")]
+        [Authorize(Roles = "Cliente,Admin")]
         public async Task<IActionResult> LimparTodas(Guid clienteId)
         {
+            if (!Authz.IsSelfOrAdmin(this, clienteId))
+                return Forbid();
             await _preferenciaServico.LimparTudasAsync(clienteId);
             return NoContent();
         }

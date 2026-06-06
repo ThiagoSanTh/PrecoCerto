@@ -1,17 +1,17 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pc.Dominio.Entities.Interacoes;
 using Pc.Servico.Interfaces;
+using Pc.WebApi.Authorization;
+using Pc.WebApi.DTOs.Comum;
 using Pc.WebApi.DTOs.Interacoes;
+using Pc.WebApi.Extensions;
 
 namespace Pc.WebApi.Controllers
 {
-    /// <summary>
-    /// Controller para operações com Histórico de Pesquisa
-    /// Endpoints para registrar, listar e gerenciar histórico de buscas
-    /// Rota base: /api/historicopesquisa
-    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class HistoricoPesquisaController : ControllerBase
     {
         private readonly IHistoricoPesquisaServico _historicoPesquisaServico;
@@ -30,8 +30,11 @@ namespace Pc.WebApi.Controllers
         /// Body: HistoricoPesquisaCriarDto
         /// </summary>
         [HttpPost]
+        [Authorize(Roles = "Cliente")]
         public async Task<IActionResult> RegistrarPesquisa([FromBody] HistoricoPesquisaCriarDto dto)
         {
+            if (User.GetUserId() != dto.ClienteId)
+                return Forbid();
             var historico = new HistoricoPesquisa
             {
                 ClienteId = dto.ClienteId,
@@ -80,8 +83,11 @@ namespace Pc.WebApi.Controllers
         /// Ordenado por data descrescente (mais recentes primeiro)
         /// </summary>
         [HttpGet("cliente/{clienteId:guid}")]
+        [Authorize(Roles = "Cliente,Admin")]
         public async Task<IActionResult> ObterHistoricoCliente(Guid clienteId)
         {
+            if (!Authz.IsSelfOrAdmin(this, clienteId))
+                return Forbid();
             var historicos = await _historicoPesquisaServico.ObterHistoricoClienteAsync(clienteId);
 
             var resposta = historicos.Select(h => new HistoricoPesquisaRespostaDto
@@ -100,8 +106,11 @@ namespace Pc.WebApi.Controllers
         /// Retorna os últimos N termos de pesquisa (padrão: 5)
         /// </summary>
         [HttpGet("cliente/{clienteId:guid}/ultimos")]
+        [Authorize(Roles = "Cliente,Admin")]
         public async Task<IActionResult> ObterUltimos(Guid clienteId, [FromQuery] int quantidade = 5)
         {
+            if (!Authz.IsSelfOrAdmin(this, clienteId))
+                return Forbid();
             var historicos = await _historicoPesquisaServico.ObterUltimosTermosAsync(clienteId, quantidade);
 
             var resposta = historicos.Select(h => new HistoricoPesquisaRespostaDto
@@ -120,6 +129,7 @@ namespace Pc.WebApi.Controllers
         /// Retorna sugestões de termos para autocomplete
         /// </summary>
         [HttpGet("sugestoes")]
+        [AllowAnonymous]
         public async Task<IActionResult> ObterSugestoes([FromQuery] string termo)
         {
             var sugestoes = await _historicoPesquisaServico.ObterSugestoesAsync(termo);
@@ -155,8 +165,11 @@ namespace Pc.WebApi.Controllers
         /// CUIDADO: Operação irreversível
         /// </summary>
         [HttpDelete("cliente/{clienteId:guid}/limpar")]
+        [Authorize(Roles = "Cliente,Admin")]
         public async Task<IActionResult> LimparHistorico(Guid clienteId)
         {
+            if (!Authz.IsSelfOrAdmin(this, clienteId))
+                return Forbid();
             await _historicoPesquisaServico.LimparHistoricoAsync(clienteId);
             return NoContent();
         }

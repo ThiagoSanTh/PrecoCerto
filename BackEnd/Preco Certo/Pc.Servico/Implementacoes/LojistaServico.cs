@@ -12,10 +12,12 @@ namespace Pc.Servico.Implementacoes
     public class LojistaServico : ILojistaServico
     {
         private readonly ILojistaRepositorio _lojistaRepositorio;
+        private readonly IPasswordHasher _passwordHasher;
 
-        public LojistaServico(ILojistaRepositorio lojistaRepositorio)
+        public LojistaServico(ILojistaRepositorio lojistaRepositorio, IPasswordHasher passwordHasher)
         {
             _lojistaRepositorio = lojistaRepositorio;
+            _passwordHasher = passwordHasher;
         }
 
         /// <summary>
@@ -40,6 +42,7 @@ namespace Pc.Servico.Implementacoes
             lojista.Ativo = true;
             lojista.DataCriacao = DateTime.UtcNow;
             lojista.Tipo = Pc.Dominio.Enums.TipoUsuario.Lojista;
+            lojista.SenhaHash = _passwordHasher.Hash(lojista.SenhaHash);
 
             return await _lojistaRepositorio.AdicionarAsync(lojista);
         }
@@ -56,7 +59,7 @@ namespace Pc.Servico.Implementacoes
 
             var lojista = await _lojistaRepositorio.ObterPorEmailAsync(email);
 
-            if (lojista == null || lojista.SenhaHash != senha) // TODO: bcrypt
+            if (lojista == null || !await VerificarSenhaAsync(lojista, senha))
                 return null;
 
             lojista.UltimoLogin = DateTime.UtcNow;
@@ -127,11 +130,26 @@ namespace Pc.Servico.Implementacoes
             if (lojista == null)
                 throw new Exception("Lojista não encontrado.");
 
-            if (lojista.SenhaHash != senhaAtual) // TODO: bcrypt
+            if (!await VerificarSenhaAsync(lojista, senhaAtual))
                 throw new Exception("Senha atual incorreta.");
 
-            lojista.SenhaHash = novaSenha;
+            lojista.SenhaHash = _passwordHasher.Hash(novaSenha);
             await _lojistaRepositorio.AtualizarAsync(lojista);
+        }
+
+        private async Task<bool> VerificarSenhaAsync(Lojista lojista, string senha)
+        {
+            if (_passwordHasher.Verify(senha, lojista.SenhaHash))
+                return true;
+
+            if (!_passwordHasher.IsBcryptHash(lojista.SenhaHash) && lojista.SenhaHash == senha)
+            {
+                lojista.SenhaHash = _passwordHasher.Hash(senha);
+                await _lojistaRepositorio.AtualizarAsync(lojista);
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>

@@ -58,6 +58,15 @@ namespace Pc.Repositorio.Implementacoes
             }
         }
 
+        public async Task AtualizarUltimoLoginAsync(Guid clienteId, DateTime ultimoLogin)
+        {
+            await _context.Clientes
+                .Where(c => c.Id == clienteId)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(c => c.UltimoLogin, ultimoLogin)
+                    .SetProperty(c => c.DataAtualizacao, ultimoLogin));
+        }
+
         private static decimal CalcularDistancia(decimal lat1, decimal lon1, decimal lat2, decimal lon2)
         {
             const decimal raioTerraKm = 6371m;

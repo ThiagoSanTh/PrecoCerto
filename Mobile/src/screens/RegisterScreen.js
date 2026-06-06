@@ -2,6 +2,8 @@ import { Alert, Text } from 'react-native';
 import { useState } from 'react';
 import { registrarCliente } from '../services/clienteService';
 import { registrarLojista } from '../services/lojistaService';
+import { login as authLogin } from '../services/authService';
+import { formatApiError } from '../utils/apiErrorUtils';
 import { obterLocalizacaoAtual } from '../services/locationService';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -45,13 +47,10 @@ export default function RegisterScreen({ navigation, route }) {
           latitudeAtual = coords.latitude;
           longitudeAtual = coords.longitude;
         } catch {
-          Alert.alert(
-            'GPS',
-            'Não foi possível obter sua localização. O cadastro continuará, mas ative o GPS depois no perfil.'
-          );
+          // GPS opcional no cadastro
         }
 
-        const perfil = await registrarCliente({
+        await registrarCliente({
           nomeUsuario: nomeUsuario.trim(),
           email: email.trim(),
           senha,
@@ -60,13 +59,14 @@ export default function RegisterScreen({ navigation, route }) {
           longitudeAtual,
         });
 
+        const { perfil } = await authLogin(email.trim(), senha, 'cliente');
         await salvarSessao({ tipo: 'cliente', perfil }, 'user');
-        Alert.alert('Sucesso', 'Conta de cliente criada!');
         navigation.replace('Home');
+        Alert.alert('Sucesso', 'Conta de cliente criada!');
         return;
       }
 
-      const perfil = await registrarLojista({
+      await registrarLojista({
         nomeUsuario: nomeUsuario.trim(),
         email: email.trim(),
         senha,
@@ -74,12 +74,12 @@ export default function RegisterScreen({ navigation, route }) {
         cargo: cargo.trim() || 'Gerente',
       });
 
+      const { perfil } = await authLogin(email.trim(), senha, 'lojista');
       await salvarSessao({ tipo: 'lojista', perfil }, 'store');
-      Alert.alert('Sucesso', 'Conta de lojista criada! Agora cadastre sua loja.');
       navigation.replace('Home');
+      Alert.alert('Sucesso', 'Conta de lojista criada! Agora cadastre sua loja.');
     } catch (error) {
-      const msg = error.response?.data || error.message || 'Erro ao cadastrar';
-      Alert.alert('Erro', String(msg));
+      Alert.alert('Erro', formatApiError(error));
     } finally {
       setLoading(false);
     }

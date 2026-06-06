@@ -12,10 +12,12 @@ namespace Pc.Servico.Implementacoes
     public class ClienteServico : IClienteServico
     {
         private readonly IClienteRepositorio _clienteRepositorio;
+        private readonly IPasswordHasher _passwordHasher;
 
-        public ClienteServico(IClienteRepositorio clienteRepositorio)
+        public ClienteServico(IClienteRepositorio clienteRepositorio, IPasswordHasher passwordHasher)
         {
             _clienteRepositorio = clienteRepositorio;
+            _passwordHasher = passwordHasher;
         }
 
         /// <summary>
@@ -40,6 +42,7 @@ namespace Pc.Servico.Implementacoes
             cliente.Ativo = true;
             cliente.DataCriacao = DateTime.UtcNow;
             cliente.Tipo = Pc.Dominio.Enums.TipoUsuario.Cliente;
+            cliente.SenhaHash = _passwordHasher.Hash(cliente.SenhaHash);
 
             return await _clienteRepositorio.AdicionarAsync(cliente);
         }
@@ -56,11 +59,12 @@ namespace Pc.Servico.Implementacoes
 
             var cliente = await _clienteRepositorio.ObterPorEmailAsync(email);
 
-            if (cliente == null || cliente.SenhaHash != senha) // TODO: bcrypt
+            if (cliente == null || !await VerificarSenhaAsync(cliente, senha))
                 return null;
 
-            cliente.UltimoLogin = DateTime.UtcNow;
-            await _clienteRepositorio.AtualizarAsync(cliente);
+            var ultimoLogin = DateTime.UtcNow;
+            await _clienteRepositorio.AtualizarUltimoLoginAsync(cliente.Id, ultimoLogin);
+            cliente.UltimoLogin = ultimoLogin;
 
             return cliente;
         }
@@ -146,11 +150,26 @@ namespace Pc.Servico.Implementacoes
             if (cliente == null)
                 throw new Exception("Cliente não encontrado.");
 
-            if (cliente.SenhaHash != senhaAtual) // TODO: bcrypt
+            if (!await VerificarSenhaAsync(cliente, senhaAtual))
                 throw new Exception("Senha atual incorreta.");
 
-            cliente.SenhaHash = novaSenha;
+            cliente.SenhaHash = _passwordHasher.Hash(novaSenha);
             await _clienteRepositorio.AtualizarAsync(cliente);
+        }
+
+        private async Task<bool> VerificarSenhaAsync(Cliente cliente, string senha)
+        {
+            if (_passwordHasher.Verify(senha, cliente.SenhaHash))
+                return true;
+
+            if (!_passwordHasher.IsBcryptHash(cliente.SenhaHash) && cliente.SenhaHash == senha)
+            {
+                cliente.SenhaHash = _passwordHasher.Hash(senha);
+                await _clienteRepositorio.AtualizarAsync(cliente);
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>

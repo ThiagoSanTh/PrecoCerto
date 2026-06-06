@@ -1,8 +1,11 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pc.Dominio.Entities.Catalogo;
 using Pc.Dominio.Entities.Estabelecimentos;
 using Pc.Servico.Interfaces;
+using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Estabelecimentos;
+using Pc.WebApi.Extensions;
 using Pc.WebApi.Mappings;
 
 namespace Pc.WebApi.Controllers
@@ -19,6 +22,7 @@ namespace Pc.WebApi.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public async Task<IActionResult> Listar()
         {
             var lojas = await _lojaServico.ListarAsync();
@@ -26,6 +30,7 @@ namespace Pc.WebApi.Controllers
         }
 
         [HttpGet("{id:guid}")]
+        [AllowAnonymous]
         public async Task<IActionResult> ObterPorId(Guid id)
         {
             var loja = await _lojaServico.ObterPorIdAsync(id);
@@ -36,6 +41,7 @@ namespace Pc.WebApi.Controllers
         }
 
         [HttpPost("buscar")]
+        [AllowAnonymous]
         public async Task<IActionResult> BuscarPorNome([FromBody] string nome)
         {
             var lojas = await _lojaServico.BuscarPorNomeAsync(nome);
@@ -43,8 +49,12 @@ namespace Pc.WebApi.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Lojista,Admin")]
         public async Task<IActionResult> Adicionar([FromBody] LojaCriarDto dto)
         {
+            if (User.IsLojista() && dto.LojistaId.HasValue && User.GetUserId() != dto.LojistaId)
+                return Forbid();
+
             var loja = new Loja
             {
                 NomeFantasia = dto.NomeFantasia,
@@ -58,17 +68,22 @@ namespace Pc.WebApi.Controllers
             };
 
             var novaLoja = await _lojaServico.AdicionarAsync(loja);
-            var resposta = LojaMapper.ParaRespostaDto(novaLoja);
-
-            return CreatedAtAction(nameof(ObterPorId), new { id = resposta.Id }, resposta);
+            return CreatedAtAction(nameof(ObterPorId), new { id = novaLoja.Id }, LojaMapper.ParaRespostaDto(novaLoja));
         }
 
         [HttpPut("{id:guid}")]
+        [Authorize(Roles = "Lojista,Admin")]
         public async Task<IActionResult> Atualizar(Guid id, [FromBody] LojaCriarDto dto)
         {
             var lojaExistente = await _lojaServico.ObterPorIdAsync(id);
             if (lojaExistente is null)
                 return NotFound("Loja não encontrada.");
+
+            if (!Authz.OwnsLoja(this, id) && !User.IsAdmin())
+            {
+                if (lojaExistente.LojistaId != User.GetUserId())
+                    return Forbid();
+            }
 
             lojaExistente.NomeFantasia = dto.NomeFantasia;
             lojaExistente.RazaoSocial = dto.RazaoSocial;
@@ -91,6 +106,7 @@ namespace Pc.WebApi.Controllers
         }
 
         [HttpDelete("{id:guid}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Remover(Guid id)
         {
             var lojaExistente = await _lojaServico.ObterPorIdAsync(id);

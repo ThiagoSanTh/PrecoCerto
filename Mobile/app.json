@@ -30,7 +30,15 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "name": "Preço Certo",
+      "shortName": "Preço Certo",
+      "themeColor": "#14B8A6",
+      "backgroundColor": "#ffffff",
+      "display": "standalone",
+      "startUrl": "/",
+      "orientation": "portrait",
+      "bundler": "metro"
     },
     "plugins": [
       [

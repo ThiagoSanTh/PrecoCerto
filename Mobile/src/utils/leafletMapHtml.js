@@ -126,12 +126,35 @@ export function buildLeafletMapHtml(dadosMapa) {
     .popup-title { font-weight: 700; font-size: 15px; color: #0f172a; }
     .popup-price { color: #14B8A6; font-weight: 600; margin-top: 4px; }
     .popup-meta { color: #64748b; font-size: 12px; margin-top: 4px; }
+    .popup-btn {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      padding: 8px 12px;
+      background: #14B8A6;
+      color: #fff;
+      font-weight: 600;
+      font-size: 13px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
   <div id="map"></div>
   <script>
     const DATA = ${payload};
+
+    function postToApp(data) {
+      var json = JSON.stringify(data);
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(json);
+      } else if (window.parent && window.parent !== window) {
+        window.parent.postMessage(json, '*');
+      }
+    }
 
     const map = L.map('map', { zoomControl: true });
 
@@ -147,6 +170,9 @@ export function buildLeafletMapHtml(dadosMapa) {
       ];
       if (m.loja) parts.push('<div class="popup-meta">' + m.loja + '</div>');
       if (m.endereco) parts.push('<div class="popup-meta">' + m.endereco + '</div>');
+      parts.push(
+        '<button type="button" class="popup-btn" data-id="' + m.id + '">Mais informações</button>'
+      );
       return parts.join('');
     }
 
@@ -166,9 +192,19 @@ export function buildLeafletMapHtml(dadosMapa) {
         iconAnchor: [22, 44],
         popupAnchor: [0, -44]
       });
-      L.marker([m.lat, m.lng], { icon: icon })
+      const marker = L.marker([m.lat, m.lng], { icon: icon })
         .addTo(map)
         .bindPopup(popupHtml(m));
+
+      marker.on('popupopen', function() {
+        var btn = document.querySelector('.popup-btn[data-id="' + m.id + '"]');
+        if (btn) {
+          btn.onclick = function(e) {
+            e.stopPropagation();
+            postToApp({ type: 'product', productId: m.id });
+          };
+        }
+      });
     });
 
     if (DATA.cliente) {
@@ -259,6 +295,15 @@ export function buildLeafletPickerMapHtml({ latitude, longitude, titulo }) {
   <script>
     const DATA = ${payload};
 
+    function postToApp(data) {
+      var json = JSON.stringify(data);
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(json);
+      } else if (window.parent && window.parent !== window) {
+        window.parent.postMessage(json, '*');
+      }
+    }
+
     const map = L.map('map', { zoomControl: true });
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -271,13 +316,7 @@ export function buildLeafletPickerMapHtml({ latitude, longitude, titulo }) {
     let marker = null;
 
     function enviarCoords(lat, lng) {
-      if (window.ReactNativeWebView) {
-        window.ReactNativeWebView.postMessage(JSON.stringify({
-          type: 'coords',
-          latitude: lat,
-          longitude: lng
-        }));
-      }
+      postToApp({ type: 'coords', latitude: lat, longitude: lng });
     }
 
     function colocarMarcador(lat, lng, centralizar) {

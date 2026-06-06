@@ -1,13 +1,23 @@
+using System.Text;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Pc.Infraestrutura;
 using Pc.Repositorio.Implementacoes;
 using Pc.Repositorio.Interfaces;
 using Pc.Servico.Implementacoes;
 using Pc.Servico.Interfaces;
+using Pc.WebApi.Configuration;
+using Pc.WebApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.WebHost.UseUrls("http://0.0.0.0:5132");
+if (builder.Environment.IsDevelopment())
+{
+    builder.WebHost.UseUrls("http://0.0.0.0:5132");
+}
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -17,16 +27,87 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? new[]
+    {
+        "http://localhost:8081",
+        "http://localhost:19006",
+        "http://localhost:3000",
+        "http://127.0.0.1:8081",
+        "http://127.0.0.1:19006",
+        "http://127.0.0.1:3000",
+    };
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("MobilePolicy", policy =>
+    options.AddPolicy("AppPolicy", policy =>
     {
-        policy
-            .AllowAnyOrigin()
-            .AllowAnyHeader()
-            .AllowAnyMethod();
+        var cors = policy.AllowAnyHeader().AllowAnyMethod();
+
+        if (builder.Environment.IsDevelopment())
+        {
+            cors.SetIsOriginAllowed(origin =>
+            {
+                if (string.IsNullOrWhiteSpace(origin)) return false;
+                if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri)) return false;
+
+                if (uri.Host is "localhost" or "127.0.0.1") return true;
+                if (uri.Host.StartsWith("192.168.") || uri.Host.StartsWith("10.")) return true;
+                if (uri.Host.StartsWith("172.")) return true;
+
+                return corsOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase);
+            });
+        }
+        else
+        {
+            cors.WithOrigins(corsOrigins);
+        }
     });
 });
+
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
+var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
+    ?? throw new InvalidOperationException("Configure Jwt:Secret (mín. 32 caracteres) em User Secrets ou variáveis de ambiente.");
+
+if (string.IsNullOrWhiteSpace(jwtSettings.Secret) || jwtSettings.Secret.Length < 32)
+{
+    if (builder.Environment.IsDevelopment())
+        jwtSettings.Secret = "DEV-ONLY-PrecoCerto-Jwt-Secret-32chars!";
+    else
+        throw new InvalidOperationException("Jwt:Secret deve ter pelo menos 32 caracteres.");
+}
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings.Issuer,
+            ValidAudience = jwtSettings.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret)),
+            ClockSkew = TimeSpan.FromMinutes(1),
+        };
+    });
+
+builder.Services.AddAuthorization();
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddFixedWindowLimiter("login", limiter =>
+    {
+        limiter.Window = TimeSpan.FromMinutes(1);
+        limiter.PermitLimit = 10;
+        limiter.QueueLimit = 0;
+    });
+});
+
+builder.Services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
+builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 
 // Repositórios — Catálogo e Estabelecimentos
 builder.Services.AddScoped<IProdutoRepositorio, ProdutoRepositorio>();
@@ -61,7 +142,9 @@ builder.Services.AddScoped<IAvaliacaoServico, AvaliacaoServico>();
 builder.Services.AddScoped<IPreferenciaClienteServico, PreferenciaClienteServico>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        npgsql => npgsql.EnableRetryOnFailure(maxRetryCount: 3)));
 
 var app = builder.Build();
 
@@ -71,7 +154,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors("MobilePolicy");
+app.UseRateLimiter();
+app.UseCors("AppPolicy");
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 

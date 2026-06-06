@@ -1,8 +1,8 @@
 import { StatusBar } from 'expo-status-bar';
 import { View, Text, Pressable, Alert } from 'react-native';
 import { useState } from 'react';
-import { loginCliente } from '../services/clienteService';
-import { loginLojista } from '../services/lojistaService';
+import { login as authLogin } from '../services/authService';
+import { formatApiError } from '../utils/apiErrorUtils';
 import { useAuth } from '../context/AuthContext';
 import {
   FormScreen,
@@ -27,22 +27,17 @@ export default function LoginScreen({ navigation }) {
 
     setLoading(true);
     try {
-      if (tipo === 'cliente') {
-        const perfil = await loginCliente(email.trim(), senha);
-        await salvarSessao({ tipo: 'cliente', perfil }, 'user');
-        await sincronizarGpsCliente();
-        navigation.replace('Home');
-      } else {
-        const perfil = await loginLojista(email.trim(), senha);
-        await salvarSessao({ tipo: 'lojista', perfil }, 'store');
-        navigation.replace('Home');
+      const tipoLogin = tipo === 'cliente' ? 'cliente' : 'lojista';
+      const { perfil } = await authLogin(email.trim(), senha, tipoLogin);
+      const modo = tipoLogin === 'cliente' ? 'user' : 'store';
+      await salvarSessao({ tipo: tipoLogin, perfil }, modo);
+      navigation.replace('Home');
+
+      if (tipoLogin === 'cliente' && perfil?.id) {
+        sincronizarGpsCliente(perfil.id).catch(() => {});
       }
     } catch (error) {
-      const msg =
-        error.response?.data ||
-        error.message ||
-        'Não foi possível entrar. Verifique email e senha.';
-      Alert.alert('Erro', String(msg));
+      Alert.alert('Erro', formatApiError(error));
     } finally {
       setLoading(false);
     }

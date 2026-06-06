@@ -1,34 +1,35 @@
-import { FlatList, Alert, ActivityIndicator, View, Image, StyleSheet } from 'react-native';
+import { FlatList, Alert, ActivityIndicator, View, StyleSheet } from 'react-native';
 import { useCallback, useState, useMemo } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { listarProdutosParaFeed, buscarProdutosPorNome } from '../services/productService';
+import { listarOfertas } from '../services/ofertaService';
 import { registrarPesquisa } from '../services/historicoService';
 import { useAuth } from '../context/AuthContext';
 import SearchMapView from '../components/SearchMapView';
+import ProductGridCard from '../components/feed/ProductGridCard';
 import {
   FormScreen,
   FormField,
   PrimaryButton,
-  ListCard,
   ListCardText,
   FormTabs,
-  formStyles,
 } from '../components/form';
 import { colors } from '../style';
 import {
   filtrarProdutosPorTermo,
-  nomeProduto,
   normalizarListaProdutos,
 } from '../utils/produtoUtils';
-import { formatarPrecoBrl } from '../utils/mapaUtils';
+import { mapaOfertasPorProduto } from '../utils/precoUtils';
 
 const MODO_LISTA = 'lista';
 const MODO_MAPA = 'mapa';
 
 export default function SearchScreen() {
+  const navigation = useNavigation();
   const [termoBusca, setTermoBusca] = useState('');
   const [produtosBase, setProdutosBase] = useState([]);
   const [resultadosBusca, setResultadosBusca] = useState(null);
+  const [ofertasMap, setOfertasMap] = useState(new Map());
   const [modoVisualizacao, setModoVisualizacao] = useState(MODO_LISTA);
   const [loading, setLoading] = useState(true);
   const { session, isCliente, sincronizarGpsCliente } = useAuth();
@@ -47,8 +48,12 @@ export default function SearchScreen() {
     setResultadosBusca(null);
     setModoVisualizacao(MODO_LISTA);
     try {
-      const lista = await listarProdutosParaFeed(null);
+      const [lista, ofertas] = await Promise.all([
+        listarProdutosParaFeed(null),
+        listarOfertas().catch(() => []),
+      ]);
       setProdutosBase(Array.isArray(lista) ? lista : []);
+      setOfertasMap(mapaOfertasPorProduto(ofertas));
     } catch (error) {
       const detalhe =
         error.response?.data?.title ||
@@ -113,27 +118,17 @@ export default function SearchScreen() {
     return filtrarProdutosPorTermo(base, termoBusca);
   }, [produtosBase, resultadosBusca, termoBusca]);
 
+  function abrirProduto(productId) {
+    navigation.navigate('ProductDetail', { productId });
+  }
+
   function renderItem({ item }) {
     return (
-      <ListCard title={nomeProduto(item)}>
-        <View style={styles.listRow}>
-          {item.imagemUrl ? (
-            <Image
-              source={{ uri: item.imagemUrl }}
-              style={styles.thumb}
-              resizeMode="cover"
-            />
-          ) : null}
-          <View style={styles.listBody}>
-            <ListCardText>{item.marca}</ListCardText>
-            {item.descricao ? <ListCardText>{item.descricao}</ListCardText> : null}
-            <ListCardText>{formatarPrecoBrl(item.preco)}</ListCardText>
-            {item.lojaNomeFantasia ? (
-              <ListCardText>{item.lojaNomeFantasia}</ListCardText>
-            ) : null}
-          </View>
-        </View>
-      </ListCard>
+      <ProductGridCard
+        produto={item}
+        oferta={ofertasMap.get(item.id)}
+        onPress={() => abrirProduto(item.id)}
+      />
     );
   }
 
@@ -142,24 +137,33 @@ export default function SearchScreen() {
   return (
     <FormScreen
       title="Buscar produtos"
-      subtitle="Todos os produtos do catálogo"
+      subtitle="Encontre as melhores ofertas"
       scrollable={false}
     >
-      <FormField
-        label="Buscar"
-        value={termoBusca}
-        onChangeText={(texto) => {
-          setTermoBusca(texto);
-          if (!texto.trim()) {
-            setResultadosBusca(null);
-            setModoVisualizacao(MODO_LISTA);
-          }
-        }}
-        placeholder="Nome, marca ou descrição..."
-        onSubmitEditing={handleSearch}
-        returnKeyType="search"
-      />
-      <PrimaryButton label="Buscar" onPress={handleSearch} style={{ marginBottom: 12 }} />
+      <View style={styles.searchRow}>
+        <View style={styles.searchInputWrap}>
+          <FormField
+            label=""
+            value={termoBusca}
+            onChangeText={(texto) => {
+              setTermoBusca(texto);
+              if (!texto.trim()) {
+                setResultadosBusca(null);
+                setModoVisualizacao(MODO_LISTA);
+              }
+            }}
+            placeholder="Buscar produtos..."
+            onSubmitEditing={handleSearch}
+            returnKeyType="search"
+            compact
+          />
+        </View>
+        <PrimaryButton
+          label="Buscar"
+          onPress={handleSearch}
+          style={styles.searchButton}
+        />
+      </View>
 
       {mostrarToggle ? (
         <FormTabs
@@ -175,17 +179,23 @@ export default function SearchScreen() {
       {loading ? (
         <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 24 }} />
       ) : modoVisualizacao === MODO_MAPA && resultadosBusca?.length > 0 ? (
-        <SearchMapView produtos={resultadosBusca} />
+        <SearchMapView
+          produtos={resultadosBusca}
+          onProductPress={abrirProduto}
+        />
       ) : (
         <FlatList
-          style={formStyles.listFlex}
+          style={styles.gridList}
+          contentContainerStyle={styles.gridContent}
           data={produtosExibidos}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
+          numColumns={2}
+          columnWrapperStyle={styles.gridRow}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
-            <ListCardText>
+            <ListCardText style={styles.emptyText}>
               {termoBusca.trim()
                 ? 'Nenhum produto encontrado para essa busca.'
                 : 'Nenhum produto cadastrado ainda.'}
@@ -198,18 +208,36 @@ export default function SearchScreen() {
 }
 
 const styles = StyleSheet.create({
-  listRow: {
+  searchRow: {
     flexDirection: 'row',
-    marginTop: 8,
-    gap: 10,
+    alignItems: 'flex-end',
+    gap: 8,
+    marginBottom: 12,
   },
-  thumb: {
-    width: 56,
-    height: 56,
-    borderRadius: 8,
-    backgroundColor: '#e2e8f0',
-  },
-  listBody: {
+  searchInputWrap: {
     flex: 1,
+  },
+  searchButton: {
+    marginBottom: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  gridList: {
+    flex: 1,
+    backgroundColor: '#EBEBEB',
+    marginHorizontal: -16,
+  },
+  gridContent: {
+    paddingHorizontal: 8,
+    paddingTop: 8,
+    paddingBottom: 16,
+  },
+  gridRow: {
+    gap: 8,
+  },
+  emptyText: {
+    textAlign: 'center',
+    marginTop: 24,
+    color: '#64748B',
   },
 });
