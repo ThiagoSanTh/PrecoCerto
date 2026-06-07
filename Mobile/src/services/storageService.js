@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system/legacy';
+import { Platform } from 'react-native';
 import { supabase, BUCKET_PRODUTOS_IMAGENS } from './supabaseClient';
 
 function extensaoPorMime(mimeType) {
@@ -14,6 +14,31 @@ function base64ParaBytes(base64) {
     bytes[i] = binary.charCodeAt(i);
   }
   return bytes;
+}
+
+async function uriParaBytes(uri) {
+  if (Platform.OS === 'web') {
+    const response = await fetch(uri);
+    if (!response.ok) {
+      throw new Error('Não foi possível ler a imagem selecionada.');
+    }
+    const buffer = await response.arrayBuffer();
+    if (!buffer?.byteLength) {
+      throw new Error('Não foi possível ler a imagem selecionada.');
+    }
+    return new Uint8Array(buffer);
+  }
+
+  const FileSystem = require('expo-file-system/legacy');
+  const base64 = await FileSystem.readAsStringAsync(uri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+
+  if (!base64?.length) {
+    throw new Error('Não foi possível ler a imagem selecionada.');
+  }
+
+  return base64ParaBytes(base64);
 }
 
 /**
@@ -36,15 +61,7 @@ export async function uploadImagemProduto({ uri, lojaId, fileName, mimeType }) {
   const path = `${lojaId}/${nomeArquivo}`;
   const contentType = mimeType || `image/${ext === 'png' ? 'png' : 'jpeg'}`;
 
-  const base64 = await FileSystem.readAsStringAsync(uri, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
-
-  if (!base64?.length) {
-    throw new Error('Não foi possível ler a imagem selecionada.');
-  }
-
-  const fileData = base64ParaBytes(base64);
+  const fileData = await uriParaBytes(uri);
 
   const { error } = await supabase.storage
     .from(BUCKET_PRODUTOS_IMAGENS)
