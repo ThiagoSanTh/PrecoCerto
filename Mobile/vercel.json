@@ -4,7 +4,7 @@
   "installCommand": "npm ci",
   "framework": null,
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/((?!manifest\\.json|service-worker\\.js|assets/).*)", "destination": "/index.html" }
   ],
   "headers": [
     {

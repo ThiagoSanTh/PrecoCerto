@@ -76,6 +76,11 @@ export async function uploadImagemProduto({ uri, lojaId, fileName, mimeType }) {
         'Bucket "produtos-imagens" não existe no Supabase. Crie em Storage → New bucket ou execute o script setup-produtos-imagens-storage.sql no SQL Editor.'
       );
     }
+    if (error.message?.toLowerCase().includes('row-level security')) {
+      throw new Error(
+        'Upload bloqueado pelas políticas do Supabase Storage. Execute setup-produtos-imagens-storage.sql no SQL Editor do projeto.'
+      );
+    }
     throw new Error(error.message || 'Falha ao enviar imagem do produto.');
   }
 
