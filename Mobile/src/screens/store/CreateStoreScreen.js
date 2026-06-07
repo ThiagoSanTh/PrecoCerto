@@ -1,19 +1,19 @@
 import { View, Text, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { useState } from 'react';
-import { criarLoja } from '../services/lojaService';
-import { atualizarLojista } from '../services/lojistaService';
-import { useAuth } from '../context/AuthContext';
-import { buscarEnderecoPorCep, geocodificarEndereco } from '../services/enderecoService';
-import { obterLocalizacaoAtual } from '../services/locationService';
-import StoreLocationMapView from '../components/StoreLocationMapView';
+import { criarLoja } from '../../services/lojaService';
+import { atualizarLojista } from '../../services/lojistaService';
+import { useAuth } from '../../context/AuthContext';
+import { buscarEnderecoPorCep, geocodificarEndereco } from '../../services/enderecoService';
+import { obterLocalizacaoAtual } from '../../services/locationService';
+import StoreLocationMapView from '../../components/StoreLocationMapView';
 import {
   FormScreen,
   FormField,
   PrimaryButton,
   SecondaryButton,
   formStyles,
-} from '../components/form';
-import { colors } from '../style';
+} from '../../components/form';
+import { colors } from '../../../theme';
 
 const STEPS = [
   { key: 'loja', label: 'Loja' },

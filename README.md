@@ -33,12 +33,33 @@
 <h2>🧱 Estrutura do Projeto</h2>
 
 <pre>
-PrecoCerto
-├── Pc.Dominio        → Entidades e enums
-├── Pc.Servico        → Regras de negócio
-├── Pc.Infraestrutura → EF Core + Banco de dados
-├── Pc.Repositorio    → Acesso a dados
-└── Pc.WebApi         → Controllers e endpoints
+PrecoCerto/
+├── BackEnd/                    → API .NET 8 (camadas)
+│   ├── Pc.Dominio/             → Entidades e enums
+│   ├── Pc.Infraestrutura/      → EF Core + migrations
+│   ├── Pc.Repositorio/         → Acesso a dados
+│   ├── Pc.Servico/             → Regras de negócio
+│   ├── Pc.WebApi/              → Controllers e endpoints
+│   ├── scripts/                → SQL (Supabase / migrations manuais)
+│   ├── docs/                   → Documentação do backend
+│   ├── Dockerfile
+│   └── PrecoCerto.slnx         → Solution .NET
+├── Mobile/                     → App Expo (React Native)
+│   └── src/
+│       ├── components/         → UI reutilizável
+│       ├── context/            → Estado global (auth)
+│       ├── navigation/         → Rotas e tabs
+│       ├── screens/            → Telas por domínio
+│       │   ├── auth/
+│       │   ├── catalog/
+│       │   ├── store/
+│       │   └── user/
+│       ├── services/           → API, Supabase, GPS
+│       ├── theme/              → Cores e estilos globais
+│       └── utils/
+├── docs/                       → Documentação geral
+├── render.yaml                 → Deploy da API (Render)
+└── README.md
 </pre>
 
 <br>

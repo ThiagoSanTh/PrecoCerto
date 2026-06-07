@@ -1,16 +1,16 @@
 import { StatusBar } from 'expo-status-bar';
 import { View, Text, Pressable, Alert } from 'react-native';
 import { useState } from 'react';
-import { login as authLogin } from '../services/authService';
-import { formatApiError } from '../utils/apiErrorUtils';
-import { useAuth } from '../context/AuthContext';
+import { login as authLogin } from '../../services/authService';
+import { formatApiError } from '../../utils/apiErrorUtils';
+import { useAuth } from '../../context/AuthContext';
 import {
   FormScreen,
   FormField,
   FormTabs,
   PrimaryButton,
   formStyles,
-} from '../components/form';
+} from '../../components/form';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');

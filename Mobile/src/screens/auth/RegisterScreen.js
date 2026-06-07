@@ -1,18 +1,18 @@
 import { Alert, Text } from 'react-native';
 import { useState } from 'react';
-import { registrarCliente } from '../services/clienteService';
-import { registrarLojista } from '../services/lojistaService';
-import { login as authLogin } from '../services/authService';
-import { formatApiError } from '../utils/apiErrorUtils';
-import { obterLocalizacaoAtual } from '../services/locationService';
-import { useAuth } from '../context/AuthContext';
+import { registrarCliente } from '../../services/clienteService';
+import { registrarLojista } from '../../services/lojistaService';
+import { login as authLogin } from '../../services/authService';
+import { formatApiError } from '../../utils/apiErrorUtils';
+import { obterLocalizacaoAtual } from '../../services/locationService';
+import { useAuth } from '../../context/AuthContext';
 import {
   FormScreen,
   FormField,
   FormTabs,
   PrimaryButton,
   formStyles,
-} from '../components/form';
+} from '../../components/form';
 
 export default function RegisterScreen({ navigation, route }) {
   const [tipoCadastro, setTipoCadastro] = useState(route?.params?.tipoInicial || 'cliente');

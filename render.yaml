@@ -2,7 +2,7 @@ services:
   - type: web
     name: preco-certo-api
     runtime: dotnet
-    rootDir: BackEnd/Preco Certo/Pc.WebApi
+    rootDir: BackEnd/Pc.WebApi
     buildCommand: dotnet publish -c Release -o out
     startCommand: dotnet out/Pc.WebApi.dll
     envVars:

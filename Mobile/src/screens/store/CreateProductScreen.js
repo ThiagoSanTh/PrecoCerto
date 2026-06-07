@@ -1,11 +1,11 @@
 import { Alert, Image, Pressable, Text, StyleSheet, View } from 'react-native';
 import { useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
-import { criarProduto } from '../services/productService';
-import { uploadImagemProduto } from '../services/storageService';
-import { useAuth } from '../context/AuthContext';
-import { FormScreen, FormField, PrimaryButton, SecondaryButton } from '../components/form';
-import { colors } from '../style';
+import { criarProduto } from '../../services/productService';
+import { uploadImagemProduto } from '../../services/storageService';
+import { useAuth } from '../../context/AuthContext';
+import { FormScreen, FormField, PrimaryButton, SecondaryButton } from '../../components/form';
+import { colors } from '../../../theme';
 
 export default function CreateProductScreen({ navigation }) {
   const { session } = useAuth();

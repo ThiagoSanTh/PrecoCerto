@@ -1,25 +1,25 @@
 import { FlatList, Alert, ActivityIndicator, View, StyleSheet } from 'react-native';
 import { useCallback, useState, useMemo } from 'react';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { listarProdutosParaFeed, buscarProdutosPorNome } from '../services/productService';
-import { listarOfertas } from '../services/ofertaService';
-import { registrarPesquisa } from '../services/historicoService';
-import { useAuth } from '../context/AuthContext';
-import SearchMapView from '../components/SearchMapView';
-import ProductGridCard from '../components/feed/ProductGridCard';
+import { listarProdutosParaFeed, buscarProdutosPorNome } from '../../services/productService';
+import { listarOfertas } from '../../services/ofertaService';
+import { registrarPesquisa } from '../../services/historicoService';
+import { useAuth } from '../../context/AuthContext';
+import SearchMapView from '../../components/SearchMapView';
+import ProductGridCard from '../../components/feed/ProductGridCard';
 import {
   FormScreen,
   FormField,
   PrimaryButton,
   ListCardText,
   FormTabs,
-} from '../components/form';
-import { colors } from '../style';
+} from '../../components/form';
+import { colors } from '../../../theme';
 import {
   filtrarProdutosPorTermo,
   normalizarListaProdutos,
-} from '../utils/produtoUtils';
-import { mapaOfertasPorProduto } from '../utils/precoUtils';
+} from '../../utils/produtoUtils';
+import { mapaOfertasPorProduto } from '../../utils/precoUtils';
 
 const MODO_LISTA = 'lista';
 const MODO_MAPA = 'mapa';

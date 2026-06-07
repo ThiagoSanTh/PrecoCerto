@@ -1,17 +1,17 @@
 import { FlatList, Alert, ActivityIndicator } from 'react-native';
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { listarOfertas } from '../services/ofertaService';
-import { obterLoja } from '../services/lojaService';
-import { useAuth } from '../context/AuthContext';
+import { listarOfertas } from '../../services/ofertaService';
+import { obterLoja } from '../../services/lojaService';
+import { useAuth } from '../../context/AuthContext';
 import {
   FormScreen,
   PrimaryButton,
   ListCard,
   ListCardText,
   formStyles,
-} from '../components/form';
-import { colors } from '../style';
+} from '../../components/form';
+import { colors } from '../../../theme';
 
 export default function StoreScreen({ navigation }) {
   const { session } = useAuth();

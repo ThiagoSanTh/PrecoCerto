@@ -1,15 +1,15 @@
 import { View, Text, Pressable, Alert } from 'react-native';
 import { useState, useEffect } from 'react';
-import { listarProdutosParaFeed } from '../services/productService';
-import { nomeProduto } from '../utils/produtoUtils';
-import { criarOferta } from '../services/ofertaService';
-import { useAuth } from '../context/AuthContext';
+import { listarProdutosParaFeed } from '../../services/productService';
+import { nomeProduto } from '../../utils/produtoUtils';
+import { criarOferta } from '../../services/ofertaService';
+import { useAuth } from '../../context/AuthContext';
 import {
   FormScreen,
   FormField,
   PrimaryButton,
   formStyles,
-} from '../components/form';
+} from '../../components/form';
 
 export default function CreateOfertaScreen({ navigation }) {
   const { session } = useAuth();

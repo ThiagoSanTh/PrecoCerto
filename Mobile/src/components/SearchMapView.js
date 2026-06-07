@@ -11,7 +11,7 @@ import {
   prepararDadosMapaLeaflet,
   sanitizarMarcadoresParaHtml,
 } from '../utils/leafletMapHtml';
-import { styles as appStyles } from '../style';
+import { styles as appStyles } from '../theme';
 
 export default function SearchMapView({ produtos, onProductPress }) {
   const [localizacaoCliente, setLocalizacaoCliente] = useState(null);

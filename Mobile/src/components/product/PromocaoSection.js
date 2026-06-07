@@ -1,6 +1,6 @@
 import { View, Text, Switch, StyleSheet } from 'react-native';
 import { FormField } from '../form';
-import { colors } from '../../style';
+import { colors } from '../../theme';
 
 export default function PromocaoSection({
   emPromocao,

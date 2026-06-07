@@ -1,16 +1,16 @@
 import { FlatList, Alert, ActivityIndicator } from 'react-native';
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { listarHistoricoCliente, limparHistoricoCliente } from '../services/historicoService';
-import { useAuth } from '../context/AuthContext';
+import { listarHistoricoCliente, limparHistoricoCliente } from '../../services/historicoService';
+import { useAuth } from '../../context/AuthContext';
 import {
   FormScreen,
   SecondaryButton,
   ListCard,
   ListCardText,
   formStyles,
-} from '../components/form';
-import { colors } from '../style';
+} from '../../components/form';
+import { colors } from '../../../theme';
 
 export default function HistoricoScreen() {
   const [historico, setHistorico] = useState([]);

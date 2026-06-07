@@ -1,8 +1,8 @@
 import { View, Text, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { useAuth } from '../context/AuthContext';
-import { atualizarCliente, alterarSenha } from '../services/clienteService';
+import { useAuth } from '../../context/AuthContext';
+import { atualizarCliente, alterarSenha } from '../../services/clienteService';
 import {
   FormScreen,
   FormField,
@@ -11,8 +11,8 @@ import {
   ListCard,
   ListCardText,
   formStyles,
-} from '../components/form';
-import { colors } from '../style';
+} from '../../components/form';
+import { colors } from '../../../theme';
 
 export default function UserScreen({ navigation }) {
   const { session, logout, sincronizarGpsCliente, isCliente, isLojista, salvarSessao } =

@@ -9,7 +9,7 @@ Se `appsettings.json` com senha do Supabase já foi commitado, rotacione a senha
 ## User Secrets
 
 ```bash
-cd "BackEnd/Preco Certo/Pc.WebApi"
+cd "BackEnd/Pc.WebApi"
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=...;Password=...;SSL Mode=Require"
 dotnet user-secrets set "Jwt:Secret" "sua-chave-secreta-com-pelo-menos-32-caracteres"
 ```

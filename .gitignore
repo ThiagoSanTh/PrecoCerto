@@ -8,7 +8,7 @@
 !.env.example
 !.env.*.example
 
-# ASP.NET — configs com credenciais reais (manter apenas *Exemplo* / templates)
+# ASP.NET — configs com credenciais reais (manter templates appsettings.Exemplo.*)
 **/Pc.WebApi/appsettings.json
 **/Pc.WebApi/appsettings.Development.json
 **/Pc.WebApi/appsettings.*.local.json

@@ -1,13 +1,13 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import LoginScreen from '../screens/LoginScreen';
-import RegisterScreen from '../screens/RegisterScreen';
-import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
-import CreateStoreScreen from '../screens/CreateStoreScreen';
-import CreateProductScreen from '../screens/CreateProductScreen';
-import ProductDetailScreen from '../screens/ProductDetailScreen';
-import CreateOfertaScreen from '../screens/CreateOfertaScreen';
+import LoginScreen from '../screens/auth/LoginScreen';
+import RegisterScreen from '../screens/auth/RegisterScreen';
+import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
+import CreateStoreScreen from '../screens/store/CreateStoreScreen';
+import CreateProductScreen from '../screens/store/CreateProductScreen';
+import ProductDetailScreen from '../screens/catalog/ProductDetailScreen';
+import CreateOfertaScreen from '../screens/store/CreateOfertaScreen';
 
 import AppRoutes from './AppRoutes';
 

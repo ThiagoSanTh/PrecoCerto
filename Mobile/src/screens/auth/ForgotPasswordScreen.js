@@ -1,6 +1,6 @@
 import { Alert } from 'react-native';
 import { useState } from 'react';
-import { FormScreen, FormField, PrimaryButton, SecondaryButton } from '../components/form';
+import { FormScreen, FormField, PrimaryButton, SecondaryButton } from '../../components/form';
 
 export default function ForgotPasswordScreen({ navigation }) {
   const [email, setEmail] = useState('');

@@ -1,19 +1,19 @@
 import { FlatList, Alert, ActivityIndicator, StyleSheet } from 'react-native';
 import { useCallback, useState, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { listarProdutos } from '../services/productService';
-import { listarOfertas } from '../services/ofertaService';
-import { useAuth } from '../context/AuthContext';
-import ProductGridCard from '../components/feed/ProductGridCard';
+import { listarProdutos } from '../../services/productService';
+import { listarOfertas } from '../../services/ofertaService';
+import { useAuth } from '../../context/AuthContext';
+import ProductGridCard from '../../components/feed/ProductGridCard';
 import {
   FormScreen,
   FormField,
   PrimaryButton,
   ListCardText,
-} from '../components/form';
-import { colors } from '../style';
-import { filtrarProdutosPorTermo, produtoPertenceALoja } from '../utils/produtoUtils';
-import { mapaOfertasPorProduto } from '../utils/precoUtils';
+} from '../../components/form';
+import { colors } from '../../../theme';
+import { filtrarProdutosPorTermo, produtoPertenceALoja } from '../../utils/produtoUtils';
+import { mapaOfertasPorProduto } from '../../utils/precoUtils';
 
 export default function ProductsScreen({ navigation }) {
   const { session } = useAuth();

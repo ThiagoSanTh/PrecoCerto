@@ -1,5 +1,5 @@
 import { StyleSheet, Platform } from 'react-native';
-import { colors } from '../../style';
+import { colors } from '../../theme';
 
 export const formStyles = StyleSheet.create({
   safe: {

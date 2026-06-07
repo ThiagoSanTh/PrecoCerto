@@ -40,33 +40,9 @@ Feche e abra o CMD novamente após instalar.
 
 ---
 
-## 2. Estrutura Node.js do repositório
-
-O projeto tem **dois** `package.json`:
-
-| Pasta | Função |
-|-------|--------|
-| `PrecoCerto\` (raiz) | Dependências auxiliares (`axios`, `expo`) |
-| `PrecoCerto\Mobile\` | **App principal** — Expo SDK 54 + React Native |
+## 2. Instalar dependências do app mobile (CMD)
 
 O app mobile é desenvolvido **sempre dentro de `Mobile\`**.
-
----
-
-## 3. Instalar dependências do projeto (CMD)
-
-Abra o CMD e execute na ordem:
-
-### 3.1 Raiz do repositório
-
-```cmd
-cd C:\Users\thiag\Desktop\PrecoCerto
-npm ci
-```
-
-> Se não existir `package-lock.json` ou `npm ci` falhar, use: `npm install`
-
-### 3.2 App mobile (obrigatório)
 
 ```cmd
 cd C:\Users\thiag\Desktop\PrecoCerto\Mobile
@@ -84,7 +60,7 @@ npm install
 
 ---
 
-## 4. Comandos para rodar o app mobile
+## 3. Comandos para rodar o app mobile
 
 Sempre a partir da pasta `Mobile\`:
 
@@ -120,7 +96,7 @@ O Expo carrega o arquivo `Mobile\.env`. Variáveis usadas:
 
 ---
 
-## 5. Principais dependências do Mobile
+## 4. Principais dependências do Mobile
 
 Instaladas automaticamente pelo `npm ci` / `npm install` em `Mobile\`:
 
@@ -140,9 +116,9 @@ Não é necessário instalar `expo` globalmente (`npm install -g expo`). Use sem
 
 ---
 
-## 6. Backend (.NET) — fora do Node.js
+## 5. Backend (.NET) — fora do Node.js
 
-A API REST fica em `BackEnd\Preco Certo\`. Requer:
+A API REST fica em `BackEnd\`. Requer:
 
 | Ferramenta | Comando de verificação |
 |------------|------------------------|
@@ -151,14 +127,14 @@ A API REST fica em `BackEnd\Preco Certo\`. Requer:
 Rodar a API:
 
 ```cmd
-cd C:\Users\thiag\Desktop\PrecoCerto\BackEnd\Preco Certo\Pc.WebApi
+cd C:\Users\thiag\Desktop\PrecoCerto\BackEnd\Pc.WebApi
 dotnet restore
 dotnet run
 ```
 
 ---
 
-## 7. Problemas comuns e soluções
+## 6. Problemas comuns e soluções
 
 | Erro | Causa | Solução (CMD) |
 |------|-------|----------------|
@@ -180,14 +156,12 @@ Substitua pelo IP do seu PC. Se retornar HTML de erro "Invalid Hostname", a API 
 
 ---
 
-## 8. Resumo rápido (copiar e colar)
+## 7. Resumo rápido (copiar e colar)
 
 Instalação completa do zero:
 
 ```cmd
-cd C:\Users\thiag\Desktop\PrecoCerto
-npm ci
-cd Mobile
+cd C:\Users\thiag\Desktop\PrecoCerto\Mobile
 npm ci
 npm start
 ```

@@ -1,8 +1,8 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import BuscarStack from './buscarStack.routes';
-import FavoritosScreen from '../screens/FavoritosScreen';
-import HistoricoScreen from '../screens/HistoricoScreen';
-import UserScreen from '../screens/UserScreen';
+import FavoritosScreen from '../screens/user/FavoritosScreen';
+import HistoricoScreen from '../screens/user/HistoricoScreen';
+import UserScreen from '../screens/user/UserScreen';
 
 const Tab = createBottomTabNavigator();
 

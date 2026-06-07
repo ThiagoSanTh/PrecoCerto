@@ -13,42 +13,42 @@ import {
   buscarProdutoPorId,
   atualizarProduto,
   removerProduto,
-} from '../services/productService';
+} from '../../services/productService';
 import {
   listarOfertasPorProduto,
   criarOferta,
   atualizarOferta,
-} from '../services/ofertaService';
+} from '../../services/ofertaService';
 import {
   listarAvaliacoesLoja,
   obterMediaAvaliacoesLoja,
-} from '../services/avaliacaoService';
-import { uploadImagemProduto } from '../services/storageService';
+} from '../../services/avaliacaoService';
+import { uploadImagemProduto } from '../../services/storageService';
 import {
   adicionarFavorito,
   removerFavoritoProduto,
   verificarFavorito,
-} from '../services/favoritoService';
-import { useAuth } from '../context/AuthContext';
-import { nomeProduto, produtoPertenceALoja } from '../utils/produtoUtils';
-import { formatarPrecoBrl } from '../utils/mapaUtils';
-import { formatarDataBr, parseDataBr } from '../utils/dataUtils';
+} from '../../services/favoritoService';
+import { useAuth } from '../../context/AuthContext';
+import { nomeProduto, produtoPertenceALoja } from '../../utils/produtoUtils';
+import { formatarPrecoBrl } from '../../utils/mapaUtils';
+import { formatarDataBr, parseDataBr } from '../../utils/dataUtils';
 import {
   montarHistoricoPrecos,
   selecionarOfertaPrincipal,
-} from '../utils/precoUtils';
-import ProductImageGallery from '../components/product/ProductImageGallery';
-import PriceHistoryBlock from '../components/product/PriceHistoryBlock';
-import ReviewList from '../components/product/ReviewList';
-import PromocaoSection from '../components/product/PromocaoSection';
-import ProductActionBar from '../components/product/ProductActionBar';
+} from '../../utils/precoUtils';
+import ProductImageGallery from '../../components/product/ProductImageGallery';
+import PriceHistoryBlock from '../../components/product/PriceHistoryBlock';
+import ReviewList from '../../components/product/ReviewList';
+import PromocaoSection from '../../components/product/PromocaoSection';
+import ProductActionBar from '../../components/product/ProductActionBar';
 import {
   FormScreen,
   FormField,
   PrimaryButton,
   SecondaryButton,
-} from '../components/form';
-import { colors } from '../style';
+} from '../../components/form';
+import { colors } from '../../../theme';
 
 function preencherFormularioProduto(prod, ofertaLoja) {
   return {
