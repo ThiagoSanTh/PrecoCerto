@@ -34,7 +34,7 @@ namespace Pc.Infraestrutura
             modelBuilder.Entity<Loja>()
                 .HasOne(l => l.Lojista)
                 .WithOne(lo => lo.Loja)
-                // A loja é criada depois do cadastro do lojista, então o vínculo é opcional no início.
+                // FK em Loja.LojistaId: lojista pode existir antes da loja ser criada.
                 .HasForeignKey<Loja>(l => l.LojistaId);
 
             modelBuilder.Entity<Produto>()

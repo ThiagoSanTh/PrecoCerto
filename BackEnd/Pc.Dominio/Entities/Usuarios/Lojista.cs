@@ -23,8 +23,7 @@ namespace Pc.Dominio.Entities.Usuarios
         public TipoUsuario Tipo { get; set; } = TipoUsuario.Lojista; // Implícito: sempre Lojista
         
         // 🏪 Dados de Funcionário
-        // O lojista pode se cadastrar antes de criar/vincular uma loja.
-        public Guid? LojaId { get; set; }
+        // Vínculo com a loja é definido em Loja.LojistaId (relação 1:1); use a navegação Loja.
         public Loja? Loja { get; set; }
         public string? Cargo { get; set; } // Ex: gerente, vendedor, estoquista
     }

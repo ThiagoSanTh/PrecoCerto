@@ -144,6 +144,7 @@ dotnet run
 | `Unknown command: "expo"` | Tentou `npm expo start` | Use `npx expo start` |
 | Pacotes corrompidos | Instalação parcial | Apague `node_modules` e rode `npm ci` de novo |
 | `Bad Request - Invalid Hostname` no login | API só aceita `localhost` no `AllowedHosts` | Reinicie a API após atualizar `appsettings.Development.json` com `"AllowedHosts": "*"` |
+| `Este host não é conhecido` no `dotnet ef database update` | `Host` errado na connection string (ex.: `postgres.PROJECT_REF`) | Supabase → Database → copie `Host=db.PROJECT_REF.supabase.co` e `Username=postgres` — ver `BackEnd/docs/SECRETS.md` |
 | App não alcança a API no celular | IP errado no `.env` | Rode `ipconfig`, atualize `EXPO_PUBLIC_API_URL` em `Mobile\.env` com o IPv4 do PC (ex.: `http://192.168.1.72:5132/api`) |
 
 ### Testar se a API responde pelo IP (CMD)

@@ -14,7 +14,6 @@ namespace Pc.WebApi.DTOs.Usuarios
         public string Senha { get; set; } = string.Empty;
 
         public string? Telefone { get; set; }
-        public Guid? LojaId { get; set; }
         public string? Cargo { get; set; }
     }
 }

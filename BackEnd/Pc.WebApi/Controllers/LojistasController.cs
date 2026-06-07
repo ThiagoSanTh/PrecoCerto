@@ -37,7 +37,6 @@ namespace Pc.WebApi.Controllers
                 Email = dto.Email,
                 SenhaHash = dto.Senha,
                 Telefone = dto.Telefone,
-                LojaId = dto.LojaId,
                 Cargo = dto.Cargo
             };
 
@@ -57,7 +56,7 @@ namespace Pc.WebApi.Controllers
             if (lojista == null)
                 return Unauthorized("Email ou senha incorretos.");
 
-            var lojaId = lojista.Loja?.Id ?? lojista.LojaId;
+            var lojaId = lojista.Loja?.Id;
             var perfil = MapResposta(lojista);
             var token = _jwtTokenService.GenerateToken(lojista.Id, Pc.Dominio.Enums.TipoUsuario.Lojista, lojaId);
 
@@ -120,7 +119,6 @@ namespace Pc.WebApi.Controllers
             lojista.NomeUsuario = dto.NomeUsuario;
             lojista.Email = dto.Email;
             lojista.Telefone = dto.Telefone;
-            lojista.LojaId = dto.LojaId;
             lojista.Cargo = dto.Cargo;
 
             await _lojistaServico.AtualizarAsync(lojista);
@@ -153,7 +151,7 @@ namespace Pc.WebApi.Controllers
             Telefone = l.Telefone,
             Tipo = (int)l.Tipo,
             UltimoLogin = l.UltimoLogin,
-            LojaId = l.Loja?.Id ?? l.LojaId,
+            LojaId = l.Loja?.Id,
             NomeLoja = l.Loja?.NomeFantasia ?? string.Empty,
             Cargo = l.Cargo,
             Ativo = l.Ativo,

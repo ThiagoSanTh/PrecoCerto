@@ -80,7 +80,7 @@ namespace Pc.WebApi.Controllers
             if (lojista == null)
                 return Unauthorized("Email ou senha incorretos.");
 
-            var lojaId = lojista.Loja?.Id ?? lojista.LojaId;
+            var lojaId = lojista.Loja?.Id;
             var perfil = MapLojista(lojista);
             var token = _jwtTokenService.GenerateToken(lojista.Id, TipoUsuario.Lojista, lojaId);
 
@@ -131,7 +131,7 @@ namespace Pc.WebApi.Controllers
             Telefone = l.Telefone,
             Tipo = (int)l.Tipo,
             UltimoLogin = l.UltimoLogin,
-            LojaId = l.Loja?.Id ?? l.LojaId,
+            LojaId = l.Loja?.Id,
             NomeLoja = l.Loja?.NomeFantasia ?? string.Empty,
             Cargo = l.Cargo,
             Ativo = l.Ativo,

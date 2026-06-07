@@ -63,8 +63,8 @@ namespace Pc.Repositorio.Implementacoes
     public async Task<List<Lojista>> ListarPorLojaAsync(Guid lojaId)
     {
         return await _context.Lojistas
-            .Where(l => l.LojaId == lojaId && l.Ativo)
             .Include(l => l.Loja)
+            .Where(l => l.Ativo && _context.Lojas.Any(lo => lo.Id == lojaId && lo.LojistaId == l.Id))
             .ToListAsync();
     }
 
