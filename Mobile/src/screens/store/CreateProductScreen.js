@@ -5,7 +5,7 @@ import { criarProduto } from '../../services/productService';
 import { uploadImagemProduto } from '../../services/storageService';
 import { useAuth } from '../../context/AuthContext';
 import { FormScreen, FormField, PrimaryButton, SecondaryButton } from '../../components/form';
-import { colors } from '../../../theme';
+import { colors } from '../../theme';
 
 export default function CreateProductScreen({ navigation }) {
   const { session } = useAuth();

@@ -7,7 +7,7 @@ import { listarOfertas } from '../../services/ofertaService';
 import { useAuth } from '../../context/AuthContext';
 import FavoritoListCard from '../../components/feed/FavoritoListCard';
 import { FormScreen, ListCardText } from '../../components/form';
-import { colors } from '../../../theme';
+import { colors } from '../../theme';
 import { mapaOfertasPorProduto } from '../../utils/precoUtils';
 
 export default function FavoritosScreen() {

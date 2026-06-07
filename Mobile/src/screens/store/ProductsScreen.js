@@ -11,7 +11,7 @@ import {
   PrimaryButton,
   ListCardText,
 } from '../../components/form';
-import { colors } from '../../../theme';
+import { colors } from '../../theme';
 import { filtrarProdutosPorTermo, produtoPertenceALoja } from '../../utils/produtoUtils';
 import { mapaOfertasPorProduto } from '../../utils/precoUtils';
 

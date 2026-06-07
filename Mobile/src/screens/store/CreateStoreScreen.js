@@ -13,7 +13,7 @@ import {
   SecondaryButton,
   formStyles,
 } from '../../components/form';
-import { colors } from '../../../theme';
+import { colors } from '../../theme';
 
 const STEPS = [
   { key: 'loja', label: 'Loja' },

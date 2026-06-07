@@ -14,7 +14,7 @@ import {
   ListCardText,
   FormTabs,
 } from '../../components/form';
-import { colors } from '../../../theme';
+import { colors } from '../../theme';
 import {
   filtrarProdutosPorTermo,
   normalizarListaProdutos,

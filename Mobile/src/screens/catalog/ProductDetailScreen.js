@@ -48,7 +48,7 @@ import {
   PrimaryButton,
   SecondaryButton,
 } from '../../components/form';
-import { colors } from '../../../theme';
+import { colors } from '../../theme';
 
 function preencherFormularioProduto(prod, ofertaLoja) {
   return {

@@ -10,7 +10,7 @@ import {
   ListCardText,
   formStyles,
 } from '../../components/form';
-import { colors } from '../../../theme';
+import { colors } from '../../theme';
 
 export default function HistoricoScreen() {
   const [historico, setHistorico] = useState([]);

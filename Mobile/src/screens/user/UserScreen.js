@@ -12,7 +12,7 @@ import {
   ListCardText,
   formStyles,
 } from '../../components/form';
-import { colors } from '../../../theme';
+import { colors } from '../../theme';
 
 export default function UserScreen({ navigation }) {
   const { session, logout, sincronizarGpsCliente, isCliente, isLojista, salvarSessao } =

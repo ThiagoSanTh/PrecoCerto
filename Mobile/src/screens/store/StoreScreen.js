@@ -11,7 +11,7 @@ import {
   ListCardText,
   formStyles,
 } from '../../components/form';
-import { colors } from '../../../theme';
+import { colors } from '../../theme';
 
 export default function StoreScreen({ navigation }) {
   const { session } = useAuth();
