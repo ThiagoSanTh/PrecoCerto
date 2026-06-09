@@ -96,6 +96,7 @@ Desktop.ini
 
 # --- Logs, temp, dumps -------------------------------------------------------
 *.log
+logs/
 *.tmp
 *.temp
 *.cache

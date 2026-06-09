@@ -27,6 +27,9 @@ namespace Pc.Infraestrutura
         public DbSet<Avaliacao> Avaliacoes { get; set; }
         public DbSet<PreferenciaCliente> PreferenciasClientes { get; set; }
 
+        public DbSet<Carrinho> Carrinhos { get; set; }
+        public DbSet<ItemCarrinho> ItensCarrinho { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -41,6 +44,38 @@ namespace Pc.Infraestrutura
                 .HasOne(p => p.Loja)
                 .WithMany()
                 .HasForeignKey(p => p.LojaId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Histórico de pesquisa: vínculos opcionais com produto/loja (BI).
+            modelBuilder.Entity<HistoricoPesquisa>()
+                .HasOne(h => h.Produto)
+                .WithMany()
+                .HasForeignKey(h => h.ProdutoId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<HistoricoPesquisa>()
+                .HasOne(h => h.Loja)
+                .WithMany()
+                .HasForeignKey(h => h.LojaId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Carrinho 1:N ItemCarrinho (remoção em cascata dos itens).
+            modelBuilder.Entity<Carrinho>()
+                .HasMany(c => c.Itens)
+                .WithOne(i => i.Carrinho)
+                .HasForeignKey(i => i.CarrinhoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ItemCarrinho>()
+                .HasOne(i => i.Produto)
+                .WithMany()
+                .HasForeignKey(i => i.ProdutoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ItemCarrinho>()
+                .HasOne(i => i.Oferta)
+                .WithMany()
+                .HasForeignKey(i => i.OfertaId)
                 .OnDelete(DeleteBehavior.SetNull);
         }
     }

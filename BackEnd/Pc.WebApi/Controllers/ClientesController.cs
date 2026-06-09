@@ -18,11 +18,16 @@ namespace Pc.WebApi.Controllers
     {
         private readonly IClienteServico _clienteServico;
         private readonly IJwtTokenService _jwtTokenService;
+        private readonly IEmailService _emailService;
 
-        public ClientesController(IClienteServico clienteServico, IJwtTokenService jwtTokenService)
+        public ClientesController(
+            IClienteServico clienteServico,
+            IJwtTokenService jwtTokenService,
+            IEmailService emailService)
         {
             _clienteServico = clienteServico;
             _jwtTokenService = jwtTokenService;
+            _emailService = emailService;
         }
 
         [HttpPost("registrar")]
@@ -43,6 +48,11 @@ namespace Pc.WebApi.Controllers
             };
 
             var novoCliente = await _clienteServico.RegistrarAsync(cliente);
+
+            if (!string.IsNullOrWhiteSpace(novoCliente.TokenConfirmacao))
+                await _emailService.EnviarConfirmacaoEmailAsync(
+                    novoCliente.Email, novoCliente.NomeUsuario, novoCliente.TokenConfirmacao, "cliente");
+
             return CreatedAtAction(nameof(ObterPorId), new { id = novoCliente.Id }, MapResposta(novoCliente));
         }
 

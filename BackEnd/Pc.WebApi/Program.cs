@@ -1,9 +1,11 @@
 using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
 using Pc.Infraestrutura;
 using Pc.Repositorio.Implementacoes;
 using Pc.Repositorio.Interfaces;
@@ -13,6 +15,14 @@ using Pc.WebApi.Configuration;
 using Pc.WebApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// 📝 Serilog: logging estruturado em console e arquivo (rotação diária).
+builder.Host.UseSerilog((context, services, configuration) => configuration
+    .ReadFrom.Configuration(context.Configuration)
+    .ReadFrom.Services(services)
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .WriteTo.File("logs/precocerto-.log", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 7));
 
 if (builder.Environment.IsDevelopment())
 {
@@ -32,7 +42,20 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     });
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.OpenApiInfo
+    {
+        Title = "Preço Certo API",
+        Version = "v1",
+        Description = "API do Preço Certo: catálogo de produtos, lojas, ofertas, usuários e interações (favoritos, histórico, avaliações)."
+    });
+
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+        options.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
+});
 
 var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
     ?? new[]
@@ -101,6 +124,15 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
+// Respeita X-Forwarded-Proto/For atras de proxy (Render/Railway) para que
+// a deteccao de HTTPS funcione sem causar loops de redirecionamento.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -114,6 +146,10 @@ builder.Services.AddRateLimiter(options =>
 
 builder.Services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+
+// ✉️ E-mail (confirmação de cadastro)
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection(EmailSettings.SectionName));
+builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 
 // Repositórios — Catálogo e Estabelecimentos
 builder.Services.AddScoped<IProdutoRepositorio, ProdutoRepositorio>();
@@ -130,6 +166,7 @@ builder.Services.AddScoped<IFavoritoRepositorio, FavoritoRepositorio>();
 builder.Services.AddScoped<IHistoricoPesquisaRepositorio, HistoricoPesquisaRepositorio>();
 builder.Services.AddScoped<IAvaliacaoRepositorio, AvaliacaoRepositorio>();
 builder.Services.AddScoped<IPreferenciaClienteRepositorio, PreferenciaClienteRepositorio>();
+builder.Services.AddScoped<ICarrinhoRepositorio, CarrinhoRepositorio>();
 
 // Serviços — Catálogo e Estabelecimentos
 builder.Services.AddScoped<IProdutoServico, ProdutoServico>();
@@ -146,6 +183,7 @@ builder.Services.AddScoped<IFavoritoServico, FavoritoServico>();
 builder.Services.AddScoped<IHistoricoPesquisaServico, HistoricoPesquisaServico>();
 builder.Services.AddScoped<IAvaliacaoServico, AvaliacaoServico>();
 builder.Services.AddScoped<IPreferenciaClienteServico, PreferenciaClienteServico>();
+builder.Services.AddScoped<ICarrinhoServico, CarrinhoServico>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(
@@ -170,10 +208,20 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+app.UseForwardedHeaders();
+
+app.UseSerilogRequestLogging();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+}
+else
+{
+    // Forca HTTPS e habilita HSTS em producao (transporte criptografado).
+    app.UseHsts();
+    app.UseHttpsRedirection();
 }
 
 app.UseCors("AppPolicy");

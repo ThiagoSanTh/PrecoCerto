@@ -65,7 +65,8 @@ namespace Pc.WebApi.Controllers
                 CodigoBarras = dto.CodigoBarras,
                 Preco = dto.Preco,
                 LojaId = dto.LojaId.Value,
-                ImagemUrl = dto.ImagemUrl
+                ImagemUrl = dto.ImagemUrl,
+                Categoria = dto.Categoria
             };
 
             var novoProduto = await _produtoServico.AdicionarAsync(produto);
@@ -92,7 +93,8 @@ namespace Pc.WebApi.Controllers
                     Marca = dto.Marca,
                     CodigoBarras = dto.CodigoBarras,
                     Preco = dto.Preco,
-                    ImagemUrl = dto.ImagemUrl
+                    ImagemUrl = dto.ImagemUrl,
+                    Categoria = dto.Categoria ?? Pc.Dominio.Enums.CategoriaProduto.Outros
                 };
 
                 await _produtoServico.AtualizarPorLojaAsync(id, dados, dto.LojaId);

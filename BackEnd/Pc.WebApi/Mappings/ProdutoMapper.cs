@@ -16,7 +16,9 @@ namespace Pc.WebApi.Mappings
                 CodigoBarras = p.CodigoBarras ?? string.Empty,
                 Preco = p.Preco,
                 LojaId = p.LojaId,
-                ImagemUrl = p.ImagemUrl
+                ImagemUrl = p.ImagemUrl,
+                Categoria = p.Categoria,
+                CategoriaNome = p.Categoria.ToString()
             };
 
             if (p.Loja == null)

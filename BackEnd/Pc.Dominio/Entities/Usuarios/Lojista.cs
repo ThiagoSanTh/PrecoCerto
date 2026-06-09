@@ -21,6 +21,10 @@ namespace Pc.Dominio.Entities.Usuarios
         public string? Telefone { get; set; }
         public DateTime? UltimoLogin { get; set; }
         public TipoUsuario Tipo { get; set; } = TipoUsuario.Lojista; // Implícito: sempre Lojista
+
+        // ✉️ Confirmação de e-mail
+        public bool EmailConfirmado { get; set; } = false;
+        public string? TokenConfirmacao { get; set; }
         
         // 🏪 Dados de Funcionário
         // Vínculo com a loja é definido em Loja.LojistaId (relação 1:1); use a navegação Loja.

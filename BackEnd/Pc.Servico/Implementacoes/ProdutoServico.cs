@@ -71,6 +71,7 @@ namespace Pc.Servico.Implementacoes
             existente.Marca = dados.Marca;
             existente.CodigoBarras = dados.CodigoBarras;
             existente.Preco = dados.Preco;
+            existente.Categoria = dados.Categoria;
             if (dados.ImagemUrl != null)
                 existente.ImagemUrl = dados.ImagemUrl;
 

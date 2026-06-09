@@ -6,5 +6,7 @@ namespace Pc.WebApi.DTOs.Interacoes
         public Guid ClienteId { get; set; }
         public string TermoPesquisa { get; set; } = string.Empty;
         public DateTime DataPesquisa { get; set; }
+        public Guid? ProdutoId { get; set; }
+        public Guid? LojaId { get; set; }
     }
 }

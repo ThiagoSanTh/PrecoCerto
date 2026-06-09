@@ -30,6 +30,7 @@ import {
   verificarFavorito,
 } from '../../services/favoritoService';
 import { useAuth } from '../../context/AuthContext';
+import { useCarrinho } from '../../context/CarrinhoContext';
 import { nomeProduto, produtoPertenceALoja } from '../../utils/produtoUtils';
 import { formatarPrecoBrl } from '../../utils/mapaUtils';
 import { formatarDataBr, parseDataBr } from '../../utils/dataUtils';
@@ -42,12 +43,14 @@ import PriceHistoryBlock from '../../components/product/PriceHistoryBlock';
 import ReviewList from '../../components/product/ReviewList';
 import PromocaoSection from '../../components/product/PromocaoSection';
 import ProductActionBar from '../../components/product/ProductActionBar';
+import CategoriaPicker from '../../components/product/CategoriaPicker';
 import {
   FormScreen,
   FormField,
   PrimaryButton,
   SecondaryButton,
 } from '../../components/form';
+import { labelCategoria } from '../../utils/categoriasProduto';
 import { colors } from '../../theme';
 
 function preencherFormularioProduto(prod, ofertaLoja) {
@@ -56,6 +59,7 @@ function preencherFormularioProduto(prod, ofertaLoja) {
     descricao: prod.descricao || '',
     marca: prod.marca || '',
     codigoBarras: prod.codigoBarras || '',
+    categoria: prod.categoria ?? 0,
     preco: String(prod.preco ?? '').replace('.', ','),
     imagemUrlAtual: prod.imagemUrl || null,
     emPromocao: Boolean(ofertaLoja?.emPromocao),
@@ -77,6 +81,7 @@ function preencherFormularioProduto(prod, ofertaLoja) {
 export default function ProductDetailScreen({ route, navigation }) {
   const { productId } = route.params;
   const { session, isCliente } = useAuth();
+  const { adicionar: adicionarAoCarrinho } = useCarrinho();
   const lojaId = session?.perfil?.lojaId;
   const clienteId = isCliente ? session?.perfil?.id : null;
 
@@ -95,6 +100,7 @@ export default function ProductDetailScreen({ route, navigation }) {
   const [descricao, setDescricao] = useState('');
   const [marca, setMarca] = useState('');
   const [codigoBarras, setCodigoBarras] = useState('');
+  const [categoria, setCategoria] = useState(0);
   const [preco, setPreco] = useState('');
   const [imagemUrlAtual, setImagemUrlAtual] = useState(null);
   const [imagemUri, setImagemUri] = useState(null);
@@ -121,6 +127,7 @@ export default function ProductDetailScreen({ route, navigation }) {
     setDescricao(form.descricao);
     setMarca(form.marca);
     setCodigoBarras(form.codigoBarras);
+    setCategoria(form.categoria);
     setPreco(form.preco);
     setImagemUrlAtual(form.imagemUrlAtual);
     setImagemUri(null);
@@ -295,6 +302,7 @@ export default function ProductDetailScreen({ route, navigation }) {
         marca,
         codigoBarras,
         preco: precoConvertido,
+        categoria,
         lojaId,
         imagemUrl,
       });
@@ -344,8 +352,25 @@ export default function ProductDetailScreen({ route, navigation }) {
     }
   }
 
-  function handleCarrinho() {
-    Alert.alert('Em breve', 'O carrinho de compras estará disponível em breve.');
+  async function handleCarrinho() {
+    if (!clienteId) {
+      Alert.alert('Atenção', 'Faça login como cliente para usar o carrinho.');
+      return;
+    }
+    if (!produto) return;
+
+    const historico = montarHistoricoPrecos(produto, oferta);
+    try {
+      await adicionarAoCarrinho({
+        produtoId: productId,
+        quantidade: 1,
+        precoUnitario: historico.precoAtual ?? 0,
+        ofertaId: oferta?.id ?? null,
+      });
+      Alert.alert('Carrinho', 'Produto adicionado ao carrinho.');
+    } catch {
+      Alert.alert('Erro', 'Não foi possível adicionar ao carrinho.');
+    }
   }
 
   async function handleToggleFavorito() {
@@ -465,6 +490,7 @@ export default function ProductDetailScreen({ route, navigation }) {
             value={codigoBarras}
             onChangeText={setCodigoBarras}
           />
+          <CategoriaPicker value={categoria} onChange={setCategoria} />
           <FormField
             label="Preço de catálogo *"
             value={preco}
@@ -504,6 +530,10 @@ export default function ProductDetailScreen({ route, navigation }) {
               {produto.descricao}
             </Text>
           ) : null}
+
+          <Text style={{ fontSize: 13, color: '#64748B', marginTop: 12 }}>
+            Categoria: {produto.categoriaNome || labelCategoria(produto.categoria)}
+          </Text>
         </View>
       )}
 

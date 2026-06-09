@@ -75,6 +75,9 @@ namespace Pc.Infraestrutura.Migrations
                     b.Property<bool>("Ativo")
                         .HasColumnType("boolean");
 
+                    b.Property<int>("Categoria")
+                        .HasColumnType("integer");
+
                     b.Property<string>("CodigoBarras")
                         .HasColumnType("text");
 
@@ -253,6 +256,31 @@ namespace Pc.Infraestrutura.Migrations
                     b.ToTable("Avaliacoes");
                 });
 
+            modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.Carrinho", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("ClienteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DataAtualizacao")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClienteId");
+
+                    b.ToTable("Carrinhos");
+                });
+
             modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.Favorito", b =>
                 {
                     b.Property<Guid>("Id")
@@ -309,6 +337,12 @@ namespace Pc.Infraestrutura.Migrations
                     b.Property<DateTime>("DataPesquisa")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("LojaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ProdutoId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("TermoPesquisa")
                         .IsRequired()
                         .HasColumnType("text");
@@ -317,7 +351,52 @@ namespace Pc.Infraestrutura.Migrations
 
                     b.HasIndex("ClienteId");
 
+                    b.HasIndex("LojaId");
+
+                    b.HasIndex("ProdutoId");
+
                     b.ToTable("HistoricosPesquisa");
+                });
+
+            modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.ItemCarrinho", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("CarrinhoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DataAtualizacao")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("OfertaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("PrecoUnitario")
+                        .HasColumnType("numeric");
+
+                    b.Property<Guid>("ProdutoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Quantidade")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CarrinhoId");
+
+                    b.HasIndex("OfertaId");
+
+                    b.HasIndex("ProdutoId");
+
+                    b.ToTable("ItensCarrinho");
                 });
 
             modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.PreferenciaCliente", b =>
@@ -419,6 +498,9 @@ namespace Pc.Infraestrutura.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<bool>("EmailConfirmado")
+                        .HasColumnType("boolean");
+
                     b.Property<decimal?>("LatitudeAtual")
                         .HasColumnType("numeric");
 
@@ -438,6 +520,9 @@ namespace Pc.Infraestrutura.Migrations
 
                     b.Property<int>("Tipo")
                         .HasColumnType("integer");
+
+                    b.Property<string>("TokenConfirmacao")
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("UltimoLogin")
                         .HasColumnType("timestamp with time zone");
@@ -469,6 +554,9 @@ namespace Pc.Infraestrutura.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<bool>("EmailConfirmado")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("NomeUsuario")
                         .IsRequired()
                         .HasColumnType("text");
@@ -482,6 +570,9 @@ namespace Pc.Infraestrutura.Migrations
 
                     b.Property<int>("Tipo")
                         .HasColumnType("integer");
+
+                    b.Property<string>("TokenConfirmacao")
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("UltimoLogin")
                         .HasColumnType("timestamp with time zone");
@@ -556,6 +647,17 @@ namespace Pc.Infraestrutura.Migrations
                     b.Navigation("Loja");
                 });
 
+            modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.Carrinho", b =>
+                {
+                    b.HasOne("Pc.Dominio.Entities.Usuarios.Cliente", "Cliente")
+                        .WithMany()
+                        .HasForeignKey("ClienteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Cliente");
+                });
+
             modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.Favorito", b =>
                 {
                     b.HasOne("Pc.Dominio.Entities.Usuarios.Cliente", "Cliente")
@@ -587,7 +689,47 @@ namespace Pc.Infraestrutura.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Pc.Dominio.Entities.Estabelecimentos.Loja", "Loja")
+                        .WithMany()
+                        .HasForeignKey("LojaId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Pc.Dominio.Entities.Catalogo.Produto", "Produto")
+                        .WithMany()
+                        .HasForeignKey("ProdutoId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Cliente");
+
+                    b.Navigation("Loja");
+
+                    b.Navigation("Produto");
+                });
+
+            modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.ItemCarrinho", b =>
+                {
+                    b.HasOne("Pc.Dominio.Entities.Interacoes.Carrinho", "Carrinho")
+                        .WithMany("Itens")
+                        .HasForeignKey("CarrinhoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Pc.Dominio.Entities.Estabelecimentos.Oferta", "Oferta")
+                        .WithMany()
+                        .HasForeignKey("OfertaId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Pc.Dominio.Entities.Catalogo.Produto", "Produto")
+                        .WithMany()
+                        .HasForeignKey("ProdutoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Carrinho");
+
+                    b.Navigation("Oferta");
+
+                    b.Navigation("Produto");
                 });
 
             modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.PreferenciaCliente", b =>
@@ -604,6 +746,11 @@ namespace Pc.Infraestrutura.Migrations
             modelBuilder.Entity("Pc.Dominio.Entities.Estabelecimentos.Loja", b =>
                 {
                     b.Navigation("Ofertas");
+                });
+
+            modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.Carrinho", b =>
+                {
+                    b.Navigation("Itens");
                 });
 
             modelBuilder.Entity("Pc.Dominio.Entities.Usuarios.Cliente", b =>

@@ -5,6 +5,7 @@ import { criarProduto } from '../../services/productService';
 import { uploadImagemProduto } from '../../services/storageService';
 import { useAuth } from '../../context/AuthContext';
 import { FormScreen, FormField, PrimaryButton, SecondaryButton } from '../../components/form';
+import CategoriaPicker from '../../components/product/CategoriaPicker';
 import { colors } from '../../theme';
 
 export default function CreateProductScreen({ navigation }) {
@@ -15,6 +16,7 @@ export default function CreateProductScreen({ navigation }) {
   const [marca, setMarca] = useState('');
   const [codigoBarras, setCodigoBarras] = useState('');
   const [preco, setPreco] = useState('');
+  const [categoria, setCategoria] = useState(0);
   const [imagemUri, setImagemUri] = useState(null);
   const [imagemMime, setImagemMime] = useState('image/jpeg');
   const [loading, setLoading] = useState(false);
@@ -78,6 +80,7 @@ export default function CreateProductScreen({ navigation }) {
         marca,
         codigoBarras,
         preco: precoConvertido,
+        categoria,
         lojaId,
         imagemUrl,
       });
@@ -114,6 +117,7 @@ export default function CreateProductScreen({ navigation }) {
       <FormField label="Descrição" value={descricao} onChangeText={setDescricao} />
       <FormField label="Marca *" value={marca} onChangeText={setMarca} />
       <FormField label="Código de barras *" value={codigoBarras} onChangeText={setCodigoBarras} />
+      <CategoriaPicker value={categoria} onChange={setCategoria} />
       <FormField
         label="Preço *"
         value={preco}

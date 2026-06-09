@@ -38,7 +38,9 @@ namespace Pc.WebApi.Controllers
             var historico = new HistoricoPesquisa
             {
                 ClienteId = dto.ClienteId,
-                TermoPesquisa = dto.TermoPesquisa
+                TermoPesquisa = dto.TermoPesquisa,
+                ProdutoId = dto.ProdutoId,
+                LojaId = dto.LojaId
             };
 
             var novoHistorico = await _historicoPesquisaServico.RegistrarPesquisaAsync(historico);
@@ -48,7 +50,9 @@ namespace Pc.WebApi.Controllers
                 Id = novoHistorico.Id,
                 ClienteId = novoHistorico.ClienteId,
                 TermoPesquisa = novoHistorico.TermoPesquisa,
-                DataPesquisa = novoHistorico.DataPesquisa
+                DataPesquisa = novoHistorico.DataPesquisa,
+                ProdutoId = novoHistorico.ProdutoId,
+                LojaId = novoHistorico.LojaId
             };
 
             return CreatedAtAction(nameof(ObterPorId), new { id = resposta.Id }, resposta);
@@ -172,6 +176,32 @@ namespace Pc.WebApi.Controllers
                 return Forbid();
             await _historicoPesquisaServico.LimparHistoricoAsync(clienteId);
             return NoContent();
+        }
+
+        /// <summary>
+        /// GET: /api/historicopesquisa/loja/{lojaId}/relatorio
+        /// Relatório de BI: termos mais pesquisados vinculados aos produtos/loja.
+        /// Apenas o lojista dono da loja (ou Admin) pode acessar.
+        /// </summary>
+        [HttpGet("loja/{lojaId:guid}/relatorio")]
+        [Authorize(Roles = "Lojista,Admin")]
+        [ProducesResponseType(typeof(IEnumerable<RelatorioPesquisaTermoDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> ObterRelatorioLoja(Guid lojaId)
+        {
+            if (!Authz.OwnsLoja(this, lojaId))
+                return Forbid();
+
+            var relatorio = await _historicoPesquisaServico.ObterRelatorioLojaAsync(lojaId);
+
+            var resposta = relatorio.Select(r => new RelatorioPesquisaTermoDto
+            {
+                Termo = r.Termo,
+                Quantidade = r.Quantidade,
+                UltimaPesquisa = r.UltimaPesquisa
+            });
+
+            return Ok(resposta);
         }
     }
 }

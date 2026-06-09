@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pc.Dominio.Entities.Catalogo;
 using Pc.Dominio.Entities.Estabelecimentos;
+using Pc.Dominio.Validacoes;
 using Pc.Servico.Interfaces;
 using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Estabelecimentos;
@@ -55,11 +56,14 @@ namespace Pc.WebApi.Controllers
             if (User.IsLojista() && dto.LojistaId.HasValue && User.GetUserId() != dto.LojistaId)
                 return Forbid();
 
+            if (!string.IsNullOrWhiteSpace(dto.Cnpj) && !CnpjValidator.IsValido(dto.Cnpj))
+                return BadRequest("CNPJ inválido.");
+
             var loja = new Loja
             {
                 NomeFantasia = dto.NomeFantasia,
                 RazaoSocial = dto.RazaoSocial,
-                Cnpj = dto.Cnpj,
+                Cnpj = string.IsNullOrWhiteSpace(dto.Cnpj) ? dto.Cnpj : CnpjValidator.ApenasDigitos(dto.Cnpj),
                 Telefone = dto.Telefone,
                 Email = dto.Email,
                 Descricao = dto.Descricao,
@@ -85,9 +89,12 @@ namespace Pc.WebApi.Controllers
                     return Forbid();
             }
 
+            if (!string.IsNullOrWhiteSpace(dto.Cnpj) && !CnpjValidator.IsValido(dto.Cnpj))
+                return BadRequest("CNPJ inválido.");
+
             lojaExistente.NomeFantasia = dto.NomeFantasia;
             lojaExistente.RazaoSocial = dto.RazaoSocial;
-            lojaExistente.Cnpj = dto.Cnpj;
+            lojaExistente.Cnpj = string.IsNullOrWhiteSpace(dto.Cnpj) ? dto.Cnpj : CnpjValidator.ApenasDigitos(dto.Cnpj);
             lojaExistente.Telefone = dto.Telefone;
             lojaExistente.Email = dto.Email;
             lojaExistente.Descricao = dto.Descricao;

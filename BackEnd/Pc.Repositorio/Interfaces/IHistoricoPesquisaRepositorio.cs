@@ -34,5 +34,13 @@ namespace Pc.Repositorio.Interfaces
         /// <param name="quantidade">Quantidade de registros a retornar</param>
         /// <returns>Lista com os últimos termos pesquisados</returns>
         Task<List<HistoricoPesquisa>> ObterUltimosAsync(Guid clienteId, int quantidade);
+
+        /// <summary>
+        /// Obtém as pesquisas vinculadas a uma loja (diretamente ou via produto da loja).
+        /// Usado para relatórios de BI do lojista.
+        /// </summary>
+        /// <param name="lojaId">ID da loja</param>
+        /// <returns>Lista de históricos relacionados à loja</returns>
+        Task<List<HistoricoPesquisa>> ObterPorLojaAsync(Guid lojaId);
     }
 }

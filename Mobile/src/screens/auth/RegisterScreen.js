@@ -5,6 +5,7 @@ import { registrarLojista } from '../../services/lojistaService';
 import { login as authLogin } from '../../services/authService';
 import { formatApiError } from '../../utils/apiErrorUtils';
 import { obterLocalizacaoAtual } from '../../services/locationService';
+import { isEmailValido } from '../../utils/validacaoUtils';
 import { useAuth } from '../../context/AuthContext';
 import {
   FormScreen,
@@ -28,6 +29,16 @@ export default function RegisterScreen({ navigation, route }) {
   async function handleRegister() {
     if (!nomeUsuario || !email || !senha || !confirmarSenha) {
       Alert.alert('Erro', 'Preencha todos os campos obrigatórios');
+      return;
+    }
+
+    if (!isEmailValido(email)) {
+      Alert.alert('Erro', 'Informe um e-mail válido.');
+      return;
+    }
+
+    if (senha.length < 6) {
+      Alert.alert('Erro', 'A senha deve ter pelo menos 6 caracteres.');
       return;
     }
 
@@ -62,7 +73,10 @@ export default function RegisterScreen({ navigation, route }) {
         const { perfil } = await authLogin(email.trim(), senha, 'cliente');
         await salvarSessao({ tipo: 'cliente', perfil }, 'user');
         navigation.replace('Home');
-        Alert.alert('Sucesso', 'Conta de cliente criada!');
+        Alert.alert(
+          'Sucesso',
+          'Conta de cliente criada! Enviamos um e-mail de confirmação — verifique sua caixa de entrada.'
+        );
         return;
       }
 
@@ -77,7 +91,10 @@ export default function RegisterScreen({ navigation, route }) {
       const { perfil } = await authLogin(email.trim(), senha, 'lojista');
       await salvarSessao({ tipo: 'lojista', perfil }, 'store');
       navigation.replace('Home');
-      Alert.alert('Sucesso', 'Conta de lojista criada! Agora cadastre sua loja.');
+      Alert.alert(
+        'Sucesso',
+        'Conta de lojista criada! Verifique seu e-mail para confirmar a conta e depois cadastre sua loja.'
+      );
     } catch (error) {
       Alert.alert('Erro', formatApiError(error));
     } finally {

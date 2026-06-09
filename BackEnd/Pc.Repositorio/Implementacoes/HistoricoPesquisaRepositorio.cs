@@ -61,5 +61,17 @@ namespace Pc.Repositorio.Implementacoes
                 .Take(quantidade)
                 .ToListAsync();
         }
+
+        /// <summary>
+        /// Obtém pesquisas relacionadas a uma loja: vinculadas diretamente (LojaId)
+        /// ou através de um produto pertencente à loja (Produto.LojaId).
+        /// </summary>
+        public async Task<List<HistoricoPesquisa>> ObterPorLojaAsync(Guid lojaId)
+        {
+            return await _context.HistoricosPesquisa
+                .Where(h => h.LojaId == lojaId || (h.Produto != null && h.Produto.LojaId == lojaId))
+                .OrderByDescending(h => h.DataPesquisa)
+                .ToListAsync();
+        }
     }
 }

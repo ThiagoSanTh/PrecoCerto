@@ -16,6 +16,17 @@ export async function obterLojista(id) {
 }
 
 export async function atualizarLojista(id, dados) {
-  const { data } = await api.put(`/Lojistas/${id}`, dados);
+  const { data } = await api.put(`/Lojistas/${id}`, {
+    nomeUsuario: dados.nomeUsuario,
+    email: dados.email,
+    telefone: dados.telefone,
+    cargo: dados.cargo,
+    // A API valida MinLength(6); placeholder não altera a senha.
+    senha: dados.senha || 'nao-alterar',
+  });
   return data;
+}
+
+export async function alterarSenhaLojista(lojistaId, senhaAtual, novaSenha) {
+  await api.put(`/Lojistas/${lojistaId}/senha`, { senhaAtual, novaSenha });
 }

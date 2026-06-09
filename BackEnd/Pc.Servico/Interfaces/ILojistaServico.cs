@@ -61,5 +61,11 @@ namespace Pc.Servico.Interfaces
         /// Remove lojista (soft delete)
         /// </summary>
         Task RemoverAsync(Guid id);
+
+        /// <summary>
+        /// Confirma o e-mail do lojista a partir do token enviado.
+        /// Retorna true se o token era válido.
+        /// </summary>
+        Task<bool> ConfirmarEmailAsync(string token);
     }
 }

@@ -1,3 +1,5 @@
+using Pc.Dominio.Enums;
+
 namespace Pc.WebApi.DTOs.Catalogo
 {
     /// <summary>Dados para atualização; LojaId identifica a loja autenticada (dono do produto).</summary>
@@ -10,5 +12,6 @@ namespace Pc.WebApi.DTOs.Catalogo
         public decimal Preco { get; set; }
         public Guid LojaId { get; set; }
         public string? ImagemUrl { get; set; }
+        public CategoriaProduto? Categoria { get; set; }
     }
 }

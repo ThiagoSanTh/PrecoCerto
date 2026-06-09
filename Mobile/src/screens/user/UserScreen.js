@@ -1,15 +1,16 @@
-import { View, Text, Pressable, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, Alert, ActivityIndicator, Switch } from 'react-native';
 import { useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
-import { atualizarCliente, alterarSenha } from '../../services/clienteService';
+import { useTheme } from '../../context/ThemeContext';
+import { atualizarCliente } from '../../services/clienteService';
+import { atualizarLojista } from '../../services/lojistaService';
+import { isEmailValido } from '../../utils/validacaoUtils';
 import {
   FormScreen,
   FormField,
   PrimaryButton,
   SecondaryButton,
-  ListCard,
-  ListCardText,
   formStyles,
 } from '../../components/form';
 import { colors } from '../../theme';
@@ -17,14 +18,15 @@ import { colors } from '../../theme';
 export default function UserScreen({ navigation }) {
   const { session, logout, sincronizarGpsCliente, isCliente, isLojista, salvarSessao } =
     useAuth();
+  const { isDark, alternarTema, colors: tema } = useTheme();
 
   const [nomeUsuario, setNomeUsuario] = useState('');
   const [email, setEmail] = useState('');
   const [telefone, setTelefone] = useState('');
-  const [senhaAtual, setSenhaAtual] = useState('');
-  const [novaSenha, setNovaSenha] = useState('');
+  const [cargo, setCargo] = useState('');
   const [gpsStatus, setGpsStatus] = useState('');
   const [loadingGps, setLoadingGps] = useState(false);
+  const [salvando, setSalvando] = useState(false);
   const [temLoja, setTemLoja] = useState(false);
 
   useFocusEffect(
@@ -33,23 +35,28 @@ export default function UserScreen({ navigation }) {
         setNomeUsuario(session.perfil.nomeUsuario || '');
         setEmail(session.perfil.email || '');
         setTelefone(session.perfil.telefone || '');
+        setCargo(session.perfil.cargo || '');
         if (session.perfil.lojaId) setTemLoja(true);
       }
-      if (isCliente) verificarLojaLojista();
     }, [session])
   );
 
-  async function verificarLojaLojista() {
-    try {
-      if (session?.perfil?.lojaId) setTemLoja(true);
-    } catch {
-      setTemLoja(false);
+  function validarFormulario() {
+    if (!nomeUsuario.trim()) {
+      Alert.alert('Erro', 'Informe o nome de usuário.');
+      return false;
     }
+    if (!isEmailValido(email)) {
+      Alert.alert('Erro', 'Informe um e-mail válido.');
+      return false;
+    }
+    return true;
   }
 
-  async function handleAtualizarPerfil() {
-    if (!isCliente || !session?.perfil?.id) return;
+  async function handleAtualizarPerfilCliente() {
+    if (!session?.perfil?.id || !validarFormulario()) return;
 
+    setSalvando(true);
     try {
       const atualizado = await atualizarCliente(session.perfil.id, {
         nomeUsuario: nomeUsuario.trim(),
@@ -61,27 +68,31 @@ export default function UserScreen({ navigation }) {
       Alert.alert('Sucesso', 'Perfil atualizado');
     } catch (error) {
       Alert.alert('Erro', String(error.response?.data || error.message));
+    } finally {
+      setSalvando(false);
     }
   }
 
-  async function handleAlterarSenha() {
-    if (!session?.perfil?.id || !senhaAtual || !novaSenha) {
-      Alert.alert('Erro', 'Preencha as senhas');
-      return;
-    }
+  async function handleAtualizarPerfilLojista() {
+    if (!session?.perfil?.id || !validarFormulario()) return;
 
-    if (!isCliente) {
-      Alert.alert('Info', 'Alteração de senha do lojista: use o endpoint de lojistas na API.');
-      return;
-    }
-
+    setSalvando(true);
     try {
-      await alterarSenha(session.perfil.id, senhaAtual, novaSenha);
-      Alert.alert('Sucesso', 'Senha alterada');
-      setSenhaAtual('');
-      setNovaSenha('');
+      const atualizado = await atualizarLojista(session.perfil.id, {
+        nomeUsuario: nomeUsuario.trim(),
+        email: email.trim(),
+        telefone: telefone.trim() || null,
+        cargo: cargo.trim() || null,
+      });
+      await salvarSessao(
+        { tipo: 'lojista', perfil: { ...session.perfil, ...atualizado } },
+        'store'
+      );
+      Alert.alert('Sucesso', 'Perfil atualizado');
     } catch (error) {
       Alert.alert('Erro', String(error.response?.data || error.message));
+    } finally {
+      setSalvando(false);
     }
   }
 
@@ -112,12 +123,30 @@ export default function UserScreen({ navigation }) {
     navigation.replace('Home');
   }
 
+  const temaToggle = (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 8,
+      }}
+    >
+      <Text style={{ fontSize: 14, color: tema.text }}>Modo escuro</Text>
+      <Switch
+        value={isDark}
+        onValueChange={alternarTema}
+        trackColor={{ true: colors.primary }}
+      />
+    </View>
+  );
+
   if (isLojista) {
     return (
       <FormScreen
         title="Perfil lojista"
-        subtitle="Dados da sua conta"
-        scrollable={false}
+        subtitle="Gerencie os dados da sua conta"
+        scrollable
         footer={
           <>
             <PrimaryButton label="Modo cliente" onPress={goToUserMode} />
@@ -125,10 +154,38 @@ export default function UserScreen({ navigation }) {
           </>
         }
       >
-        <ListCard title={session.perfil.nomeUsuario}>
-          <ListCardText>{session.perfil.email}</ListCardText>
-          <ListCardText>Loja ID: {session.perfil.lojaId || '—'}</ListCardText>
-        </ListCard>
+        <FormField label="Nome de usuário" value={nomeUsuario} onChangeText={setNomeUsuario} />
+        <FormField
+          label="E-mail"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+        />
+        <FormField
+          label="Telefone"
+          value={telefone}
+          onChangeText={setTelefone}
+          keyboardType="phone-pad"
+        />
+        <FormField label="Cargo na loja" value={cargo} onChangeText={setCargo} />
+
+        <Text style={formStyles.sectionHint}>Loja ID: {session.perfil.lojaId || '—'}</Text>
+
+        <PrimaryButton
+          label="Salvar perfil"
+          onPress={handleAtualizarPerfilLojista}
+          loading={salvando}
+        />
+        <SecondaryButton
+          label="Alterar senha"
+          onPress={() => navigation.navigate('ChangePassword')}
+        />
+
+        <Text style={[formStyles.summaryTitle, { marginTop: 16, marginBottom: 4, color: tema.text }]}>
+          Aparência
+        </Text>
+        {temaToggle}
       </FormScreen>
     );
   }
@@ -160,6 +217,9 @@ export default function UserScreen({ navigation }) {
         <Text style={[formStyles.sectionHint, { color: colors.primaryDark }]}>{gpsStatus}</Text>
       ) : null}
 
+      <Text style={[formStyles.summaryTitle, { marginTop: 16, marginBottom: 8 }]}>
+        Dados pessoais
+      </Text>
       <FormField label="Nome de usuário" value={nomeUsuario} onChangeText={setNomeUsuario} />
       <FormField
         label="E-mail"
@@ -175,14 +235,24 @@ export default function UserScreen({ navigation }) {
         keyboardType="phone-pad"
       />
 
-      <PrimaryButton label="Salvar perfil" onPress={handleAtualizarPerfil} />
+      <PrimaryButton
+        label="Salvar perfil"
+        onPress={handleAtualizarPerfilCliente}
+        loading={salvando}
+      />
 
       <Text style={[formStyles.summaryTitle, { marginTop: 16, marginBottom: 8 }]}>
-        Alterar senha
+        Segurança
       </Text>
-      <FormField label="Senha atual" value={senhaAtual} onChangeText={setSenhaAtual} secureTextEntry />
-      <FormField label="Nova senha" value={novaSenha} onChangeText={setNovaSenha} secureTextEntry />
-      <SecondaryButton label="Alterar senha" onPress={handleAlterarSenha} />
+      <SecondaryButton
+        label="Alterar senha"
+        onPress={() => navigation.navigate('ChangePassword')}
+      />
+
+      <Text style={[formStyles.summaryTitle, { marginTop: 16, marginBottom: 4, color: tema.text }]}>
+        Aparência
+      </Text>
+      {temaToggle}
 
       {!temLoja ? (
         <PrimaryButton

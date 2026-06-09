@@ -118,7 +118,14 @@ export default function SearchScreen() {
     return filtrarProdutosPorTermo(base, termoBusca);
   }, [produtosBase, resultadosBusca, termoBusca]);
 
-  function abrirProduto(productId) {
+  function abrirProduto(productId, produto) {
+    // BI: registra o clique no resultado vinculando termo + produto + loja.
+    if (clienteId && termoBusca.trim()) {
+      registrarPesquisa(clienteId, termoBusca.trim(), {
+        produtoId: productId,
+        lojaId: produto?.lojaId ?? null,
+      }).catch(() => {});
+    }
     navigation.navigate('ProductDetail', { productId });
   }
 
@@ -127,7 +134,7 @@ export default function SearchScreen() {
       <ProductGridCard
         produto={item}
         oferta={ofertasMap.get(item.id)}
-        onPress={() => abrirProduto(item.id)}
+        onPress={() => abrirProduto(item.id, item)}
       />
     );
   }

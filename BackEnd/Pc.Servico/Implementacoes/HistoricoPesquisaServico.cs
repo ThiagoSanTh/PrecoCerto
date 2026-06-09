@@ -114,5 +114,27 @@ namespace Pc.Servico.Implementacoes
 
             await _historicoPesquisaRepositorio.RemoverAsync(id);
         }
+
+        /// <summary>
+        /// Agrega as pesquisas vinculadas à loja por termo (case-insensitive),
+        /// retornando a contagem e a data mais recente, ordenado por contagem.
+        /// </summary>
+        public async Task<List<RelatorioPesquisaTermo>> ObterRelatorioLojaAsync(Guid lojaId)
+        {
+            if (lojaId == Guid.Empty)
+                throw new Exception("LojaId é obrigatório.");
+
+            var historicos = await _historicoPesquisaRepositorio.ObterPorLojaAsync(lojaId);
+
+            return historicos
+                .GroupBy(h => h.TermoPesquisa.Trim().ToLowerInvariant())
+                .Select(g => new RelatorioPesquisaTermo(
+                    g.Key,
+                    g.Count(),
+                    g.Max(h => h.DataPesquisa)))
+                .OrderByDescending(r => r.Quantidade)
+                .ThenByDescending(r => r.UltimaPesquisa)
+                .ToList();
+        }
     }
 }

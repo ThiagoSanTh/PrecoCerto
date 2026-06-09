@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formStyles as s } from './formStyles';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function FormScreen({
   title,
@@ -20,6 +21,8 @@ export default function FormScreen({
   steps,
   currentStep = 0,
 }) {
+  const { colors } = useTheme();
+
   const content = scrollable ? (
     <ScrollView
       style={s.flex}
@@ -34,19 +37,22 @@ export default function FormScreen({
   );
 
   return (
-    <SafeAreaView style={s.safe} edges={['top', 'bottom', 'left', 'right']}>
+    <SafeAreaView
+      style={[s.safe, { backgroundColor: colors.background }]}
+      edges={['top', 'bottom', 'left', 'right']}
+    >
       <KeyboardAvoidingView
         style={s.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={s.header}>
+        <View style={[s.header, { borderBottomColor: colors.border }]}>
           {onBack ? (
             <Pressable onPress={onBack} hitSlop={12}>
               <Text style={s.backLink}>← {backLabel}</Text>
             </Pressable>
           ) : null}
-          <Text style={s.title}>{title}</Text>
-          {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
+          <Text style={[s.title, { color: colors.text }]}>{title}</Text>
+          {subtitle ? <Text style={[s.subtitle, { color: colors.textMuted }]}>{subtitle}</Text> : null}
           {steps?.length > 0 ? (
             <>
               <Text style={[s.subtitle, { marginTop: 4 }]}>
@@ -66,7 +72,11 @@ export default function FormScreen({
 
         {content}
 
-        {footer ? <View style={s.footer}>{footer}</View> : null}
+        {footer ? (
+          <View style={[s.footer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+            {footer}
+          </View>
+        ) : null}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

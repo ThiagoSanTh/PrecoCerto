@@ -17,11 +17,16 @@ namespace Pc.WebApi.Controllers
     {
         private readonly ILojistaServico _lojistaServico;
         private readonly IJwtTokenService _jwtTokenService;
+        private readonly IEmailService _emailService;
 
-        public LojistasController(ILojistaServico lojistaServico, IJwtTokenService jwtTokenService)
+        public LojistasController(
+            ILojistaServico lojistaServico,
+            IJwtTokenService jwtTokenService,
+            IEmailService emailService)
         {
             _lojistaServico = lojistaServico;
             _jwtTokenService = jwtTokenService;
+            _emailService = emailService;
         }
 
         [HttpPost("registrar")]
@@ -41,6 +46,11 @@ namespace Pc.WebApi.Controllers
             };
 
             var novoLojista = await _lojistaServico.RegistrarAsync(lojista);
+
+            if (!string.IsNullOrWhiteSpace(novoLojista.TokenConfirmacao))
+                await _emailService.EnviarConfirmacaoEmailAsync(
+                    novoLojista.Email, novoLojista.NomeUsuario, novoLojista.TokenConfirmacao, "lojista");
+
             return CreatedAtAction(nameof(ObterPorId), new { id = novoLojista.Id }, MapResposta(novoLojista));
         }
 

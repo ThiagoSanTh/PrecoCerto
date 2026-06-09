@@ -31,9 +31,15 @@ namespace Pc.WebApi.Controllers
         }
 
         /// <summary>POST /api/auth/login — login unificado com JWT.</summary>
+        /// <param name="dto">Credenciais e tipo de usuário (cliente, lojista ou admin).</param>
+        /// <returns>Token JWT e perfil do usuário autenticado.</returns>
         [HttpPost("login")]
         [AllowAnonymous]
         [EnableRateLimiting("login")]
+        [ProducesResponseType(typeof(AuthLoginRespostaDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
         public async Task<IActionResult> Login([FromBody] AuthLoginDto dto)
         {
             try
@@ -107,6 +113,35 @@ namespace Pc.WebApi.Controllers
                 Tipo = "admin",
                 Perfil = perfil
             });
+        }
+
+        /// <summary>
+        /// GET /api/auth/confirmar-email?token=...&amp;tipo=cliente|lojista
+        /// Confirma o e-mail do usuário a partir do token enviado no cadastro.
+        /// </summary>
+        [HttpGet("confirmar-email")]
+        [AllowAnonymous]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> ConfirmarEmail([FromQuery] string token, [FromQuery] string tipo = "cliente")
+        {
+            if (string.IsNullOrWhiteSpace(token))
+                return BadRequest("Token inválido.");
+
+            var t = (tipo ?? "cliente").Trim().ToLowerInvariant();
+            var confirmado = t == "lojista"
+                ? await _lojistaServico.ConfirmarEmailAsync(token)
+                : await _clienteServico.ConfirmarEmailAsync(token);
+
+            if (!confirmado)
+                return BadRequest("Token inválido ou e-mail já confirmado.");
+
+            return Content(
+                "<html><body style='font-family:sans-serif;text-align:center;padding:40px'>" +
+                "<h2>E-mail confirmado com sucesso!</h2>" +
+                "<p>Você já pode usar o Preço Certo normalmente.</p>" +
+                "</body></html>",
+                "text/html");
         }
 
         private static ClienteRespostaDto MapCliente(Pc.Dominio.Entities.Usuarios.Cliente c) => new()

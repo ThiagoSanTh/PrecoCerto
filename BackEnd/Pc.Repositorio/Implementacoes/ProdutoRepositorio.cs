@@ -60,6 +60,7 @@ namespace Pc.Repositorio.Implementacoes
             existente.CodigoBarras = produto.CodigoBarras;
             existente.Preco = produto.Preco;
             existente.ImagemUrl = produto.ImagemUrl;
+            existente.Categoria = produto.Categoria;
             existente.DataAtualizacao = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();

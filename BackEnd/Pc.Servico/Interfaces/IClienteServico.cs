@@ -67,5 +67,11 @@ namespace Pc.Servico.Interfaces
         /// Remove cliente (soft delete)
         /// </summary>
         Task RemoverAsync(Guid id);
+
+        /// <summary>
+        /// Confirma o e-mail do cliente a partir do token enviado.
+        /// Retorna true se o token era válido.
+        /// </summary>
+        Task<bool> ConfirmarEmailAsync(string token);
     }
 }

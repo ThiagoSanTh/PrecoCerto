@@ -13,6 +13,7 @@ import {
   SecondaryButton,
   formStyles,
 } from '../../components/form';
+import { isCnpjValido } from '../../utils/validacaoUtils';
 import { colors } from '../../theme';
 
 const STEPS = [
@@ -47,6 +48,10 @@ export default function CreateStoreScreen({ navigation }) {
   function validarPassoLoja() {
     if (!nomeFantasia.trim()) {
       Alert.alert('Loja', 'Informe o nome fantasia.');
+      return false;
+    }
+    if (cnpj.trim() && !isCnpjValido(cnpj)) {
+      Alert.alert('Loja', 'CNPJ inválido. Verifique os números informados.');
       return false;
     }
     return true;

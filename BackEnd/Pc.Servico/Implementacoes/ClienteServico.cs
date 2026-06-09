@@ -43,6 +43,8 @@ namespace Pc.Servico.Implementacoes
             cliente.DataCriacao = DateTime.UtcNow;
             cliente.Tipo = Pc.Dominio.Enums.TipoUsuario.Cliente;
             cliente.SenhaHash = _passwordHasher.Hash(cliente.SenhaHash);
+            cliente.EmailConfirmado = false;
+            cliente.TokenConfirmacao = Guid.NewGuid().ToString("N");
 
             return await _clienteRepositorio.AdicionarAsync(cliente);
         }
@@ -190,6 +192,25 @@ namespace Pc.Servico.Implementacoes
                 cliente.Ativo = false;
                 await _clienteRepositorio.AtualizarAsync(cliente);
             }
+        }
+
+        /// <summary>
+        /// Confirma o e-mail do cliente a partir do token.
+        /// </summary>
+        public async Task<bool> ConfirmarEmailAsync(string token)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+                return false;
+
+            var clientes = await _clienteRepositorio.ListarAsync();
+            var cliente = clientes.Find(c => c.TokenConfirmacao == token);
+            if (cliente == null)
+                return false;
+
+            cliente.EmailConfirmado = true;
+            cliente.TokenConfirmacao = null;
+            await _clienteRepositorio.AtualizarAsync(cliente);
+            return true;
         }
 
     }

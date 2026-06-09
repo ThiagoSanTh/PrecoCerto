@@ -4,4 +4,5 @@
   <Project Path="Pc.Repositorio/Pc.Repositorio.csproj" />
   <Project Path="Pc.Servico/Pc.Servico.csproj" />
   <Project Path="Pc.WebApi/Pc.WebApi.csproj" />
+  <Project Path="Pc.Tests/Pc.Tests.csproj" />
 </Solution>

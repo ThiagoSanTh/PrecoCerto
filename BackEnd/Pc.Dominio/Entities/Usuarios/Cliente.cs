@@ -21,6 +21,10 @@ namespace Pc.Dominio.Entities.Usuarios
         public string? Telefone { get; set; }
         public DateTime? UltimoLogin { get; set; }
         public TipoUsuario Tipo { get; set; } = TipoUsuario.Cliente; // Implícito: sempre Cliente
+
+        // ✉️ Confirmação de e-mail
+        public bool EmailConfirmado { get; set; } = false;
+        public string? TokenConfirmacao { get; set; }
         
         // 📍 Geolocalização
         public decimal? LatitudeAtual { get; set; }

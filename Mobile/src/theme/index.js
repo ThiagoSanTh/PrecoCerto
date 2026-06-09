@@ -1,12 +1,30 @@
 import { StyleSheet } from 'react-native';
 
-export const colors = {
-    primary: '#2DD4BF',
-    primaryDark: '#14B8A6',
-    background: '#FFFFFF',
-    card: '#1E293B',
-    text: '#FFFFFF'
-  };
+// Paleta clara (padrão). Mantida como `colors` para compatibilidade com telas
+// que importam o objeto estático diretamente.
+export const lightColors = {
+  primary: '#2DD4BF',
+  primaryDark: '#14B8A6',
+  background: '#FFFFFF',
+  surface: '#FFFFFF',
+  card: '#F1F5F9',
+  text: '#0F172A',
+  textMuted: '#64748B',
+  border: '#E2E8F0',
+};
+
+export const darkColors = {
+  primary: '#2DD4BF',
+  primaryDark: '#5EEAD4',
+  background: '#0F172A',
+  surface: '#1E293B',
+  card: '#1E293B',
+  text: '#F8FAFC',
+  textMuted: '#94A3B8',
+  border: '#334155',
+};
+
+export const colors = lightColors;
 
 export const styles = StyleSheet.create({
     container: {

@@ -43,6 +43,8 @@ namespace Pc.Servico.Implementacoes
             lojista.DataCriacao = DateTime.UtcNow;
             lojista.Tipo = Pc.Dominio.Enums.TipoUsuario.Lojista;
             lojista.SenhaHash = _passwordHasher.Hash(lojista.SenhaHash);
+            lojista.EmailConfirmado = false;
+            lojista.TokenConfirmacao = Guid.NewGuid().ToString("N");
 
             return await _lojistaRepositorio.AdicionarAsync(lojista);
         }
@@ -163,6 +165,25 @@ namespace Pc.Servico.Implementacoes
                 lojista.Ativo = false;
                 await _lojistaRepositorio.AtualizarAsync(lojista);
             }
+        }
+
+        /// <summary>
+        /// Confirma o e-mail do lojista a partir do token.
+        /// </summary>
+        public async Task<bool> ConfirmarEmailAsync(string token)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+                return false;
+
+            var lojistas = await _lojistaRepositorio.ListarAsync();
+            var lojista = lojistas.Find(l => l.TokenConfirmacao == token);
+            if (lojista == null)
+                return false;
+
+            lojista.EmailConfirmado = true;
+            lojista.TokenConfirmacao = null;
+            await _lojistaRepositorio.AtualizarAsync(lojista);
+            return true;
         }
 
     }
