@@ -11,7 +11,7 @@ namespace Pc.Dominio.Entities.Interacoes
     public class HistoricoPesquisa : BaseEntity
     {
         public Guid ClienteId { get; set; }
-        public Cliente? Cliente { get; set; }
+        public Usuario? Cliente { get; set; }
 
         public string TermoPesquisa { get; set; } = string.Empty;
 

@@ -7,7 +7,6 @@ import { useAuth } from '../../context/AuthContext';
 import {
   FormScreen,
   FormField,
-  FormTabs,
   PrimaryButton,
   formStyles,
 } from '../../components/form';
@@ -15,7 +14,6 @@ import {
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
-  const [tipo, setTipo] = useState('cliente');
   const [loading, setLoading] = useState(false);
   const { salvarSessao, sincronizarGpsCliente } = useAuth();
 
@@ -27,13 +25,14 @@ export default function LoginScreen({ navigation }) {
 
     setLoading(true);
     try {
-      const tipoLogin = tipo === 'cliente' ? 'cliente' : 'lojista';
-      const { perfil } = await authLogin(email.trim(), senha, tipoLogin);
-      const modo = tipoLogin === 'cliente' ? 'user' : 'store';
-      await salvarSessao({ tipo: tipoLogin, perfil }, modo);
+      // O papel (cliente/lojista/vendedor) é determinado pelo servidor.
+      const { tipo, perfil } = await authLogin(email.trim(), senha);
+      const ehLojaUser = tipo === 'lojista' || tipo === 'vendedor';
+      const modo = ehLojaUser ? 'store' : 'user';
+      await salvarSessao({ tipo, perfil }, modo);
       navigation.replace('Home');
 
-      if (tipoLogin === 'cliente' && perfil?.id) {
+      if (tipo === 'cliente' && perfil?.id) {
         sincronizarGpsCliente(perfil.id).catch(() => {});
       }
     } catch (error) {
@@ -49,20 +48,9 @@ export default function LoginScreen({ navigation }) {
       subtitle="Entre com sua conta"
       footer={<PrimaryButton label="Entrar" onPress={handleLogin} loading={loading} />}
     >
-      <FormTabs
-        options={[
-          { value: 'cliente', label: 'Cliente' },
-          { value: 'lojista', label: 'Lojista' },
-        ]}
-        value={tipo}
-        onChange={setTipo}
-      />
-
-      {tipo === 'cliente' ? (
-        <Text style={formStyles.sectionHint}>
-          Após o login, sua localização é obtida automaticamente pelo GPS.
-        </Text>
-      ) : null}
+      <Text style={formStyles.sectionHint}>
+        Após o login, sua localização é obtida automaticamente pelo GPS.
+      </Text>
 
       <FormField
         label="E-mail"
@@ -86,7 +74,7 @@ export default function LoginScreen({ navigation }) {
           <Text style={formStyles.linkText}>Esqueci a senha</Text>
         </Pressable>
         <Pressable
-          onPress={() => navigation.navigate('Cadastro', { tipoInicial: tipo })}
+          onPress={() => navigation.navigate('Cadastro')}
           style={{ flex: 1, paddingVertical: 8, alignItems: 'flex-end' }}
         >
           <Text style={formStyles.linkText}>Novo usuário</Text>

@@ -14,7 +14,7 @@ import {
 import { colors } from '../../theme';
 
 export default function StoreScreen({ navigation }) {
-  const { session } = useAuth();
+  const { session, isLojista } = useAuth();
   const lojaId = session?.perfil?.lojaId;
   const [loja, setLoja] = useState(null);
   const [ofertas, setOfertas] = useState([]);
@@ -86,6 +86,14 @@ export default function StoreScreen({ navigation }) {
         onPress={() => navigation.navigate('CreateOferta')}
         style={{ marginBottom: 12 }}
       />
+
+      {isLojista ? (
+        <PrimaryButton
+          label="Gerenciar vendedores"
+          onPress={() => navigation.navigate('Vendedores', { lojaId })}
+          style={{ marginBottom: 12 }}
+        />
+      ) : null}
 
       <FlatList
         style={formStyles.listFlex}

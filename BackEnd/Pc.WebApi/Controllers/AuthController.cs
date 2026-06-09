@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Pc.Dominio.Entities.Usuarios;
 using Pc.Dominio.Enums;
 using Pc.Servico.Interfaces;
 using Pc.WebApi.DTOs.Comum;
@@ -13,26 +14,23 @@ namespace Pc.WebApi.Controllers
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
-        private readonly IClienteServico _clienteServico;
-        private readonly ILojistaServico _lojistaServico;
+        private readonly IClienteServico _usuarioServico;
         private readonly IAdminServico _adminServico;
         private readonly IJwtTokenService _jwtTokenService;
 
         public AuthController(
-            IClienteServico clienteServico,
-            ILojistaServico lojistaServico,
+            IClienteServico usuarioServico,
             IAdminServico adminServico,
             IJwtTokenService jwtTokenService)
         {
-            _clienteServico = clienteServico;
-            _lojistaServico = lojistaServico;
+            _usuarioServico = usuarioServico;
             _adminServico = adminServico;
             _jwtTokenService = jwtTokenService;
         }
 
         /// <summary>POST /api/auth/login — login unificado com JWT.</summary>
-        /// <param name="dto">Credenciais e tipo de usuário (cliente, lojista ou admin).</param>
-        /// <returns>Token JWT e perfil do usuário autenticado.</returns>
+        /// <param name="dto">Credenciais e tipo opcional (admin para login administrativo).</param>
+        /// <returns>Token JWT e perfil do usuário autenticado (papel derivado do servidor).</returns>
         [HttpPost("login")]
         [AllowAnonymous]
         [EnableRateLimiting("login")]
@@ -47,15 +45,11 @@ namespace Pc.WebApi.Controllers
                 if (!ModelState.IsValid)
                     return ValidationProblem(ModelState);
 
-                var tipo = (dto.Tipo ?? "cliente").Trim().ToLowerInvariant();
+                var tipo = (dto.Tipo ?? "").Trim().ToLowerInvariant();
+                if (tipo == "admin")
+                    return await LoginAdminAsync(dto);
 
-                return tipo switch
-                {
-                    "cliente" => await LoginClienteAsync(dto),
-                    "lojista" => await LoginLojistaAsync(dto),
-                    "admin" => await LoginAdminAsync(dto),
-                    _ => BadRequest("Tipo inválido. Use: cliente, lojista ou admin.")
-                };
+                return await LoginUsuarioAsync(dto);
             }
             catch (Exception ex)
             {
@@ -63,38 +57,45 @@ namespace Pc.WebApi.Controllers
             }
         }
 
-        private async Task<IActionResult> LoginClienteAsync(AuthLoginDto dto)
+        private async Task<IActionResult> LoginUsuarioAsync(AuthLoginDto dto)
         {
-            var cliente = await _clienteServico.ValidarLoginAsync(dto.Email, dto.Senha);
-            if (cliente == null)
+            var usuario = await _usuarioServico.ValidarLoginAsync(dto.Email, dto.Senha);
+            if (usuario == null)
                 return Unauthorized("Email ou senha incorretos.");
 
-            var perfil = MapCliente(cliente);
-            var token = _jwtTokenService.GenerateToken(cliente.Id, TipoUsuario.Cliente);
+            // Papel e lojaId são derivados no servidor (não confiamos no cliente).
+            var lojaId = usuario.Papel switch
+            {
+                PapelUsuario.Lojista => usuario.LojaPropria?.Id,
+                PapelUsuario.Vendedor => usuario.LojaVinculadaId,
+                _ => null
+            };
 
+            var tipoJwt = usuario.Papel switch
+            {
+                PapelUsuario.Lojista => TipoUsuario.Lojista,
+                PapelUsuario.Vendedor => TipoUsuario.Vendedor,
+                _ => TipoUsuario.Cliente
+            };
+
+            var token = _jwtTokenService.GenerateToken(usuario.Id, tipoJwt, lojaId);
+
+            if (usuario.Papel == PapelUsuario.Cliente)
+            {
+                return Ok(new AuthLoginRespostaDto
+                {
+                    Token = token,
+                    Tipo = "cliente",
+                    Perfil = MapCliente(usuario)
+                });
+            }
+
+            var tipoStr = usuario.Papel == PapelUsuario.Vendedor ? "vendedor" : "lojista";
             return Ok(new AuthLoginRespostaDto
             {
                 Token = token,
-                Tipo = "cliente",
-                Perfil = perfil
-            });
-        }
-
-        private async Task<IActionResult> LoginLojistaAsync(AuthLoginDto dto)
-        {
-            var lojista = await _lojistaServico.ValidarLoginAsync(dto.Email, dto.Senha);
-            if (lojista == null)
-                return Unauthorized("Email ou senha incorretos.");
-
-            var lojaId = lojista.Loja?.Id;
-            var perfil = MapLojista(lojista);
-            var token = _jwtTokenService.GenerateToken(lojista.Id, TipoUsuario.Lojista, lojaId);
-
-            return Ok(new AuthLoginRespostaDto
-            {
-                Token = token,
-                Tipo = "lojista",
-                Perfil = perfil
+                Tipo = tipoStr,
+                Perfil = MapLojista(usuario, lojaId)
             });
         }
 
@@ -116,23 +117,19 @@ namespace Pc.WebApi.Controllers
         }
 
         /// <summary>
-        /// GET /api/auth/confirmar-email?token=...&amp;tipo=cliente|lojista
+        /// GET /api/auth/confirmar-email?token=...
         /// Confirma o e-mail do usuário a partir do token enviado no cadastro.
         /// </summary>
         [HttpGet("confirmar-email")]
         [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> ConfirmarEmail([FromQuery] string token, [FromQuery] string tipo = "cliente")
+        public async Task<IActionResult> ConfirmarEmail([FromQuery] string token)
         {
             if (string.IsNullOrWhiteSpace(token))
                 return BadRequest("Token inválido.");
 
-            var t = (tipo ?? "cliente").Trim().ToLowerInvariant();
-            var confirmado = t == "lojista"
-                ? await _lojistaServico.ConfirmarEmailAsync(token)
-                : await _clienteServico.ConfirmarEmailAsync(token);
-
+            var confirmado = await _usuarioServico.ConfirmarEmailAsync(token);
             if (!confirmado)
                 return BadRequest("Token inválido ou e-mail já confirmado.");
 
@@ -144,13 +141,14 @@ namespace Pc.WebApi.Controllers
                 "text/html");
         }
 
-        private static ClienteRespostaDto MapCliente(Pc.Dominio.Entities.Usuarios.Cliente c) => new()
+        private static ClienteRespostaDto MapCliente(Usuario c) => new()
         {
             Id = c.Id,
             NomeUsuario = c.NomeUsuario,
             Email = c.Email,
             Telefone = c.Telefone,
             Tipo = (int)c.Tipo,
+            Papel = (int)c.Papel,
             UltimoLogin = c.UltimoLogin,
             LatitudeAtual = c.LatitudeAtual,
             LongitudeAtual = c.LongitudeAtual,
@@ -158,19 +156,20 @@ namespace Pc.WebApi.Controllers
             DataCriacao = c.DataCriacao
         };
 
-        private static LojistaRespostaDto MapLojista(Pc.Dominio.Entities.Usuarios.Lojista l) => new()
+        private static LojistaRespostaDto MapLojista(Usuario u, Guid? lojaId) => new()
         {
-            Id = l.Id,
-            NomeUsuario = l.NomeUsuario,
-            Email = l.Email,
-            Telefone = l.Telefone,
-            Tipo = (int)l.Tipo,
-            UltimoLogin = l.UltimoLogin,
-            LojaId = l.Loja?.Id,
-            NomeLoja = l.Loja?.NomeFantasia ?? string.Empty,
-            Cargo = l.Cargo,
-            Ativo = l.Ativo,
-            DataCriacao = l.DataCriacao
+            Id = u.Id,
+            NomeUsuario = u.NomeUsuario,
+            Email = u.Email,
+            Telefone = u.Telefone,
+            Tipo = (int)u.Tipo,
+            Papel = (int)u.Papel,
+            UltimoLogin = u.UltimoLogin,
+            LojaId = lojaId,
+            NomeLoja = u.LojaPropria?.NomeFantasia ?? string.Empty,
+            Cargo = u.Cargo,
+            Ativo = u.Ativo,
+            DataCriacao = u.DataCriacao
         };
 
         private static AdminRespostaDto MapAdmin(Pc.Dominio.Entities.Usuarios.Admin a) => new()

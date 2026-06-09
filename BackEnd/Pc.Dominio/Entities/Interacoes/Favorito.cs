@@ -11,7 +11,7 @@ namespace Pc.Dominio.Entities.Interacoes
     public class Favorito : BaseEntity
     {
         public Guid ClienteId { get; set; }
-        public Cliente? Cliente { get; set; }
+        public Usuario? Cliente { get; set; }
 
         public Guid? ProdutoId { get; set; }
         public Produto? Produto { get; set; }

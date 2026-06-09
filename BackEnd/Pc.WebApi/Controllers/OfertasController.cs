@@ -1,4 +1,4 @@
-Ôªøusing Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pc.Dominio.Entities.Catalogo;
 using Pc.Dominio.Entities.Estabelecimentos;
@@ -52,7 +52,7 @@ namespace Pc.WebApi.Controllers
             var oferta = await _ofertaServico.ObterPorIdAsync(id);
 
             if (oferta == null)
-                return NotFound("Oferta n√£o encontrada.");
+                return NotFound("Oferta n„o encontrada.");
 
             var resposta = new OfertaRespostaDto
             {
@@ -101,7 +101,7 @@ namespace Pc.WebApi.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Lojista,Admin")]
+        [Authorize(Roles = "Lojista,Vendedor,Admin")]
         public async Task<IActionResult> Adicionar([FromBody] OfertaCriarDto dto)
         {
             if (!Authz.OwnsLoja(this, dto.LojaId))
@@ -139,7 +139,7 @@ namespace Pc.WebApi.Controllers
         }
 
         [HttpPut("{id:guid}")]
-        [Authorize(Roles = "Lojista,Admin")]
+        [Authorize(Roles = "Lojista,Vendedor,Admin")]
         public async Task<IActionResult> Atualizar(Guid id, [FromBody] OfertaCriarDto dto)
         {
             if (!Authz.OwnsLoja(this, dto.LojaId))
@@ -147,7 +147,7 @@ namespace Pc.WebApi.Controllers
             var ofertaExistente = await _ofertaServico.ObterPorIdAsync(id);
 
             if (ofertaExistente == null)
-                return NotFound("Oferta n√£o encontrada.");
+                return NotFound("Oferta n„o encontrada.");
 
             ofertaExistente.ProdutoId = dto.ProdutoId;
             ofertaExistente.LojaId = dto.LojaId;
@@ -165,13 +165,13 @@ namespace Pc.WebApi.Controllers
         }
 
         [HttpDelete("{id:guid}")]
-        [Authorize(Roles = "Lojista,Admin")]
+        [Authorize(Roles = "Lojista,Vendedor,Admin")]
         public async Task<IActionResult> Remover(Guid id)
         {
             var ofertaExistente = await _ofertaServico.ObterPorIdAsync(id);
 
             if (ofertaExistente == null)
-                return NotFound("Oferta n√£o encontrada.");
+                return NotFound("Oferta n„o encontrada.");
 
             if (!Authz.OwnsLoja(this, ofertaExistente.LojaId))
                 return Forbid();

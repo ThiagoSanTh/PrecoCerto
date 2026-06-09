@@ -10,6 +10,6 @@ namespace Pc.WebApi.DTOs.Estabelecimentos
         public string? Descricao { get; set; }
         public EnderecoDto? Endereco { get; set; }
         public Guid? EnderecoId { get; set; }
-        public Guid? LojistaId { get; set; }
+        public Guid? UsuarioId { get; set; }
     }
 }

@@ -12,8 +12,7 @@ namespace Pc.Infraestrutura
         {
         }
 
-        public DbSet<Cliente> Clientes { get; set; }
-        public DbSet<Lojista> Lojistas { get; set; }
+        public DbSet<Usuario> Usuarios { get; set; }
         public DbSet<Admin> Admins { get; set; }
 
         public DbSet<Loja> Lojas { get; set; }
@@ -34,11 +33,20 @@ namespace Pc.Infraestrutura
         {
             base.OnModelCreating(modelBuilder);
 
+            // Loja 1:1 com o proprietário (Usuario com Papel = Lojista).
             modelBuilder.Entity<Loja>()
-                .HasOne(l => l.Lojista)
-                .WithOne(lo => lo.Loja)
-                // FK em Loja.LojistaId: lojista pode existir antes da loja ser criada.
-                .HasForeignKey<Loja>(l => l.LojistaId);
+                .HasOne(l => l.Usuario)
+                .WithOne(u => u.LojaPropria)
+                // FK em Loja.UsuarioId: o usuário pode existir antes da loja ser criada.
+                .HasForeignKey<Loja>(l => l.UsuarioId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Vínculo de Vendedor: usuário atua no estoque de uma loja.
+            modelBuilder.Entity<Usuario>()
+                .HasOne(u => u.LojaVinculada)
+                .WithMany()
+                .HasForeignKey(u => u.LojaVinculadaId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             modelBuilder.Entity<Produto>()
                 .HasOne(p => p.Loja)

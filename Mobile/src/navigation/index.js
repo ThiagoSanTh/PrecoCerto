@@ -8,6 +8,7 @@ import CreateStoreScreen from '../screens/store/CreateStoreScreen';
 import CreateProductScreen from '../screens/store/CreateProductScreen';
 import ProductDetailScreen from '../screens/catalog/ProductDetailScreen';
 import CreateOfertaScreen from '../screens/store/CreateOfertaScreen';
+import VendedoresScreen from '../screens/store/VendedoresScreen';
 import ChangePasswordScreen from '../screens/user/ChangePasswordScreen';
 
 import AppRoutes from './AppRoutes';
@@ -25,6 +26,7 @@ export default function Routes() {
         <Stack.Screen name="CreateProduct" component={CreateProductScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ headerShown: false }} />
         <Stack.Screen name="CreateOferta" component={CreateOfertaScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Vendedores" component={VendedoresScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Home" component={AppRoutes} options={{ headerShown: false }} />
       </Stack.Navigator>

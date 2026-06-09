@@ -37,7 +37,7 @@ namespace Pc.WebApi.Controllers
             if (!ModelState.IsValid)
                 return ValidationProblem(ModelState);
 
-            var cliente = new Cliente
+            var cliente = new Usuario
             {
                 NomeUsuario = dto.NomeUsuario,
                 Email = dto.Email,
@@ -163,13 +163,14 @@ namespace Pc.WebApi.Controllers
             return NoContent();
         }
 
-        private static ClienteRespostaDto MapResposta(Cliente c) => new()
+        private static ClienteRespostaDto MapResposta(Usuario c) => new()
         {
             Id = c.Id,
             NomeUsuario = c.NomeUsuario,
             Email = c.Email,
             Telefone = c.Telefone,
             Tipo = (int)c.Tipo,
+            Papel = (int)c.Papel,
             UltimoLogin = c.UltimoLogin,
             LatitudeAtual = c.LatitudeAtual,
             LongitudeAtual = c.LongitudeAtual,

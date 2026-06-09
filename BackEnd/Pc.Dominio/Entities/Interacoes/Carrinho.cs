@@ -9,7 +9,7 @@ namespace Pc.Dominio.Entities.Interacoes
     public class Carrinho : BaseEntity
     {
         public Guid ClienteId { get; set; }
-        public Cliente? Cliente { get; set; }
+        public Usuario? Cliente { get; set; }
 
         public ICollection<ItemCarrinho> Itens { get; set; } = new List<ItemCarrinho>();
     }

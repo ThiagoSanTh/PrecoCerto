@@ -11,9 +11,10 @@ export default function AppRoutes() {
   useEffect(() => {
     async function loadMode() {
       const saved = await AsyncStorage.getItem('@userMode');
+      const ehLojaUser = session?.tipo === 'lojista' || session?.tipo === 'vendedor';
       if (saved) {
         setMode(saved);
-      } else if (session?.tipo === 'lojista') {
+      } else if (ehLojaUser) {
         setMode('store');
       } else {
         setMode('user');
@@ -24,7 +25,8 @@ export default function AppRoutes() {
 
   if (loading) return null;
 
-  if (session?.tipo === 'lojista' || mode === 'store') {
+  const ehLojaUser = session?.tipo === 'lojista' || session?.tipo === 'vendedor';
+  if (ehLojaUser || mode === 'store') {
     return <StoreTabs />;
   }
 

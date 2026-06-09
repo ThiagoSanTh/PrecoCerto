@@ -1,76 +1,29 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 using Pc.Dominio.Entities.Usuarios;
+using Pc.Dominio.Enums;
 using Pc.Servico.Interfaces;
 using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Comum;
 using Pc.WebApi.DTOs.Usuarios;
-using Pc.WebApi.Services;
+using Pc.WebApi.Extensions;
 
 namespace Pc.WebApi.Controllers
 {
+    /// <summary>
+    /// Operações de perfil de lojista e gestão de vendedores.
+    /// No modelo unificado, lojista e vendedor são <see cref="Usuario"/> com papéis distintos.
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     public class LojistasController : ControllerBase
     {
-        private readonly ILojistaServico _lojistaServico;
-        private readonly IJwtTokenService _jwtTokenService;
-        private readonly IEmailService _emailService;
+        private readonly IClienteServico _usuarioServico;
 
-        public LojistasController(
-            ILojistaServico lojistaServico,
-            IJwtTokenService jwtTokenService,
-            IEmailService emailService)
+        public LojistasController(IClienteServico usuarioServico)
         {
-            _lojistaServico = lojistaServico;
-            _jwtTokenService = jwtTokenService;
-            _emailService = emailService;
-        }
-
-        [HttpPost("registrar")]
-        [AllowAnonymous]
-        public async Task<IActionResult> Registrar([FromBody] LojistaCriarDto dto)
-        {
-            if (!ModelState.IsValid)
-                return ValidationProblem(ModelState);
-
-            var lojista = new Lojista
-            {
-                NomeUsuario = dto.NomeUsuario,
-                Email = dto.Email,
-                SenhaHash = dto.Senha,
-                Telefone = dto.Telefone,
-                Cargo = dto.Cargo
-            };
-
-            var novoLojista = await _lojistaServico.RegistrarAsync(lojista);
-
-            if (!string.IsNullOrWhiteSpace(novoLojista.TokenConfirmacao))
-                await _emailService.EnviarConfirmacaoEmailAsync(
-                    novoLojista.Email, novoLojista.NomeUsuario, novoLojista.TokenConfirmacao, "lojista");
-
-            return CreatedAtAction(nameof(ObterPorId), new { id = novoLojista.Id }, MapResposta(novoLojista));
-        }
-
-        [HttpPost("login")]
-        [AllowAnonymous]
-        [EnableRateLimiting("login")]
-        public async Task<IActionResult> Login([FromBody] LoginDto dto)
-        {
-            if (!ModelState.IsValid)
-                return ValidationProblem(ModelState);
-
-            var lojista = await _lojistaServico.ValidarLoginAsync(dto.Email, dto.Senha);
-            if (lojista == null)
-                return Unauthorized("Email ou senha incorretos.");
-
-            var lojaId = lojista.Loja?.Id;
-            var perfil = MapResposta(lojista);
-            var token = _jwtTokenService.GenerateToken(lojista.Id, Pc.Dominio.Enums.TipoUsuario.Lojista, lojaId);
-
-            return Ok(new AuthLoginRespostaDto { Token = token, Tipo = "lojista", Perfil = perfil });
+            _usuarioServico = usuarioServico;
         }
 
         [HttpGet("{id:guid}")]
@@ -79,41 +32,11 @@ namespace Pc.WebApi.Controllers
             var denied = Authz.ForbidUnlessSelfOrAdmin(this, id);
             if (denied != null) return denied;
 
-            var lojista = await _lojistaServico.ObterPorIdAsync(id);
-            if (lojista == null)
-                return NotFound("Lojista não encontrado.");
+            var usuario = await _usuarioServico.ObterComLojaAsync(id);
+            if (usuario == null)
+                return NotFound("Usuário não encontrado.");
 
-            return Ok(MapResposta(lojista));
-        }
-
-        [HttpGet("email/{email}")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> BuscarPorEmail(string email)
-        {
-            var lojista = await _lojistaServico.ObterPorEmailAsync(email);
-            if (lojista == null)
-                return NotFound("Lojista não encontrado.");
-
-            return Ok(MapResposta(lojista));
-        }
-
-        [HttpGet("loja/{lojaId:guid}")]
-        [Authorize(Roles = "Admin,Lojista")]
-        public async Task<IActionResult> ListarPorLoja(Guid lojaId)
-        {
-            if (!Authz.OwnsLoja(this, lojaId))
-                return Forbid();
-
-            var lojistas = await _lojistaServico.ListarPorLojaAsync(lojaId);
-            return Ok(lojistas.Select(MapResposta));
-        }
-
-        [HttpGet]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Listar()
-        {
-            var lojistas = await _lojistaServico.ListarAtivosAsync();
-            return Ok(lojistas.Select(MapResposta));
+            return Ok(MapResposta(usuario));
         }
 
         [HttpPut("{id:guid}")]
@@ -122,17 +45,17 @@ namespace Pc.WebApi.Controllers
             var denied = Authz.ForbidUnlessSelfOrAdmin(this, id);
             if (denied != null) return denied;
 
-            var lojista = await _lojistaServico.ObterPorIdAsync(id);
-            if (lojista == null)
-                return NotFound("Lojista não encontrado.");
+            var usuario = await _usuarioServico.ObterComLojaAsync(id);
+            if (usuario == null)
+                return NotFound("Usuário não encontrado.");
 
-            lojista.NomeUsuario = dto.NomeUsuario;
-            lojista.Email = dto.Email;
-            lojista.Telefone = dto.Telefone;
-            lojista.Cargo = dto.Cargo;
+            usuario.NomeUsuario = dto.NomeUsuario;
+            usuario.Email = dto.Email;
+            usuario.Telefone = dto.Telefone;
+            usuario.Cargo = dto.Cargo;
 
-            await _lojistaServico.AtualizarAsync(lojista);
-            return Ok(MapResposta(lojista));
+            await _usuarioServico.AtualizarAsync(usuario);
+            return Ok(MapResposta(usuario));
         }
 
         [HttpPut("{id:guid}/senha")]
@@ -141,31 +64,103 @@ namespace Pc.WebApi.Controllers
             var denied = Authz.ForbidUnlessSelfOrAdmin(this, id);
             if (denied != null) return denied;
 
-            await _lojistaServico.AlterarSenhaAsync(id, dto.SenhaAtual, dto.NovaSenha);
+            await _usuarioServico.AlterarSenhaAsync(id, dto.SenhaAtual, dto.NovaSenha);
             return Ok(new { mensagem = "Senha alterada com sucesso" });
+        }
+
+        /// <summary>Lista os vendedores vinculados a uma loja.</summary>
+        [HttpGet("loja/{lojaId:guid}/vendedores")]
+        [Authorize(Roles = "Admin,Lojista")]
+        public async Task<IActionResult> ListarVendedores(Guid lojaId)
+        {
+            if (!Authz.OwnsLoja(this, lojaId))
+                return Forbid();
+
+            var vendedores = await _usuarioServico.ListarVendedoresPorLojaAsync(lojaId);
+            return Ok(vendedores.Select(MapResposta));
+        }
+
+        /// <summary>Promove um cliente a vendedor da loja (controle de estoque).</summary>
+        [HttpPost("loja/{lojaId:guid}/vendedores")]
+        [Authorize(Roles = "Admin,Lojista")]
+        public async Task<IActionResult> PromoverVendedor(Guid lojaId, [FromBody] PromoverVendedorDto dto)
+        {
+            if (!Authz.OwnsLoja(this, lojaId))
+                return Forbid();
+
+            Usuario? alvo = null;
+            if (dto.UsuarioId.HasValue && dto.UsuarioId.Value != Guid.Empty)
+                alvo = await _usuarioServico.ObterPorIdAsync(dto.UsuarioId.Value);
+            else if (!string.IsNullOrWhiteSpace(dto.Email))
+                alvo = await _usuarioServico.ObterPorEmailAsync(dto.Email);
+
+            if (alvo == null)
+                return NotFound("Usuário a promover não encontrado.");
+
+            try
+            {
+                await _usuarioServico.PromoverParaVendedorAsync(alvo.Id, lojaId, dto.Cargo);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+
+            var atualizado = await _usuarioServico.ObterPorIdAsync(alvo.Id);
+            return Ok(MapResposta(atualizado!));
+        }
+
+        /// <summary>Remove o vínculo de vendedor (volta a ser Cliente).</summary>
+        [HttpDelete("loja/{lojaId:guid}/vendedores/{usuarioId:guid}")]
+        [Authorize(Roles = "Admin,Lojista")]
+        public async Task<IActionResult> RemoverVendedor(Guid lojaId, Guid usuarioId)
+        {
+            if (!Authz.OwnsLoja(this, lojaId))
+                return Forbid();
+
+            try
+            {
+                await _usuarioServico.RemoverVendedorAsync(usuarioId);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+
+            return NoContent();
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Listar()
+        {
+            var todos = await _usuarioServico.ListarAtivosAsync();
+            var lojistas = todos.Where(u => u.Papel == PapelUsuario.Lojista || u.Papel == PapelUsuario.Vendedor);
+            return Ok(lojistas.Select(MapResposta));
         }
 
         [HttpDelete("{id:guid}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Remover(Guid id)
         {
-            await _lojistaServico.RemoverAsync(id);
+            await _usuarioServico.RemoverAsync(id);
             return NoContent();
         }
 
-        private static LojistaRespostaDto MapResposta(Lojista l) => new()
+        private static LojistaRespostaDto MapResposta(Usuario u) => new()
         {
-            Id = l.Id,
-            NomeUsuario = l.NomeUsuario,
-            Email = l.Email,
-            Telefone = l.Telefone,
-            Tipo = (int)l.Tipo,
-            UltimoLogin = l.UltimoLogin,
-            LojaId = l.Loja?.Id,
-            NomeLoja = l.Loja?.NomeFantasia ?? string.Empty,
-            Cargo = l.Cargo,
-            Ativo = l.Ativo,
-            DataCriacao = l.DataCriacao
+            Id = u.Id,
+            NomeUsuario = u.NomeUsuario,
+            Email = u.Email,
+            Telefone = u.Telefone,
+            Tipo = (int)u.Tipo,
+            Papel = (int)u.Papel,
+            UltimoLogin = u.UltimoLogin,
+            LojaId = u.Papel == PapelUsuario.Vendedor ? u.LojaVinculadaId : u.LojaPropria?.Id,
+            NomeLoja = u.LojaPropria?.NomeFantasia ?? string.Empty,
+            Cargo = u.Cargo,
+            Ativo = u.Ativo,
+            DataCriacao = u.DataCriacao
         };
     }
 }

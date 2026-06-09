@@ -1,4 +1,4 @@
-Ôªøusing Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pc.Dominio.Entities.Catalogo;
 using Pc.Servico.Excecoes;
@@ -34,7 +34,7 @@ namespace Pc.WebApi.Controllers
         {
             var produto = await _produtoServico.ObterPorIdAsync(id);
             if (produto is null)
-                return NotFound("Produto n√£o encontrado.");
+                return NotFound("Produto n„o encontrado.");
 
             return Ok(ProdutoMapper.ParaRespostaDto(produto));
         }
@@ -48,11 +48,11 @@ namespace Pc.WebApi.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Lojista,Admin")]
+        [Authorize(Roles = "Lojista,Vendedor,Admin")]
         public async Task<IActionResult> Adicionar([FromBody] ProdutoCriarDto dto)
         {
             if (!dto.LojaId.HasValue)
-                return BadRequest("LojaId √© obrigat√≥rio.");
+                return BadRequest("LojaId È obrigatÛrio.");
 
             if (!Authz.OwnsLoja(this, dto.LojaId.Value))
                 return Forbid();
@@ -78,7 +78,7 @@ namespace Pc.WebApi.Controllers
         }
 
         [HttpPut("{id:guid}")]
-        [Authorize(Roles = "Lojista,Admin")]
+        [Authorize(Roles = "Lojista,Vendedor,Admin")]
         public async Task<IActionResult> Atualizar(Guid id, [FromBody] ProdutoAtualizarDto dto)
         {
             if (!Authz.OwnsLoja(this, dto.LojaId))
@@ -111,7 +111,7 @@ namespace Pc.WebApi.Controllers
         }
 
         [HttpDelete("{id:guid}")]
-        [Authorize(Roles = "Lojista,Admin")]
+        [Authorize(Roles = "Lojista,Vendedor,Admin")]
         public async Task<IActionResult> Deletar(Guid id, [FromQuery] Guid lojaId)
         {
             if (!Authz.OwnsLoja(this, lojaId))

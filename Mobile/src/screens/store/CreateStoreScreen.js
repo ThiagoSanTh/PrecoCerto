@@ -1,7 +1,6 @@
 import { View, Text, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { useState } from 'react';
 import { criarLoja } from '../../services/lojaService';
-import { atualizarLojista } from '../../services/lojistaService';
 import { useAuth } from '../../context/AuthContext';
 import { buscarEnderecoPorCep, geocodificarEndereco } from '../../services/enderecoService';
 import { obterLocalizacaoAtual } from '../../services/locationService';
@@ -23,7 +22,7 @@ const STEPS = [
 ];
 
 export default function CreateStoreScreen({ navigation }) {
-  const { session, atualizarPerfilSessao } = useAuth();
+  const { session, logout } = useAuth();
   const [step, setStep] = useState(0);
 
   const [nomeFantasia, setNomeFantasia] = useState('');
@@ -50,7 +49,12 @@ export default function CreateStoreScreen({ navigation }) {
       Alert.alert('Loja', 'Informe o nome fantasia.');
       return false;
     }
-    if (cnpj.trim() && !isCnpjValido(cnpj)) {
+    // Abrir loja exige CNPJ válido — é o que torna o usuário um lojista.
+    if (!cnpj.trim()) {
+      Alert.alert('Loja', 'Informe o CNPJ da loja.');
+      return false;
+    }
+    if (!isCnpjValido(cnpj)) {
       Alert.alert('Loja', 'CNPJ inválido. Verifique os números informados.');
       return false;
     }
@@ -158,8 +162,8 @@ export default function CreateStoreScreen({ navigation }) {
       return;
     }
 
-    if (session?.tipo !== 'lojista' || !session?.perfil?.id) {
-      Alert.alert('Erro', 'Faça login como lojista para criar uma loja');
+    if (!session?.perfil?.id) {
+      Alert.alert('Erro', 'Faça login para abrir uma loja.');
       return;
     }
 
@@ -179,12 +183,12 @@ export default function CreateStoreScreen({ navigation }) {
         }
       }
 
-      const loja = await criarLoja({
+      // O backend define o usuário autenticado como dono e o promove a Lojista.
+      await criarLoja({
         nomeFantasia: nomeFantasia.trim(),
-        cnpj: cnpj.trim() || null,
+        cnpj: cnpj.trim(),
         telefone: telefone.trim() || null,
         email: emailLoja.trim() || session.perfil.email,
-        lojistaId: session.perfil.id,
         endereco: {
           cep,
           logradouro,
@@ -197,24 +201,13 @@ export default function CreateStoreScreen({ navigation }) {
         },
       });
 
-      await atualizarLojista(session.perfil.id, {
-        nomeUsuario: session.perfil.nomeUsuario || nomeFantasia,
-        email: session.perfil.email,
-        telefone: telefone.trim() || session.perfil.telefone,
-        lojaId: loja.id,
-        cargo: session.perfil.cargo || 'Gerente',
-      });
-
-      await atualizarPerfilSessao(
-        {
-          lojaId: loja.id,
-          nomeLoja: loja.nomeFantasia,
-        },
-        'store'
+      // Como o papel mudou para Lojista, é preciso reautenticar para obter um
+      // token com as permissões de loja.
+      Alert.alert(
+        'Loja criada!',
+        'Sua conta agora é de lojista. Entre novamente para acessar o painel da loja.',
+        [{ text: 'OK', onPress: () => logout() }]
       );
-
-      Alert.alert('Sucesso', 'Loja criada e vinculada ao lojista!');
-      navigation.replace('Home');
     } catch (error) {
       const msg = error.response?.data || error.message;
       Alert.alert('Erro', String(msg));

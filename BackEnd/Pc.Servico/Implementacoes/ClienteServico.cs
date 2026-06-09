@@ -1,13 +1,13 @@
 using Pc.Dominio.Entities.Usuarios;
+using Pc.Dominio.Enums;
 using Pc.Repositorio.Interfaces;
 using Pc.Servico.Interfaces;
 
 namespace Pc.Servico.Implementacoes
 {
     /// <summary>
-    /// Serviço de Cliente: lógica de negócio para autenticação e gerenciamento de clientes
-    /// Validações: email único, senha válida, dados obrigatórios
-    /// Consolidado - sem intermediário Usuario
+    /// Serviço do usuário (entidade unificada Usuario): autenticação, perfil,
+    /// localização e papéis (Cliente/Lojista/Vendedor).
     /// </summary>
     public class ClienteServico : IClienteServico
     {
@@ -20,11 +20,7 @@ namespace Pc.Servico.Implementacoes
             _passwordHasher = passwordHasher;
         }
 
-        /// <summary>
-        /// Registra um novo cliente
-        /// Validações: email único, NomeUsuario obrigatório, senha mínima 6 caracteres
-        /// </summary>
-        public async Task<Cliente> RegistrarAsync(Cliente cliente)
+        public async Task<Usuario> RegistrarAsync(Usuario cliente)
         {
             if (string.IsNullOrWhiteSpace(cliente.Email))
                 throw new Exception("Email é obrigatório.");
@@ -41,7 +37,8 @@ namespace Pc.Servico.Implementacoes
 
             cliente.Ativo = true;
             cliente.DataCriacao = DateTime.UtcNow;
-            cliente.Tipo = Pc.Dominio.Enums.TipoUsuario.Cliente;
+            cliente.Tipo = TipoUsuario.Cliente;
+            cliente.Papel = PapelUsuario.Cliente;
             cliente.SenhaHash = _passwordHasher.Hash(cliente.SenhaHash);
             cliente.EmailConfirmado = false;
             cliente.TokenConfirmacao = Guid.NewGuid().ToString("N");
@@ -49,12 +46,7 @@ namespace Pc.Servico.Implementacoes
             return await _clienteRepositorio.AdicionarAsync(cliente);
         }
 
-        /// <summary>
-        /// Valida credenciais de login
-        /// Retorna o cliente se credenciais forem válidas
-        /// TODO: Usar bcrypt para comparação de senha
-        /// </summary>
-        public async Task<Cliente?> ValidarLoginAsync(string email, string senha)
+        public async Task<Usuario?> ValidarLoginAsync(string email, string senha)
         {
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(senha))
                 return null;
@@ -78,51 +70,37 @@ namespace Pc.Servico.Implementacoes
             return cliente;
         }
 
-        /// <summary>
-        /// Obtém cliente por ID
-        /// </summary>
-        public async Task<Cliente?> ObterPorIdAsync(Guid id)
+        public async Task<Usuario?> ObterPorIdAsync(Guid id)
         {
             return await _clienteRepositorio.ObterPorIdAsync(id);
         }
 
-        /// <summary>
-        /// Obtém cliente por email
-        /// </summary>
-        public async Task<Cliente?> ObterPorEmailAsync(string email)
+        public async Task<Usuario?> ObterComLojaAsync(Guid id)
+        {
+            return await _clienteRepositorio.ObterPorIdComLojaAsync(id);
+        }
+
+        public async Task<Usuario?> ObterPorEmailAsync(string email)
         {
             return await _clienteRepositorio.ObterPorEmailAsync(email);
         }
 
-        /// <summary>
-        /// Lista todos os clientes ativos
-        /// </summary>
-        public async Task<List<Cliente>> ListarAtivosAsync()
+        public async Task<List<Usuario>> ListarAtivosAsync()
         {
             return await _clienteRepositorio.ListarAtivosAsync();
         }
 
-        /// <summary>
-        /// Lista todos os clientes
-        /// </summary>
-        public async Task<List<Cliente>> ListarAsync()
+        public async Task<List<Usuario>> ListarAsync()
         {
             return await _clienteRepositorio.ListarAsync();
         }
 
-        /// <summary>
-        /// Atualiza dados do cliente
-        /// </summary>
-        public async Task AtualizarAsync(Cliente cliente)
+        public async Task AtualizarAsync(Usuario cliente)
         {
             cliente.DataAtualizacao = DateTime.UtcNow;
             await _clienteRepositorio.AtualizarAsync(cliente);
         }
 
-        /// <summary>
-        /// Atualiza localização do cliente (geolocalização)
-        /// Validações: Latitude -90~90, Longitude -180~180
-        /// </summary>
         public async Task AtualizarLocalizacaoAsync(Guid clienteId, decimal latitude, decimal longitude)
         {
             if (latitude < -90 || latitude > 90)
@@ -134,11 +112,7 @@ namespace Pc.Servico.Implementacoes
             await _clienteRepositorio.AtualizarLocalizacaoAsync(clienteId, latitude, longitude);
         }
 
-        /// <summary>
-        /// Obtém clientes por proximidade (raio em KM)
-        /// Usa Haversine para cálculo de distância
-        /// </summary>
-        public async Task<List<Cliente>> ObterPorProximidadeAsync(decimal latitude, decimal longitude, decimal raioKm)
+        public async Task<List<Usuario>> ObterPorProximidadeAsync(decimal latitude, decimal longitude, decimal raioKm)
         {
             if (raioKm <= 0)
                 throw new Exception("Raio deve ser maior que zero.");
@@ -146,10 +120,6 @@ namespace Pc.Servico.Implementacoes
             return await _clienteRepositorio.ObterPorProximidadeAsync(latitude, longitude, raioKm);
         }
 
-        /// <summary>
-        /// Altera a senha do cliente
-        /// TODO: Usar bcrypt para comparação
-        /// </summary>
         public async Task AlterarSenhaAsync(Guid clienteId, string senhaAtual, string novaSenha)
         {
             if (string.IsNullOrWhiteSpace(novaSenha) || novaSenha.Length < 6)
@@ -157,7 +127,7 @@ namespace Pc.Servico.Implementacoes
 
             var cliente = await _clienteRepositorio.ObterPorIdAsync(clienteId);
             if (cliente == null)
-                throw new Exception("Cliente não encontrado.");
+                throw new Exception("Usuário não encontrado.");
 
             if (!await VerificarSenhaAsync(cliente, senhaAtual))
                 throw new Exception("Senha atual incorreta.");
@@ -166,7 +136,7 @@ namespace Pc.Servico.Implementacoes
             await _clienteRepositorio.AtualizarAsync(cliente);
         }
 
-        private async Task<bool> VerificarSenhaAsync(Cliente cliente, string senha)
+        private async Task<bool> VerificarSenhaAsync(Usuario cliente, string senha)
         {
             if (_passwordHasher.Verify(senha, cliente.SenhaHash))
                 return true;
@@ -181,9 +151,6 @@ namespace Pc.Servico.Implementacoes
             return false;
         }
 
-        /// <summary>
-        /// Remove/desativa cliente (soft delete)
-        /// </summary>
         public async Task RemoverAsync(Guid id)
         {
             var cliente = await _clienteRepositorio.ObterPorIdAsync(id);
@@ -194,9 +161,6 @@ namespace Pc.Servico.Implementacoes
             }
         }
 
-        /// <summary>
-        /// Confirma o e-mail do cliente a partir do token.
-        /// </summary>
         public async Task<bool> ConfirmarEmailAsync(string token)
         {
             if (string.IsNullOrWhiteSpace(token))
@@ -213,6 +177,51 @@ namespace Pc.Servico.Implementacoes
             return true;
         }
 
+        public async Task DefinirComoLojistaAsync(Guid usuarioId)
+        {
+            var usuario = await _clienteRepositorio.ObterPorIdAsync(usuarioId);
+            if (usuario == null)
+                throw new Exception("Usuário não encontrado.");
+
+            usuario.Papel = PapelUsuario.Lojista;
+            usuario.Tipo = TipoUsuario.Lojista;
+            await _clienteRepositorio.AtualizarAsync(usuario);
+        }
+
+        public async Task PromoverParaVendedorAsync(Guid usuarioId, Guid lojaId, string? cargo)
+        {
+            var usuario = await _clienteRepositorio.ObterPorIdAsync(usuarioId);
+            if (usuario == null)
+                throw new Exception("Usuário não encontrado.");
+
+            if (usuario.Papel == PapelUsuario.Lojista)
+                throw new Exception("Lojistas não podem ser promovidos a vendedores.");
+
+            usuario.Papel = PapelUsuario.Vendedor;
+            usuario.LojaVinculadaId = lojaId;
+            usuario.Cargo = string.IsNullOrWhiteSpace(cargo) ? "Vendedor" : cargo;
+            await _clienteRepositorio.AtualizarAsync(usuario);
+        }
+
+        public async Task RemoverVendedorAsync(Guid usuarioId)
+        {
+            var usuario = await _clienteRepositorio.ObterPorIdAsync(usuarioId);
+            if (usuario == null)
+                throw new Exception("Usuário não encontrado.");
+
+            if (usuario.Papel != PapelUsuario.Vendedor)
+                throw new Exception("Usuário não é um vendedor.");
+
+            usuario.Papel = PapelUsuario.Cliente;
+            usuario.LojaVinculadaId = null;
+            usuario.Cargo = null;
+            await _clienteRepositorio.AtualizarAsync(usuario);
+        }
+
+        public async Task<List<Usuario>> ListarVendedoresPorLojaAsync(Guid lojaId)
+        {
+            var todos = await _clienteRepositorio.ListarAtivosAsync();
+            return todos.FindAll(u => u.Papel == PapelUsuario.Vendedor && u.LojaVinculadaId == lojaId);
+        }
     }
 }
-

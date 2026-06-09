@@ -96,6 +96,7 @@ export function AuthProvider({ children }) {
         sincronizarGpsCliente,
         isCliente: session?.tipo === 'cliente',
         isLojista: session?.tipo === 'lojista',
+        isVendedor: session?.tipo === 'vendedor',
       }}
     >
       {children}

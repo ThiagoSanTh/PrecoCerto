@@ -1,7 +1,7 @@
 import api from './api';
 import { saveToken } from './tokenStorage';
 
-export async function login(email, senha, tipo) {
+export async function login(email, senha, tipo = undefined) {
   const { data } = await api.post('/Auth/login', {
     email: email.trim(),
     senha,

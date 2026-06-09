@@ -16,10 +16,12 @@ namespace Pc.WebApi.Controllers
     public class LojasController : ControllerBase
     {
         private readonly ILojaServico _lojaServico;
+        private readonly IClienteServico _usuarioServico;
 
-        public LojasController(ILojaServico lojaServico)
+        public LojasController(ILojaServico lojaServico, IClienteServico usuarioServico)
         {
             _lojaServico = lojaServico;
+            _usuarioServico = usuarioServico;
         }
 
         [HttpGet]
@@ -50,28 +52,38 @@ namespace Pc.WebApi.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Lojista,Admin")]
+        [Authorize]
         public async Task<IActionResult> Adicionar([FromBody] LojaCriarDto dto)
         {
-            if (User.IsLojista() && dto.LojistaId.HasValue && User.GetUserId() != dto.LojistaId)
-                return Forbid();
+            // Abrir loja exige CNPJ válido — é isso que promove o usuário a Lojista.
+            if (!CnpjValidator.IsValido(dto.Cnpj))
+                return BadRequest("CNPJ inválido. É necessário um CNPJ válido para abrir uma loja.");
 
-            if (!string.IsNullOrWhiteSpace(dto.Cnpj) && !CnpjValidator.IsValido(dto.Cnpj))
-                return BadRequest("CNPJ inválido.");
+            // O dono da loja é o usuário autenticado (admin pode informar outro).
+            var usuarioId = User.GetUserId();
+            if (User.IsAdmin() && dto.UsuarioId.HasValue && dto.UsuarioId.Value != Guid.Empty)
+                usuarioId = dto.UsuarioId;
+
+            if (usuarioId is null || usuarioId == Guid.Empty)
+                return BadRequest("Usuário inválido.");
 
             var loja = new Loja
             {
                 NomeFantasia = dto.NomeFantasia,
                 RazaoSocial = dto.RazaoSocial,
-                Cnpj = string.IsNullOrWhiteSpace(dto.Cnpj) ? dto.Cnpj : CnpjValidator.ApenasDigitos(dto.Cnpj),
+                Cnpj = CnpjValidator.ApenasDigitos(dto.Cnpj),
                 Telefone = dto.Telefone,
                 Email = dto.Email,
                 Descricao = dto.Descricao,
-                LojistaId = dto.LojistaId,
+                UsuarioId = usuarioId,
                 Endereco = CriarEndereco(dto.Endereco)
             };
 
             var novaLoja = await _lojaServico.AdicionarAsync(loja);
+
+            // Promove o usuário a Lojista (papel + tipo).
+            await _usuarioServico.DefinirComoLojistaAsync(usuarioId.Value);
+
             return CreatedAtAction(nameof(ObterPorId), new { id = novaLoja.Id }, LojaMapper.ParaRespostaDto(novaLoja));
         }
 
@@ -85,7 +97,7 @@ namespace Pc.WebApi.Controllers
 
             if (!Authz.OwnsLoja(this, id) && !User.IsAdmin())
             {
-                if (lojaExistente.LojistaId != User.GetUserId())
+                if (lojaExistente.UsuarioId != User.GetUserId())
                     return Forbid();
             }
 
@@ -102,8 +114,8 @@ namespace Pc.WebApi.Controllers
             if (dto.EnderecoId.HasValue)
                 lojaExistente.EnderecoId = dto.EnderecoId.Value;
 
-            if (dto.LojistaId.HasValue)
-                lojaExistente.LojistaId = dto.LojistaId.Value;
+            if (dto.UsuarioId.HasValue)
+                lojaExistente.UsuarioId = dto.UsuarioId.Value;
 
             if (dto.Endereco is not null)
                 lojaExistente.Endereco = CriarEndereco(dto.Endereco);

@@ -25,6 +25,9 @@ namespace Pc.WebApi.Extensions
         public static bool IsLojista(this ClaimsPrincipal user) =>
             user.IsInRole("Lojista");
 
+        public static bool IsVendedor(this ClaimsPrincipal user) =>
+            user.IsInRole("Vendedor");
+
         public static bool IsCliente(this ClaimsPrincipal user) =>
             user.IsInRole("Cliente");
     }

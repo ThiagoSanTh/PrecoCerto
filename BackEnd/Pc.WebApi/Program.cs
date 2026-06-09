@@ -158,7 +158,6 @@ builder.Services.AddScoped<IOfertaRepositorio, OfertaRepositorio>();
 
 // Repositórios — Usuários
 builder.Services.AddScoped<IClienteRepositorio, ClienteRepositorio>();
-builder.Services.AddScoped<ILojistaRepositorio, LojistaRepositorio>();
 builder.Services.AddScoped<IAdminRepositorio, AdminRepositorio>();
 
 // Repositórios — Interações
@@ -175,7 +174,6 @@ builder.Services.AddScoped<IOfertaServico, OfertaServico>();
 
 // Serviços — Usuários
 builder.Services.AddScoped<IClienteServico, ClienteServico>();
-builder.Services.AddScoped<ILojistaServico, LojistaServico>();
 builder.Services.AddScoped<IAdminServico, AdminServico>();
 
 // Serviços — Interações

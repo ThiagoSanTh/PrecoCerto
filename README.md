@@ -328,8 +328,28 @@ npm run start      # ou: npm run web / npm run android / npm run ios
   <li>✅ Autenticação JWT + hashing de senha (BCrypt) + rate limiting no login</li>
   <li>✅ Geolocalização, favoritos, histórico e avaliações</li>
   <li>✅ App mobile (Expo) integrado à API</li>
-  <li>⚠️ Confirmação de e-mail (SMTP), carrinho e dark mode em evolução</li>
+  <li>✅ Confirmação de e-mail (SMTP), carrinho de compras e dark mode</li>
+  <li>✅ Hierarquia de usuários unificada (entidade <code>Usuario</code> com papéis Cliente/Lojista/Vendedor)</li>
 </ul>
+
+<h3>👥 Hierarquia de usuários</h3>
+
+<p>
+  Cliente e Lojista foram unificados em uma única entidade <code>Usuario</code>. O
+  papel é derivado das ações do usuário, via enum <code>PapelUsuario</code>:
+</p>
+
+<ul>
+  <li><strong>Cliente</strong>: usuário padrão (cadastro simples).</li>
+  <li><strong>Lojista</strong>: cliente que abriu uma loja informando um <strong>CNPJ válido</strong> (validação de dígitos, sem consulta à Receita).</li>
+  <li><strong>Vendedor</strong>: cliente promovido por um lojista para gerenciar o estoque (produtos/ofertas) da loja.</li>
+</ul>
+
+<p>
+  Observação: ao abrir uma loja, o usuário é promovido a Lojista no servidor; é
+  necessário <strong>entrar novamente</strong> para obter um token JWT com as
+  permissões de loja.
+</p>
 
 <br>
 
