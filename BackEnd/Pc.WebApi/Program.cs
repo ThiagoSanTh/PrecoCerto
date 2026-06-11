@@ -76,6 +76,7 @@ builder.Services.AddCors(options =>
         policy
             .AllowAnyHeader()
             .AllowAnyMethod()
+            .SetPreflightMaxAge(TimeSpan.FromMinutes(10))
             .SetIsOriginAllowed(origin =>
             {
                 if (string.IsNullOrWhiteSpace(origin)) return false;
@@ -282,6 +283,9 @@ using (var scope = app.Services.CreateScope())
 
 app.UseForwardedHeaders();
 
+// CORS antes de redirecionamentos — preflight OPTIONS não pode receber 301/302.
+app.UseCors("AppPolicy");
+
 app.UseResponseCompression();
 app.UseSerilogRequestLogging();
 
@@ -292,12 +296,10 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
-    // Forca HTTPS e habilita HSTS em producao (transporte criptografado).
     app.UseHsts();
-    app.UseHttpsRedirection();
+    // Railway/Render terminam TLS no edge; redirecionar HTTP interno quebra preflight CORS.
 }
 
-app.UseCors("AppPolicy");
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
