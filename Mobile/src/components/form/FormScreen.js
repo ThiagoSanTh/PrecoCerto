@@ -33,7 +33,7 @@ export default function FormScreen({
       {children}
     </ScrollView>
   ) : (
-    <View style={s.body}>{children}</View>
+    <View style={[s.body, s.bodyFill]}>{children}</View>
   );
 
   return (

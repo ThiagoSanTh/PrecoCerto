@@ -1,4 +1,4 @@
-import { Platform, View, StyleSheet } from 'react-native';
+import { Platform, View, StyleSheet, useWindowDimensions } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 
@@ -12,6 +12,7 @@ const LeafletMapFrame = forwardRef(function LeafletMapFrame(
   ref
 ) {
   const iframeRef = useRef(null);
+<<<<<<< HEAD
   const webViewRef = useRef(null);
 
   useImperativeHandle(ref, () => ({
@@ -26,6 +27,10 @@ const LeafletMapFrame = forwardRef(function LeafletMapFrame(
       }
     },
   }));
+=======
+  const { height: windowHeight } = useWindowDimensions();
+  const webMapHeight = Math.max(320, Math.floor(windowHeight * 0.55));
+>>>>>>> fd252bd9 (fix: resolve conflitos de stash e corrige layout do mapa no web)
 
   useEffect(() => {
     if (Platform.OS !== 'web') return undefined;
@@ -41,13 +46,13 @@ const LeafletMapFrame = forwardRef(function LeafletMapFrame(
 
   if (Platform.OS === 'web') {
     return (
-      <View style={[styles.frame, style]}>
+      <View style={[styles.frame, style, { minHeight: webMapHeight, height: webMapHeight }]}>
         <iframe
           ref={iframeRef}
           key={mapKey}
           title="Mapa"
           srcDoc={html}
-          style={styles.iframe}
+          style={{ ...styles.iframe, height: webMapHeight, minHeight: webMapHeight }}
           sandbox="allow-scripts allow-same-origin"
         />
       </View>

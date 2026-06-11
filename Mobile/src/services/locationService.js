@@ -13,6 +13,14 @@ export async function obterLocalizacaoAtual() {
     );
   }
 
+  const lastKnown = await Location.getLastKnownPositionAsync();
+  if (lastKnown?.coords) {
+    return {
+      latitude: lastKnown.coords.latitude,
+      longitude: lastKnown.coords.longitude,
+    };
+  }
+
   const position = await Location.getCurrentPositionAsync({
     accuracy: Location.Accuracy.Balanced,
   });
