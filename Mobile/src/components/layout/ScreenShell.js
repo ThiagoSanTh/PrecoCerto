@@ -15,18 +15,18 @@ export default function ScreenShell({ children, variant = 'default', fullBleed =
   const isAuth = shellVariant === 'auth';
   const showAuthCard = isAuth && isWeb && isDesktopWeb;
 
+  const columnWidth = `${contentWidthPercent * 100}%`;
+  const columnMaxWidth = isAuth && showAuthCard ? authCardMaxWidth : contentMaxWidth;
+
   const inner = (
     <View
       style={[
-        styles.contentColumn,
+        showAuthCard ? styles.authCard : styles.contentColumn,
         {
-          width: `${contentWidthPercent * 100}%`,
-          maxWidth: isAuth && showAuthCard ? authCardMaxWidth : contentMaxWidth,
-        },
-        showAuthCard && styles.authCard,
-        showAuthCard && {
-          backgroundColor: colors.surface,
-          borderColor: colors.border,
+          width: columnWidth,
+          maxWidth: columnMaxWidth,
+          backgroundColor: showAuthCard ? colors.surface : undefined,
+          borderColor: showAuthCard ? colors.border : undefined,
         },
       ]}
     >
@@ -68,6 +68,7 @@ const styles = StyleSheet.create({
   },
   authRootDesktop: {
     justifyContent: 'center',
+    paddingVertical: 24,
   },
   contentColumn: {
     flex: 1,
@@ -75,11 +76,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   authCard: {
-    flex: 0,
-    marginVertical: 32,
+    alignSelf: 'center',
+    overflow: 'hidden',
     borderRadius: 16,
     borderWidth: 1,
-    overflow: 'hidden',
     maxHeight: '92%',
     ...(Platform.OS === 'web'
       ? {

@@ -5,6 +5,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFormStyles } from '../../hooks/useFormStyles';
@@ -30,11 +31,12 @@ export default function FormScreen({
   const s = useFormStyles();
   const { colors } = useTheme();
   const shellVariant = webVariant === 'auth' ? 'auth' : 'default';
+  const isAuthLayout = shellVariant === 'auth';
 
   const content = scrollable ? (
     <ScrollView
       style={s.flex}
-      contentContainerStyle={s.scrollContent}
+      contentContainerStyle={[s.scrollContent, isAuthLayout && styles.authScrollContent]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
@@ -55,7 +57,7 @@ export default function FormScreen({
     >
       <ScreenShell variant={shellVariant} fullBleed={fullBleed}>
         <KeyboardAvoidingView
-          style={s.flex}
+          style={isAuthLayout ? styles.authBody : s.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <View style={[s.header, { borderBottomColor: colors.border }]}>
@@ -106,3 +108,12 @@ export default function FormScreen({
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  authBody: {
+    width: '100%',
+  },
+  authScrollContent: {
+    flexGrow: 1,
+  },
+});
