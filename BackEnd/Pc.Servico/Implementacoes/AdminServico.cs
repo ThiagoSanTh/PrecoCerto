@@ -39,8 +39,8 @@ namespace Pc.Servico.Implementacoes
             if (string.IsNullOrWhiteSpace(admin.SenhaHash) || admin.SenhaHash.Length < 6)
                 throw new Exception("Senha deve ter pelo menos 6 caracteres.");
 
-            var emailExiste = await _adminRepositorio.ListarAsync();
-            if (emailExiste.Exists(a => a.Email.ToLower() == admin.Email.ToLower()))
+            var emailExiste = await _adminRepositorio.EmailExisteAsync(admin.Email);
+            if (emailExiste)
                 throw new Exception("Email já registrado.");
 
             admin.Ativo = true;

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Pc.Dominio.Comum;
 using Pc.Dominio.Entities.Interacoes;
 using Pc.Infraestrutura;
 using Pc.Repositorio.Interfaces;
@@ -30,12 +31,35 @@ namespace Pc.Repositorio.Implementacoes
         /// </summary>
         public async Task<List<Favorito>> ObterPorClienteAsync(Guid clienteId)
         {
-            return await _context.Favoritos
+            return await QueryPorCliente(clienteId).ToListAsync();
+        }
+
+        public async Task<PaginacaoResultado<Favorito>> ObterPorClientePaginadoAsync(
+            Guid clienteId, PaginacaoParametros paginacao)
+        {
+            var query = QueryPorCliente(clienteId);
+            var total = await query.CountAsync();
+            var items = await query
+                .OrderByDescending(f => f.DataCriacao)
+                .Skip(paginacao.Skip)
+                .Take(paginacao.PageSize)
+                .ToListAsync();
+
+            return new PaginacaoResultado<Favorito>
+            {
+                Items = items,
+                Page = paginacao.Page,
+                PageSize = paginacao.PageSize,
+                Total = total
+            };
+        }
+
+        private IQueryable<Favorito> QueryPorCliente(Guid clienteId) =>
+            _context.Favoritos
+                .AsNoTracking()
                 .Where(f => f.ClienteId == clienteId)
                 .Include(f => f.Produto)
-                .Include(f => f.Loja)
-                .ToListAsync();
-        }
+                .Include(f => f.Loja);
 
         /// <summary>
         /// Verifica se um cliente tem um produto específico como favorito

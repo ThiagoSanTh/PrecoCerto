@@ -1,33 +1,48 @@
 import { Alert, Text } from 'react-native';
 import { useState } from 'react';
 import { registrarCliente } from '../../services/clienteService';
-import { registrarLojista } from '../../services/lojistaService';
 import { login as authLogin } from '../../services/authService';
 import { formatApiError } from '../../utils/apiErrorUtils';
 import { obterLocalizacaoAtual } from '../../services/locationService';
+import { isEmailValido, isTelefoneValido } from '../../utils/validacaoUtils';
 import { useAuth } from '../../context/AuthContext';
 import {
   FormScreen,
   FormField,
-  FormTabs,
   PrimaryButton,
   formStyles,
 } from '../../components/form';
 
-export default function RegisterScreen({ navigation, route }) {
-  const [tipoCadastro, setTipoCadastro] = useState(route?.params?.tipoInicial || 'cliente');
+export default function RegisterScreen({ navigation }) {
   const [nomeUsuario, setNomeUsuario] = useState('');
   const [email, setEmail] = useState('');
   const [telefone, setTelefone] = useState('');
-  const [cargo, setCargo] = useState('Gerente');
   const [senha, setSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
   const [loading, setLoading] = useState(false);
-  const { salvarSessao } = useAuth();
+  const { salvarSessao, sincronizarGpsCliente } = useAuth();
 
   async function handleRegister() {
     if (!nomeUsuario || !email || !senha || !confirmarSenha) {
       Alert.alert('Erro', 'Preencha todos os campos obrigatórios');
+      return;
+    }
+
+    if (!isEmailValido(email)) {
+      Alert.alert('Erro', 'Informe um e-mail válido.');
+      return;
+    }
+
+    if (senha.length < 6) {
+      Alert.alert('Erro', 'A senha deve ter pelo menos 6 caracteres.');
+      return;
+    }
+
+    if (telefone.trim() && !isTelefoneValido(telefone)) {
+      Alert.alert(
+        'Erro',
+        'Telefone inválido. Informe 8 dígitos (fixo) ou 9 dígitos (celular), com DDD opcional.'
+      );
       return;
     }
 
@@ -38,46 +53,34 @@ export default function RegisterScreen({ navigation, route }) {
 
     setLoading(true);
     try {
-      if (tipoCadastro === 'cliente') {
-        let latitudeAtual = null;
-        let longitudeAtual = null;
+      let latitudeAtual = null;
+      let longitudeAtual = null;
 
-        try {
-          const coords = await obterLocalizacaoAtual();
-          latitudeAtual = coords.latitude;
-          longitudeAtual = coords.longitude;
-        } catch {
-          // GPS opcional no cadastro
-        }
-
-        await registrarCliente({
-          nomeUsuario: nomeUsuario.trim(),
-          email: email.trim(),
-          senha,
-          telefone: telefone.trim() || null,
-          latitudeAtual,
-          longitudeAtual,
-        });
-
-        const { perfil } = await authLogin(email.trim(), senha, 'cliente');
-        await salvarSessao({ tipo: 'cliente', perfil }, 'user');
-        navigation.replace('Home');
-        Alert.alert('Sucesso', 'Conta de cliente criada!');
-        return;
+      try {
+        const coords = await obterLocalizacaoAtual();
+        latitudeAtual = coords.latitude;
+        longitudeAtual = coords.longitude;
+      } catch {
+        // GPS opcional no cadastro
       }
 
-      await registrarLojista({
+      await registrarCliente({
         nomeUsuario: nomeUsuario.trim(),
-        email: email.trim(),
+        email: email.trim().toLowerCase(),
         senha,
         telefone: telefone.trim() || null,
-        cargo: cargo.trim() || 'Gerente',
+        latitudeAtual,
+        longitudeAtual,
       });
 
-      const { perfil } = await authLogin(email.trim(), senha, 'lojista');
-      await salvarSessao({ tipo: 'lojista', perfil }, 'store');
+      const emailNormalizado = email.trim().toLowerCase();
+      const { tipo, perfil } = await authLogin(emailNormalizado, senha);
+      await salvarSessao({ tipo: tipo || 'cliente', perfil }, 'user');
       navigation.replace('Home');
-      Alert.alert('Sucesso', 'Conta de lojista criada! Agora cadastre sua loja.');
+
+      if (perfil?.id) {
+        sincronizarGpsCliente(perfil.id).catch(() => {});
+      }
     } catch (error) {
       Alert.alert('Erro', formatApiError(error));
     } finally {
@@ -85,34 +88,17 @@ export default function RegisterScreen({ navigation, route }) {
     }
   }
 
-  const labelCadastro = tipoCadastro === 'cliente' ? 'cliente' : 'lojista';
-
   return (
     <FormScreen
       title="Cadastro"
       subtitle="Crie sua conta no Preço Certo"
       onBack={() => navigation.goBack()}
       footer={
-        <PrimaryButton
-          label={`Cadastrar ${labelCadastro}`}
-          onPress={handleRegister}
-          loading={loading}
-        />
+        <PrimaryButton label="Cadastrar" onPress={handleRegister} loading={loading} />
       }
     >
-      <FormTabs
-        options={[
-          { value: 'cliente', label: 'Cliente' },
-          { value: 'lojista', label: 'Lojista' },
-        ]}
-        value={tipoCadastro}
-        onChange={setTipoCadastro}
-      />
-
       <Text style={formStyles.sectionHint}>
-        {tipoCadastro === 'cliente'
-          ? 'Latitude e longitude são capturadas automaticamente pelo GPS.'
-          : 'Cadastre a loja com CEP e endereço depois de criar a conta.'}
+        Crie sua conta de usuário. Para se tornar lojista, abra uma loja com um CNPJ válido depois.
       </Text>
 
       <FormField label="Nome de usuário *" value={nomeUsuario} onChangeText={setNomeUsuario} />
@@ -130,10 +116,6 @@ export default function RegisterScreen({ navigation, route }) {
         keyboardType="phone-pad"
         placeholder="opcional"
       />
-
-      {tipoCadastro === 'lojista' ? (
-        <FormField label="Cargo na loja" value={cargo} onChangeText={setCargo} />
-      ) : null}
 
       <FormField label="Senha *" value={senha} onChangeText={setSenha} secureTextEntry />
       <FormField

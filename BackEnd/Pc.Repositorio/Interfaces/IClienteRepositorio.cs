@@ -1,42 +1,35 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Pc.Dominio.Entities.Usuarios;
 
 namespace Pc.Repositorio.Interfaces
 {
     /// <summary>
-    /// Interface para operações de repositório de Cliente
-    /// Herda do IRepositorio genérico e adiciona métodos específicos
-    /// Consolidado - sem intermediário Usuario
+    /// Repositório do usuário (entidade unificada Usuario).
+    /// Mantém o nome IClienteRepositorio por compatibilidade com a camada de serviço.
     /// </summary>
-    public interface IClienteRepositorio : IRepositorio<Cliente>
+    public interface IClienteRepositorio : IRepositorio<Usuario>
     {
-        /// <summary>
-        /// Obtém cliente por email (para login)
-        /// </summary>
-        Task<Cliente?> ObterPorEmailAsync(string email);
+        Task<Usuario?> ObterPorEmailAsync(string email);
 
-        /// <summary>
-        /// Obtém clientes por proximidade (geolocalização)
-        /// </summary>
-        Task<List<Cliente>> ObterPorProximidadeAsync(decimal latitude, decimal longitude, decimal raioKm);
+        Task<List<Usuario>> ObterPorProximidadeAsync(decimal latitude, decimal longitude, decimal raioKm);
 
-        /// <summary>
-        /// Atualiza a localização atual do cliente
-        /// </summary>
         Task AtualizarLocalizacaoAsync(Guid clienteId, decimal latitude, decimal longitude);
 
-        /// <summary>
-        /// Lista todos os clientes ativos
-        /// </summary>
-        Task<List<Cliente>> ListarAtivosAsync();
+        Task<List<Usuario>> ListarAtivosAsync();
 
-        /// <summary>
-        /// Atualiza apenas o UltimoLogin (evita UPDATE completo no login)
-        /// </summary>
         Task AtualizarUltimoLoginAsync(Guid clienteId, DateTime ultimoLogin);
+
+        /// <summary>Obtém o usuário proprietário de uma loja (ou vinculado como vendedor).</summary>
+        Task<Usuario?> ObterPorIdComLojaAsync(Guid id);
+
+        /// <summary>Obtém o usuário pelo token de confirmação de e-mail.</summary>
+        Task<Usuario?> ObterPorTokenConfirmacaoAsync(string token);
+
+        /// <summary>Obtém usuário por e-mail para verificação de duplicidade no cadastro (ignora Ativo).</summary>
+        Task<Usuario?> ObterPorEmailCadastroAsync(string email);
+
+        Task<Usuario?> ObterPorTokenRecuperacaoSenhaAsync(string token);
     }
 }

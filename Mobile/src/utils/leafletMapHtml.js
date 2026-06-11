@@ -229,6 +229,344 @@ export function buildLeafletMapHtml(dadosMapa) {
 </html>`;
 }
 
+/** Normaliza loja da API para o marcador plano usado no mapa do feed. */
+export function normalizarLojaParaMapa(loja) {
+  const lat =
+    loja?.latitude ??
+    loja?.Latitude ??
+    loja?.endereco?.latitude ??
+    loja?.Endereco?.Latitude;
+  const lng =
+    loja?.longitude ??
+    loja?.Longitude ??
+    loja?.endereco?.longitude ??
+    loja?.Endereco?.Longitude;
+  const nome = loja?.nomeFantasia ?? loja?.NomeFantasia ?? 'Loja';
+  const logradouro = loja?.endereco?.logradouro ?? loja?.Endereco?.Logradouro ?? '';
+  const cidade = loja?.endereco?.cidade ?? loja?.Endereco?.Cidade ?? '';
+
+  return {
+    id: loja?.id ?? loja?.Id,
+    lat: lat != null && lat !== '' ? Number(lat) : null,
+    lng: lng != null && lng !== '' ? Number(lng) : null,
+    nome,
+    endereco: [logradouro, cidade].filter(Boolean).join(' — '),
+    media: loja?.mediaAvaliacoes ?? loja?.MediaAvaliacoes ?? null,
+    inicial: inicialPlaceholder(nome),
+  };
+}
+
+export function prepararDadosMapaLojas(localizacaoCliente, lojas) {
+  const marcadores = (lojas || []).filter(
+    (l) =>
+      Number.isFinite(l.lat) && Number.isFinite(l.lng) && !(l.lat === 0 && l.lng === 0)
+  );
+
+  const pontos = marcadores.map((m) => [m.lat, m.lng]);
+
+  if (
+    localizacaoCliente?.latitude != null &&
+    localizacaoCliente?.longitude != null
+  ) {
+    pontos.push([
+      Number(localizacaoCliente.latitude),
+      Number(localizacaoCliente.longitude),
+    ]);
+  }
+
+  let view = { center: [-23.5505, -46.6333], zoom: 12, bounds: null };
+
+  if (pontos.length === 1) {
+    view = { center: pontos[0], zoom: 14, bounds: null };
+  } else if (pontos.length > 1) {
+    let minLat = pontos[0][0];
+    let maxLat = pontos[0][0];
+    let minLng = pontos[0][1];
+    let maxLng = pontos[0][1];
+    pontos.forEach(([lat, lng]) => {
+      minLat = Math.min(minLat, lat);
+      maxLat = Math.max(maxLat, lat);
+      minLng = Math.min(minLng, lng);
+      maxLng = Math.max(maxLng, lng);
+    });
+    view = {
+      center: [(minLat + maxLat) / 2, (minLng + maxLng) / 2],
+      zoom: 12,
+      bounds: [
+        [minLat, minLng],
+        [maxLat, maxLng],
+      ],
+    };
+  }
+
+  const cliente =
+    localizacaoCliente?.latitude != null &&
+    localizacaoCliente?.longitude != null
+      ? {
+          lat: Number(localizacaoCliente.latitude),
+          lng: Number(localizacaoCliente.longitude),
+        }
+      : null;
+
+  return { marcadores, cliente, view };
+}
+
+/** Sanitiza strings das lojas exibidas no HTML do mapa do feed. */
+export function sanitizarLojasParaHtml(marcadores) {
+  return marcadores.map((m) => ({
+    ...m,
+    nome: escapeHtml(m.nome),
+    endereco: escapeHtml(m.endereco),
+    inicial: escapeHtml(m.inicial),
+  }));
+}
+
+/**
+ * Mapa do feed: pins por LOJA, com busca seletiva em tempo real (issue #36).
+ * O app envia mensagens de destaque sem recriar o HTML:
+ *   { type: 'destaques', payload: { lojaIds: null | [ids], produtosPorLoja: { id: [{ id, nome, preco }] } } }
+ * lojaIds = null restaura todos os pins; com lista, pins fora dela somem e os
+ * presentes ganham destaque + popup com os produtos encontrados.
+ */
+export function buildLojasMapHtml(dadosMapa) {
+  const payload = JSON.stringify(dadosMapa);
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  ${LEAFLET_ASSETS}
+  <style>
+    ${LEAFLET_BASE_CSS}
+    .pin-loja-feed {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 2px solid #2DD4BF;
+      background: #14B8A6;
+      color: #fff;
+      font-weight: bold;
+      font-size: 17px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+      transition: transform 0.15s ease;
+    }
+    .pin-loja-feed.destaque {
+      width: 52px;
+      height: 52px;
+      font-size: 22px;
+      background: #0D9488;
+      border: 3px solid #F59E0B;
+      box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.35), 0 2px 10px rgba(0,0,0,0.35);
+    }
+    .pin-cliente {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #2563eb;
+      border: 3px solid #fff;
+      box-shadow: 0 0 0 2px #2563eb;
+    }
+    .leaflet-popup-content { margin: 10px 12px; font-family: system-ui, sans-serif; font-size: 14px; line-height: 1.4; }
+    .popup-title { font-weight: 700; font-size: 15px; color: #0f172a; }
+    .popup-meta { color: #64748b; font-size: 12px; margin-top: 4px; }
+    .popup-produto {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 6px;
+      font-size: 13px;
+    }
+    .popup-produto .preco { color: #14B8A6; font-weight: 600; white-space: nowrap; }
+    .popup-btn {
+      display: block;
+      width: 100%;
+      margin-top: 8px;
+      padding: 7px 10px;
+      background: #14B8A6;
+      color: #fff;
+      font-weight: 600;
+      font-size: 13px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    const DATA = ${payload};
+
+    function esc(text) {
+      return String(text == null ? '' : text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function postToApp(data) {
+      var json = JSON.stringify(data);
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(json);
+      } else if (window.parent && window.parent !== window) {
+        window.parent.postMessage(json, '*');
+      }
+    }
+
+    const map = L.map('map', { zoomControl: true });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+
+    // Estado de destaque corrente (atualizado pelo app enquanto o usuário digita).
+    var destaques = { lojaIds: null, produtosPorLoja: {} };
+    var markers = {};
+
+    function pinHtml(m, comDestaque) {
+      var classe = 'pin-loja-feed' + (comDestaque ? ' destaque' : '');
+      return '<div class="' + classe + '">' + m.inicial + '</div>';
+    }
+
+    function criarIcon(m, comDestaque) {
+      var size = comDestaque ? 52 : 40;
+      return L.divIcon({
+        html: pinHtml(m, comDestaque),
+        className: '',
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size],
+        popupAnchor: [0, -size]
+      });
+    }
+
+    function popupHtml(m) {
+      var parts = ['<div class="popup-title">' + m.nome + '</div>'];
+      if (m.endereco) parts.push('<div class="popup-meta">' + m.endereco + '</div>');
+      if (m.media != null) {
+        parts.push('<div class="popup-meta">Avaliação: ' + Number(m.media).toFixed(1) + ' / 5</div>');
+      }
+
+      var produtos = (destaques.produtosPorLoja && destaques.produtosPorLoja[m.id]) || [];
+      produtos.forEach(function(p) {
+        parts.push(
+          '<div class="popup-produto"><span>' + esc(p.nome) + '</span>' +
+          '<span class="preco">' + esc(p.preco) + '</span></div>' +
+          '<button type="button" class="popup-btn" data-id="' + esc(p.id) + '">Mais informações</button>'
+        );
+      });
+
+      return parts.join('');
+    }
+
+    function ligarBotoesPopup() {
+      var botoes = document.querySelectorAll('.popup-btn');
+      botoes.forEach(function(btn) {
+        btn.onclick = function(e) {
+          e.stopPropagation();
+          postToApp({ type: 'product', productId: btn.getAttribute('data-id') });
+        };
+      });
+    }
+
+    var usarCluster = DATA.marcadores.length > 100;
+    var clusterGroup = usarCluster ? L.markerClusterGroup({ maxClusterRadius: 50 }) : null;
+
+    DATA.marcadores.forEach(function(m) {
+      var marker = L.marker([m.lat, m.lng], { icon: criarIcon(m, false) })
+        .bindPopup(popupHtml(m));
+      marker.on('popupopen', ligarBotoesPopup);
+      if (usarCluster) {
+        clusterGroup.addLayer(marker);
+      } else {
+        marker.addTo(map);
+      }
+      markers[m.id] = { marker: marker, dados: m, visivel: true, destaque: false };
+    });
+
+    if (usarCluster) {
+      map.addLayer(clusterGroup);
+    }
+
+    function aplicarDestaques(payload) {
+      destaques = {
+        lojaIds: payload && payload.lojaIds ? payload.lojaIds : null,
+        produtosPorLoja: (payload && payload.produtosPorLoja) || {}
+      };
+
+      var ids = destaques.lojaIds === null ? null : {};
+      if (ids !== null) {
+        destaques.lojaIds.forEach(function(id) { ids[id] = true; });
+      }
+
+      Object.keys(markers).forEach(function(id) {
+        var entry = markers[id];
+        var deveMostrar = ids === null || ids[id] === true;
+        var deveDestacar = ids !== null && ids[id] === true;
+
+        if (deveMostrar && !entry.visivel) {
+          entry.marker.addTo(map);
+          entry.visivel = true;
+        } else if (!deveMostrar && entry.visivel) {
+          entry.marker.closePopup();
+          map.removeLayer(entry.marker);
+          entry.visivel = false;
+        }
+
+        if (entry.visivel && entry.destaque !== deveDestacar) {
+          entry.marker.setIcon(criarIcon(entry.dados, deveDestacar));
+          entry.destaque = deveDestacar;
+        }
+
+        if (entry.visivel) {
+          entry.marker.setPopupContent(popupHtml(entry.dados));
+        }
+      });
+    }
+
+    // Canal app -> mapa (injectJavaScript no nativo, postMessage no web).
+    window.__onAppMessage = function(json) {
+      try {
+        var data = typeof json === 'string' ? JSON.parse(json) : json;
+        if (data && data.type === 'destaques') aplicarDestaques(data.payload);
+      } catch (e) { /* ignore */ }
+    };
+
+    window.addEventListener('message', function(event) {
+      window.__onAppMessage(event.data);
+    });
+
+    if (DATA.cliente) {
+      const clienteIcon = L.divIcon({
+        html: '<div class="pin-cliente"></div>',
+        className: '',
+        iconSize: [16, 16],
+        iconAnchor: [8, 8]
+      });
+      L.marker([DATA.cliente.lat, DATA.cliente.lng], { icon: clienteIcon })
+        .addTo(map)
+        .bindPopup('Você está aqui');
+    }
+
+    if (DATA.view.bounds) {
+      map.fitBounds(DATA.view.bounds, { padding: [48, 48], maxZoom: 16 });
+    } else {
+      map.setView(DATA.view.center, DATA.view.zoom);
+    }
+
+    // Avisa o app que o mapa está pronto para receber destaques.
+    postToApp({ type: 'ready' });
+  </script>
+</body>
+</html>`;
+}
+
 /** Sanitiza strings exibidas no HTML do mapa (camada RN antes do JSON). */
 export function sanitizarMarcadoresParaHtml(marcadores) {
   return marcadores.map((m) => ({
@@ -243,7 +581,10 @@ export function sanitizarMarcadoresParaHtml(marcadores) {
 
 const LEAFLET_ASSETS = `
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin="" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
 `;
 
 const LEAFLET_BASE_CSS = `

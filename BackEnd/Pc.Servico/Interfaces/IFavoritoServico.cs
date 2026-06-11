@@ -1,3 +1,4 @@
+using Pc.Dominio.Comum;
 using Pc.Dominio.Entities.Interacoes;
 
 namespace Pc.Servico.Interfaces
@@ -24,6 +25,7 @@ namespace Pc.Servico.Interfaces
         /// Lista todos os favoritos de um cliente
         /// </summary>
         Task<List<Favorito>> ListarPorClienteAsync(Guid clienteId);
+        Task<PaginacaoResultado<Favorito>> ListarPorClientePaginadoAsync(Guid clienteId, PaginacaoParametros paginacao);
 
         /// <summary>
         /// Remove um favorito

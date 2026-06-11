@@ -23,6 +23,7 @@ namespace Pc.WebApi.Services
             {
                 TipoUsuario.Cliente => "Cliente",
                 TipoUsuario.Lojista => "Lojista",
+                TipoUsuario.Vendedor => "Vendedor",
                 TipoUsuario.Admin => "Admin",
                 _ => "Cliente"
             };

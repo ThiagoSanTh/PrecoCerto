@@ -6,36 +6,54 @@ import {
   normalizarProdutoApi,
 } from '../utils/produtoUtils';
 
-export async function listarProdutos(lojaId) {
-  const params = lojaId ? { lojaId } : {};
-  const { data } = await api.get('/Produtos', { params });
-  return normalizarListaProdutos(Array.isArray(data) ? data : []);
+function normalizarPaginado(data) {
+  if (Array.isArray(data)) {
+    return {
+      items: normalizarListaProdutos(data),
+      page: 1,
+      pageSize: data.length,
+      total: data.length,
+      hasNext: false,
+    };
+  }
+  return {
+    items: normalizarListaProdutos(data?.items ?? []),
+    page: data?.page ?? 1,
+    pageSize: data?.pageSize ?? 20,
+    total: data?.total ?? 0,
+    hasNext: data?.hasNext ?? false,
+  };
 }
 
-export async function buscarProdutosPorNome(nome, lojaId) {
+export async function listarProdutos(lojaId, page = 1, pageSize = 50) {
+  const params = { page, pageSize };
+  if (lojaId) params.lojaId = lojaId;
+  const { data } = await api.get('/Produtos', { params });
+  return normalizarPaginado(data);
+}
+
+export async function buscarProdutosPorNome(nome, lojaId, page = 1, pageSize = 20) {
   const { data } = await api.post('/Produtos/Buscar', {
     nome: nome.trim(),
     lojaId: lojaId || null,
+    page,
+    pageSize,
   });
-  return normalizarListaProdutos(Array.isArray(data) ? data : []);
+  return normalizarPaginado(data);
 }
 
-/**
- * Cliente: todos os produtos.
- * Loja: apenas produtos da loja (com fallback para ofertas já publicadas).
- */
 export async function listarProdutosParaFeed(lojaId) {
   if (!lojaId) {
-    return listarProdutos();
+    const res = await listarProdutos(null, 1, 50);
+    return res.items;
   }
 
-  const [porLoja, todos, ofertas] = await Promise.all([
-    listarProdutos(lojaId),
-    listarProdutos(),
-    listarOfertas(),
+  const [porLoja, ofertasRes] = await Promise.all([
+    listarProdutos(lojaId, 1, 100),
+    listarOfertas(1, 100),
   ]);
 
-  return mesclarProdutosDaLoja(porLoja, todos, ofertas, lojaId);
+  return mesclarProdutosDaLoja(porLoja.items, [], ofertasRes.items, lojaId);
 }
 
 export async function buscarProdutoPorId(id) {

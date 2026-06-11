@@ -1,10 +1,12 @@
-Ôªøusing Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Pc.Dominio.Entities.Catalogo;
 using Pc.Servico.Excecoes;
 using Pc.Servico.Interfaces;
 using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Catalogo;
+using Pc.WebApi.Helpers;
 using Pc.WebApi.Mappings;
 
 namespace Pc.WebApi.Controllers
@@ -22,37 +24,45 @@ namespace Pc.WebApi.Controllers
 
         [HttpGet]
         [AllowAnonymous]
-        public async Task<IActionResult> Listar([FromQuery] Guid? lojaId)
+        [EnableRateLimiting("catalogo")]
+        public async Task<IActionResult> Listar(
+            [FromQuery] Guid? lojaId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
         {
-            var produtos = await _produtoServico.ListarProdutosAsync(lojaId);
-            return Ok(produtos.Select(ProdutoMapper.ParaRespostaDto));
+            var paginacao = PaginacaoHelper.Normalizar(page, pageSize);
+            var produtos = await _produtoServico.ListarProdutosPaginadoAsync(paginacao, lojaId);
+            return Ok(PaginacaoHelper.ParaResposta(produtos, ProdutoMapper.ParaResumoDto));
         }
 
         [HttpGet("{id:guid}")]
         [AllowAnonymous]
+        [EnableRateLimiting("catalogo")]
         public async Task<IActionResult> ObterPorId(Guid id)
         {
             var produto = await _produtoServico.ObterPorIdAsync(id);
             if (produto is null)
-                return NotFound("Produto n√£o encontrado.");
+                return NotFound("Produto n„o encontrado.");
 
             return Ok(ProdutoMapper.ParaRespostaDto(produto));
         }
 
         [HttpPost("Buscar")]
         [AllowAnonymous]
+        [EnableRateLimiting("catalogo")]
         public async Task<IActionResult> BuscarPorNome([FromBody] ProdutoBuscarDto dto)
         {
-            var produtos = await _produtoServico.BuscarPorNomeAsync(dto.Nome, dto.LojaId);
-            return Ok(produtos.Select(ProdutoMapper.ParaRespostaDto));
+            var paginacao = PaginacaoHelper.Normalizar(dto.Page, dto.PageSize);
+            var produtos = await _produtoServico.BuscarPorNomePaginadoAsync(dto.Nome, paginacao, dto.LojaId);
+            return Ok(PaginacaoHelper.ParaResposta(produtos, ProdutoMapper.ParaResumoDto));
         }
 
         [HttpPost]
-        [Authorize(Roles = "Lojista,Admin")]
+        [Authorize(Roles = "Lojista,Vendedor,Admin")]
         public async Task<IActionResult> Adicionar([FromBody] ProdutoCriarDto dto)
         {
             if (!dto.LojaId.HasValue)
-                return BadRequest("LojaId √© obrigat√≥rio.");
+                return BadRequest("LojaId È obrigatÛrio.");
 
             if (!Authz.OwnsLoja(this, dto.LojaId.Value))
                 return Forbid();
@@ -65,7 +75,8 @@ namespace Pc.WebApi.Controllers
                 CodigoBarras = dto.CodigoBarras,
                 Preco = dto.Preco,
                 LojaId = dto.LojaId.Value,
-                ImagemUrl = dto.ImagemUrl
+                ImagemUrl = dto.ImagemUrl,
+                Categoria = dto.Categoria
             };
 
             var novoProduto = await _produtoServico.AdicionarAsync(produto);
@@ -77,7 +88,7 @@ namespace Pc.WebApi.Controllers
         }
 
         [HttpPut("{id:guid}")]
-        [Authorize(Roles = "Lojista,Admin")]
+        [Authorize(Roles = "Lojista,Vendedor,Admin")]
         public async Task<IActionResult> Atualizar(Guid id, [FromBody] ProdutoAtualizarDto dto)
         {
             if (!Authz.OwnsLoja(this, dto.LojaId))
@@ -92,7 +103,8 @@ namespace Pc.WebApi.Controllers
                     Marca = dto.Marca,
                     CodigoBarras = dto.CodigoBarras,
                     Preco = dto.Preco,
-                    ImagemUrl = dto.ImagemUrl
+                    ImagemUrl = dto.ImagemUrl,
+                    Categoria = dto.Categoria ?? Pc.Dominio.Enums.CategoriaProduto.Outros
                 };
 
                 await _produtoServico.AtualizarPorLojaAsync(id, dados, dto.LojaId);
@@ -109,7 +121,7 @@ namespace Pc.WebApi.Controllers
         }
 
         [HttpDelete("{id:guid}")]
-        [Authorize(Roles = "Lojista,Admin")]
+        [Authorize(Roles = "Lojista,Vendedor,Admin")]
         public async Task<IActionResult> Deletar(Guid id, [FromQuery] Guid lojaId)
         {
             if (!Authz.OwnsLoja(this, lojaId))

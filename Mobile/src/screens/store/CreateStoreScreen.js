@@ -1,9 +1,9 @@
 import { View, Text, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { useState } from 'react';
 import { criarLoja } from '../../services/lojaService';
-import { atualizarLojista } from '../../services/lojistaService';
 import { useAuth } from '../../context/AuthContext';
 import { buscarEnderecoPorCep, geocodificarEndereco } from '../../services/enderecoService';
+import { consultarCnpj } from '../../services/consultaService';
 import { obterLocalizacaoAtual } from '../../services/locationService';
 import StoreLocationMapView from '../../components/StoreLocationMapView';
 import {
@@ -13,6 +13,8 @@ import {
   SecondaryButton,
   formStyles,
 } from '../../components/form';
+import { isCnpjValido, isEmailValido, isTelefoneValido } from '../../utils/validacaoUtils';
+import { formatApiError } from '../../utils/apiErrorUtils';
 import { colors } from '../../theme';
 
 const STEPS = [
@@ -22,7 +24,7 @@ const STEPS = [
 ];
 
 export default function CreateStoreScreen({ navigation }) {
-  const { session, atualizarPerfilSessao } = useAuth();
+  const { session, logout } = useAuth();
   const [step, setStep] = useState(0);
 
   const [nomeFantasia, setNomeFantasia] = useState('');
@@ -42,26 +44,100 @@ export default function CreateStoreScreen({ navigation }) {
 
   const [loading, setLoading] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
+  const [loadingCnpj, setLoadingCnpj] = useState(false);
   const [loadingCoords, setLoadingCoords] = useState(false);
+  const [cnpjVerificado, setCnpjVerificado] = useState(false);
+
+  async function buscarDadosCnpj() {
+    if (!isCnpjValido(cnpj) || cnpjVerificado) return;
+    setLoadingCnpj(true);
+    try {
+      const data = await consultarCnpj(cnpj);
+      setCnpjVerificado(true);
+      if (data.nomeFantasia && !nomeFantasia.trim()) setNomeFantasia(data.nomeFantasia);
+      if (data.razaoSocial && !nomeFantasia.trim()) setNomeFantasia(data.razaoSocial);
+    } catch (error) {
+      setCnpjVerificado(false);
+      Alert.alert('CNPJ', formatApiError(error));
+    } finally {
+      setLoadingCnpj(false);
+    }
+  }
+
+  async function garantirCnpjNaReceita() {
+    if (cnpjVerificado) return true;
+    setLoadingCnpj(true);
+    try {
+      await consultarCnpj(cnpj);
+      setCnpjVerificado(true);
+      return true;
+    } catch (error) {
+      Alert.alert('CNPJ', formatApiError(error));
+      return false;
+    } finally {
+      setLoadingCnpj(false);
+    }
+  }
 
   function validarPassoLoja() {
     if (!nomeFantasia.trim()) {
       Alert.alert('Loja', 'Informe o nome fantasia.');
       return false;
     }
+    // Abrir loja exige CNPJ válido — é o que torna o usuário um lojista.
+    if (!cnpj.trim()) {
+      Alert.alert('Loja', 'Informe o CNPJ da loja.');
+      return false;
+    }
+    if (!isCnpjValido(cnpj)) {
+      Alert.alert('Loja', 'CNPJ inválido. Verifique os números informados.');
+      return false;
+    }
+    if (telefone.trim() && !isTelefoneValido(telefone)) {
+      Alert.alert(
+        'Loja',
+        'Telefone inválido. Informe 8 dígitos (fixo) ou 9 dígitos (celular), com DDD opcional.'
+      );
+      return false;
+    }
+    if (emailLoja.trim() && !isEmailValido(emailLoja)) {
+      Alert.alert('Loja', 'E-mail da loja inválido.');
+      return false;
+    }
     return true;
   }
 
   function validarPassoEndereco() {
-    if (!cep.trim() || !logradouro.trim() || !numero.trim() || !cidade.trim() || !estado.trim()) {
+    const cepLimpo = cep.replace(/\D/g, '');
+    if (cepLimpo.length !== 8 || !logradouro.trim() || !numero.trim() || !cidade.trim() || !estado.trim()) {
       Alert.alert('Endereço', 'Preencha CEP, logradouro, número, cidade e estado.');
       return false;
     }
     return true;
   }
 
-  function avancar() {
-    if (step === 0 && !validarPassoLoja()) return;
+  function montarEnderecoPayload(lat, lng) {
+    const cepLimpo = cep.replace(/\D/g, '');
+    const estadoSigla = estado.trim().toUpperCase().slice(0, 2);
+    const bairroNormalizado = bairro.trim() || 'Centro';
+
+    return {
+      cep: cepLimpo,
+      logradouro: logradouro.trim(),
+      numero: numero.trim(),
+      bairro: bairroNormalizado,
+      cidade: cidade.trim(),
+      estado: estadoSigla,
+      latitude: lat,
+      longitude: lng,
+    };
+  }
+
+  async function avancar() {
+    if (step === 0) {
+      if (!validarPassoLoja()) return;
+      if (!(await garantirCnpjNaReceita())) return;
+    }
     if (step === 1 && !validarPassoEndereco()) return;
     if (step < STEPS.length - 1) setStep((s) => s + 1);
   }
@@ -153,8 +229,13 @@ export default function CreateStoreScreen({ navigation }) {
       return;
     }
 
-    if (session?.tipo !== 'lojista' || !session?.perfil?.id) {
-      Alert.alert('Erro', 'Faça login como lojista para criar uma loja');
+    if (!session?.perfil?.id) {
+      Alert.alert('Erro', 'Faça login para abrir uma loja.');
+      return;
+    }
+
+    if (!(await garantirCnpjNaReceita())) {
+      setStep(0);
       return;
     }
 
@@ -174,45 +255,30 @@ export default function CreateStoreScreen({ navigation }) {
         }
       }
 
-      const loja = await criarLoja({
+      // O backend define o usuário autenticado como dono e o promove a Lojista.
+      await criarLoja({
         nomeFantasia: nomeFantasia.trim(),
-        cnpj: cnpj.trim() || null,
+        cnpj: cnpj.trim(),
         telefone: telefone.trim() || null,
         email: emailLoja.trim() || session.perfil.email,
-        lojistaId: session.perfil.id,
-        endereco: {
-          cep,
-          logradouro,
-          numero,
-          bairro,
-          cidade,
-          estado,
-          latitude: lat,
-          longitude: lng,
-        },
+        endereco: montarEnderecoPayload(lat, lng),
       });
 
-      await atualizarLojista(session.perfil.id, {
-        nomeUsuario: session.perfil.nomeUsuario || nomeFantasia,
-        email: session.perfil.email,
-        telefone: telefone.trim() || session.perfil.telefone,
-        lojaId: loja.id,
-        cargo: session.perfil.cargo || 'Gerente',
-      });
-
-      await atualizarPerfilSessao(
-        {
-          lojaId: loja.id,
-          nomeLoja: loja.nomeFantasia,
-        },
-        'store'
+      Alert.alert(
+        'Loja criada!',
+        'Sua conta agora é de lojista. Entre novamente para acessar o painel da loja.',
+        [{ text: 'OK', onPress: () => logout() }]
       );
-
-      Alert.alert('Sucesso', 'Loja criada e vinculada ao lojista!');
-      navigation.replace('Home');
     } catch (error) {
-      const msg = error.response?.data || error.message;
-      Alert.alert('Erro', String(msg));
+      if (error.response?.status === 409) {
+        Alert.alert(
+          'Loja já cadastrada',
+          formatApiError(error),
+          [{ text: 'OK', onPress: () => logout() }]
+        );
+        return;
+      }
+      Alert.alert('Erro', formatApiError(error));
     } finally {
       setLoading(false);
     }
@@ -229,7 +295,7 @@ export default function CreateStoreScreen({ navigation }) {
       currentStep={step}
       footer={
         step < STEPS.length - 1 ? (
-          <PrimaryButton label="Continuar" onPress={avancar} />
+          <PrimaryButton label="Continuar" onPress={avancar} loading={loadingCnpj} />
         ) : (
           <PrimaryButton label="Criar loja" onPress={handleCreateStore} loading={loading} />
         )
@@ -244,7 +310,16 @@ export default function CreateStoreScreen({ navigation }) {
             onChangeText={setNomeFantasia}
             autoFocus
           />
-          <FormField label="CNPJ" value={cnpj} onChangeText={setCnpj} />
+          <FormField
+            label="CNPJ"
+            value={cnpj}
+            onChangeText={(value) => {
+              setCnpj(value);
+              setCnpjVerificado(false);
+            }}
+            onBlur={buscarDadosCnpj}
+          />
+          {loadingCnpj ? <ActivityIndicator color={colors.primary} style={{ marginBottom: 8 }} /> : null}
           <FormField
             label="Telefone"
             value={telefone}

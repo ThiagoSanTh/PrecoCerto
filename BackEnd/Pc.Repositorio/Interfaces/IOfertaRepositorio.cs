@@ -1,4 +1,5 @@
-﻿using Pc.Dominio.Entities.Catalogo;
+﻿using Pc.Dominio.Comum;
+using Pc.Dominio.Entities.Catalogo;
 using Pc.Dominio.Entities.Estabelecimentos;
 using System;
 using System.Collections.Generic;
@@ -9,5 +10,7 @@ namespace Pc.Repositorio.Interfaces
     public interface IOfertaRepositorio : IRepositorio<Oferta>
     {
         Task<List<Oferta>> ObterPorProdutoAsync(Guid produtoId);
+        Task<Dictionary<Guid, Oferta>> ObterMelhorOfertaPorProdutosAsync(IEnumerable<Guid> produtoIds);
+        Task<PaginacaoResultado<Oferta>> ListarPaginadoAsync(PaginacaoParametros paginacao);
     }
 }

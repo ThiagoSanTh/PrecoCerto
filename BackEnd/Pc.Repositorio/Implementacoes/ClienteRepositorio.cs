@@ -6,36 +6,66 @@ using Pc.Repositorio.Interfaces;
 namespace Pc.Repositorio.Implementacoes
 {
     /// <summary>
-    /// Persistência de Cliente com consultas de autenticação e proximidade.
+    /// Persistência do usuário (entidade unificada Usuario) com consultas de
+    /// autenticação e proximidade.
     /// </summary>
-    public class ClienteRepositorio : Repositorio<Cliente>, IClienteRepositorio
+    public class ClienteRepositorio : Repositorio<Usuario>, IClienteRepositorio
     {
         public ClienteRepositorio(AppDbContext context) : base(context)
         {
         }
 
-        public override async Task<Cliente?> ObterPorIdAsync(Guid id)
+        public override async Task<Usuario?> ObterPorIdAsync(Guid id)
         {
-            return await _context.Clientes
+            return await _context.Usuarios
                 .FirstOrDefaultAsync(c => c.Id == id && c.Ativo);
         }
 
-        public async Task<Cliente?> ObterPorEmailAsync(string email)
+        public async Task<Usuario?> ObterPorIdComLojaAsync(Guid id)
         {
-            return await _context.Clientes
+            return await _context.Usuarios
+                .Include(u => u.LojaPropria)
+                .FirstOrDefaultAsync(c => c.Id == id && c.Ativo);
+        }
+
+        public async Task<Usuario?> ObterPorEmailAsync(string email)
+        {
+            return await _context.Usuarios
+                .Include(u => u.LojaPropria)
                 .FirstOrDefaultAsync(c => c.Email.ToLower() == email.ToLower() && c.Ativo);
         }
 
-        public async Task<List<Cliente>> ListarAtivosAsync()
+        public async Task<Usuario?> ObterPorEmailCadastroAsync(string email)
         {
-            return await _context.Clientes
+            return await _context.Usuarios
+                .FirstOrDefaultAsync(c => c.Email.ToLower() == email.ToLower());
+        }
+
+        public async Task<Usuario?> ObterPorTokenConfirmacaoAsync(string token)
+        {
+            return await _context.Usuarios
+                .FirstOrDefaultAsync(c => c.TokenConfirmacao == token);
+        }
+
+        public async Task<Usuario?> ObterPorTokenRecuperacaoSenhaAsync(string token)
+        {
+            return await _context.Usuarios
+                .FirstOrDefaultAsync(c =>
+                    c.TokenRecuperacaoSenha == token
+                    && c.TokenRecuperacaoExpira.HasValue
+                    && c.TokenRecuperacaoExpira > DateTime.UtcNow);
+        }
+
+        public async Task<List<Usuario>> ListarAtivosAsync()
+        {
+            return await _context.Usuarios
                 .Where(c => c.Ativo)
                 .ToListAsync();
         }
 
-        public async Task<List<Cliente>> ObterPorProximidadeAsync(decimal latitude, decimal longitude, decimal raioKm)
+        public async Task<List<Usuario>> ObterPorProximidadeAsync(decimal latitude, decimal longitude, decimal raioKm)
         {
-            var clientes = await _context.Clientes
+            var clientes = await _context.Usuarios
                 .Where(c => c.Ativo)
                 .ToListAsync();
 
@@ -60,7 +90,7 @@ namespace Pc.Repositorio.Implementacoes
 
         public async Task AtualizarUltimoLoginAsync(Guid clienteId, DateTime ultimoLogin)
         {
-            await _context.Clientes
+            await _context.Usuarios
                 .Where(c => c.Id == clienteId)
                 .ExecuteUpdateAsync(s => s
                     .SetProperty(c => c.UltimoLogin, ultimoLogin)

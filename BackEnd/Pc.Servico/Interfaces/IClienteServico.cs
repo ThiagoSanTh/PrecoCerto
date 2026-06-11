@@ -3,69 +3,54 @@ using Pc.Dominio.Entities.Usuarios;
 namespace Pc.Servico.Interfaces
 {
     /// <summary>
-    /// Interface do serviço de Cliente
-    /// Define contrato para operações de negócio relacionadas a clientes
-    /// Inclui autenticação, gerenciamento de localização e perfil
-    /// Consolidado - sem intermediário Usuario
+    /// Serviço do usuário (entidade unificada Usuario).
+    /// Mantém o nome IClienteServico por compatibilidade com os controllers existentes.
     /// </summary>
     public interface IClienteServico
     {
-        /// <summary>
-        /// Registra um novo cliente (signup)
-        /// Validações: email único, senha mínima 6 chars
-        /// </summary>
-        Task<Cliente> RegistrarAsync(Cliente cliente);
+        Task<Usuario> RegistrarAsync(Usuario cliente);
 
-        /// <summary>
-        /// Valida credenciais de login
-        /// </summary>
-        Task<Cliente?> ValidarLoginAsync(string email, string senha);
+        Task<Usuario?> ValidarLoginAsync(string email, string senha);
 
-        /// <summary>
-        /// Obtém cliente por ID
-        /// </summary>
-        Task<Cliente?> ObterPorIdAsync(Guid id);
+        Task<Usuario?> ObterPorIdAsync(Guid id);
 
-        /// <summary>
-        /// Obtém cliente por email
-        /// </summary>
-        Task<Cliente?> ObterPorEmailAsync(string email);
+        Task<Usuario?> ObterComLojaAsync(Guid id);
 
-        /// <summary>
-        /// Lista todos os clientes ativos
-        /// </summary>
-        Task<List<Cliente>> ListarAtivosAsync();
+        Task<Usuario?> ObterPorEmailAsync(string email);
 
-        /// <summary>
-        /// Lista todos os clientes (inclui inativos)
-        /// </summary>
-        Task<List<Cliente>> ListarAsync();
+        Task<List<Usuario>> ListarAtivosAsync();
 
-        /// <summary>
-        /// Atualiza dados do cliente
-        /// </summary>
-        Task AtualizarAsync(Cliente cliente);
+        Task<List<Usuario>> ListarAsync();
 
-        /// <summary>
-        /// Atualiza localização atual do cliente (geolocalização)
-        /// Recebe latitude/longitude do GPS
-        /// </summary>
+        Task AtualizarAsync(Usuario cliente);
+
         Task AtualizarLocalizacaoAsync(Guid clienteId, decimal latitude, decimal longitude);
 
-        /// <summary>
-        /// Obtém clientes próximos (em um raio de geolocalização)
-        /// Útil para recomendações de lojas próximas
-        /// </summary>
-        Task<List<Cliente>> ObterPorProximidadeAsync(decimal latitude, decimal longitude, decimal raioKm);
+        Task<List<Usuario>> ObterPorProximidadeAsync(decimal latitude, decimal longitude, decimal raioKm);
 
-        /// <summary>
-        /// Altera a senha do cliente
-        /// </summary>
         Task AlterarSenhaAsync(Guid clienteId, string senhaAtual, string novaSenha);
 
-        /// <summary>
-        /// Remove cliente (soft delete)
-        /// </summary>
         Task RemoverAsync(Guid id);
+
+        Task<string?> GerarTokenRecuperacaoSenhaAsync(string email);
+
+        Task<bool> RedefinirSenhaComTokenAsync(string token, string novaSenha);
+
+        Task AlterarEmailAsync(Guid usuarioId, string senhaAtual, string novoEmail);
+
+        /// <summary>Marca um usuário como Lojista (após abrir loja com CNPJ válido).</summary>
+        Task DefinirComoLojistaAsync(Guid usuarioId);
+
+        /// <summary>
+        /// Promove um cliente a Vendedor de uma loja (controle de estoque).
+        /// Apenas o lojista dono da loja deve chamar (validação no controller).
+        /// </summary>
+        Task PromoverParaVendedorAsync(Guid usuarioId, Guid lojaId, string? cargo);
+
+        /// <summary>Remove o vínculo de vendedor, voltando o usuário a Cliente.</summary>
+        Task RemoverVendedorAsync(Guid usuarioId);
+
+        /// <summary>Lista os vendedores vinculados a uma loja.</summary>
+        Task<List<Usuario>> ListarVendedoresPorLojaAsync(Guid lojaId);
     }
 }

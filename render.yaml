@@ -5,6 +5,7 @@ services:
     rootDir: BackEnd/Pc.WebApi
     buildCommand: dotnet publish -c Release -o out
     startCommand: dotnet out/Pc.WebApi.dll
+    healthCheckPath: /api/health
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
@@ -19,4 +20,17 @@ services:
       - key: Jwt__Audience
         value: PrecoCertoApp
       - key: Cors__AllowedOrigins__0
+        sync: false
+      # SMTP para confirmação de e-mail (opcional; defina no painel do Render)
+      - key: Email__Host
+        sync: false
+      - key: Email__Port
+        value: "587"
+      - key: Email__User
+        sync: false
+      - key: Email__Password
+        sync: false
+      - key: Email__From
+        sync: false
+      - key: Email__AppBaseUrl
         sync: false

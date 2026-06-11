@@ -19,6 +19,7 @@ namespace Pc.WebApi.Authorization
 
         public static bool OwnsLoja(ControllerBase controller, Guid lojaId) =>
             controller.User.IsAdmin() ||
-            (controller.User.IsLojista() && controller.User.GetLojaId() == lojaId);
+            ((controller.User.IsLojista() || controller.User.IsVendedor())
+                && controller.User.GetLojaId() == lojaId);
     }
 }

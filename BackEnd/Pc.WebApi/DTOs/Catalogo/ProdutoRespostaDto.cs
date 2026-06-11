@@ -1,3 +1,5 @@
+using Pc.Dominio.Enums;
+
 namespace Pc.WebApi.DTOs.Catalogo
 {
     public class ProdutoRespostaDto
@@ -10,6 +12,8 @@ namespace Pc.WebApi.DTOs.Catalogo
         public decimal Preco { get; set; }
         public Guid? LojaId { get; set; }
         public string? ImagemUrl { get; set; }
+        public CategoriaProduto Categoria { get; set; }
+        public string CategoriaNome { get; set; } = string.Empty;
         public string? LojaNomeFantasia { get; set; }
         public decimal? Latitude { get; set; }
         public decimal? Longitude { get; set; }

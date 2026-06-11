@@ -12,8 +12,7 @@ namespace Pc.Infraestrutura
         {
         }
 
-        public DbSet<Cliente> Clientes { get; set; }
-        public DbSet<Lojista> Lojistas { get; set; }
+        public DbSet<Usuario> Usuarios { get; set; }
         public DbSet<Admin> Admins { get; set; }
 
         public DbSet<Loja> Lojas { get; set; }
@@ -27,21 +26,73 @@ namespace Pc.Infraestrutura
         public DbSet<Avaliacao> Avaliacoes { get; set; }
         public DbSet<PreferenciaCliente> PreferenciasClientes { get; set; }
 
+        public DbSet<Conversa> Conversas { get; set; }
+        public DbSet<Mensagem> Mensagens { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.Entity<Loja>()
-                .HasOne(l => l.Lojista)
-                .WithOne(lo => lo.Loja)
-                // FK em Loja.LojistaId: lojista pode existir antes da loja ser criada.
-                .HasForeignKey<Loja>(l => l.LojistaId);
+                .HasOne(l => l.Usuario)
+                .WithOne(u => u.LojaPropria)
+                .HasForeignKey<Loja>(l => l.UsuarioId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Usuario>()
+                .HasOne(u => u.LojaVinculada)
+                .WithMany()
+                .HasForeignKey(u => u.LojaVinculadaId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             modelBuilder.Entity<Produto>()
                 .HasOne(p => p.Loja)
                 .WithMany()
                 .HasForeignKey(p => p.LojaId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Produto>()
+                .HasIndex(p => p.LojaId);
+
+            modelBuilder.Entity<Oferta>()
+                .HasIndex(o => o.ProdutoId);
+
+            modelBuilder.Entity<Mensagem>()
+                .HasIndex(m => new { m.ConversaId, m.EnviadaEm });
+
+            modelBuilder.Entity<HistoricoPesquisa>()
+                .HasOne(h => h.Produto)
+                .WithMany()
+                .HasForeignKey(h => h.ProdutoId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<HistoricoPesquisa>()
+                .HasOne(h => h.Loja)
+                .WithMany()
+                .HasForeignKey(h => h.LojaId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Conversa>()
+                .HasIndex(c => new { c.ClienteId, c.LojaId })
+                .IsUnique();
+
+            modelBuilder.Entity<Conversa>()
+                .HasOne(c => c.Cliente)
+                .WithMany()
+                .HasForeignKey(c => c.ClienteId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Conversa>()
+                .HasOne(c => c.Loja)
+                .WithMany()
+                .HasForeignKey(c => c.LojaId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Mensagem>()
+                .HasOne(m => m.Conversa)
+                .WithMany(c => c.Mensagens)
+                .HasForeignKey(m => m.ConversaId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

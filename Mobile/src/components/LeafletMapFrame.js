@@ -1,12 +1,31 @@
 import { Platform, View, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { useEffect, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 
 /**
  * Mapa Leaflet: WebView no nativo, iframe no Expo Web (PWA).
+ * Expõe via ref `enviarMensagem(obj)` — canal app -> mapa para atualizar o
+ * estado do mapa (ex.: destaques de pins) sem recriar o HTML.
  */
-export default function LeafletMapFrame({ html, mapKey, onMessage, style }) {
+const LeafletMapFrame = forwardRef(function LeafletMapFrame(
+  { html, mapKey, onMessage, style },
+  ref
+) {
   const iframeRef = useRef(null);
+  const webViewRef = useRef(null);
+
+  useImperativeHandle(ref, () => ({
+    enviarMensagem(obj) {
+      const json = JSON.stringify(obj);
+      if (Platform.OS === 'web') {
+        iframeRef.current?.contentWindow?.postMessage(json, '*');
+      } else {
+        webViewRef.current?.injectJavaScript(
+          `window.__onAppMessage && window.__onAppMessage(${JSON.stringify(json)}); true;`
+        );
+      }
+    },
+  }));
 
   useEffect(() => {
     if (Platform.OS !== 'web') return undefined;
@@ -37,6 +56,7 @@ export default function LeafletMapFrame({ html, mapKey, onMessage, style }) {
 
   return (
     <WebView
+      ref={webViewRef}
       key={mapKey}
       style={[styles.frame, style]}
       originWhitelist={['*']}
@@ -48,7 +68,9 @@ export default function LeafletMapFrame({ html, mapKey, onMessage, style }) {
       onMessage={onMessage}
     />
   );
-}
+});
+
+export default LeafletMapFrame;
 
 const styles = StyleSheet.create({
   frame: {

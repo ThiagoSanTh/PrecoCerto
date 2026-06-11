@@ -1,7 +1,13 @@
 import api from './api';
 
-export async function registrarPesquisa(clienteId, termoPesquisa) {
-  const { data } = await api.post('/HistoricoPesquisa', { clienteId, termoPesquisa });
+export async function registrarPesquisa(clienteId, termoPesquisa, opcoes = {}) {
+  const { produtoId = null, lojaId = null } = opcoes;
+  const { data } = await api.post('/HistoricoPesquisa', {
+    clienteId,
+    termoPesquisa,
+    produtoId,
+    lojaId,
+  });
   return data;
 }
 

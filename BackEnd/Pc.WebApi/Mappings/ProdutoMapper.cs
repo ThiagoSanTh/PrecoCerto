@@ -5,6 +5,23 @@ namespace Pc.WebApi.Mappings
 {
     public static class ProdutoMapper
     {
+        public static ProdutoResumoDto ParaResumoDto(Produto p)
+        {
+            return new ProdutoResumoDto
+            {
+                Id = p.Id,
+                Nome = p.NomeProduto,
+                Descricao = p.Descricao,
+                Marca = p.Marca ?? string.Empty,
+                Preco = p.Preco,
+                LojaId = p.LojaId,
+                ImagemUrl = p.ImagemUrl,
+                Categoria = p.Categoria,
+                CategoriaNome = p.Categoria.ToString(),
+                LojaNomeFantasia = p.Loja?.NomeFantasia
+            };
+        }
+
         public static ProdutoRespostaDto ParaRespostaDto(Produto p)
         {
             var dto = new ProdutoRespostaDto
@@ -16,7 +33,9 @@ namespace Pc.WebApi.Mappings
                 CodigoBarras = p.CodigoBarras ?? string.Empty,
                 Preco = p.Preco,
                 LojaId = p.LojaId,
-                ImagemUrl = p.ImagemUrl
+                ImagemUrl = p.ImagemUrl,
+                Categoria = p.Categoria,
+                CategoriaNome = p.Categoria.ToString()
             };
 
             if (p.Loja == null)

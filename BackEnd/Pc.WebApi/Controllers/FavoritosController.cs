@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pc.Dominio.Entities.Interacoes;
+using Pc.Repositorio.Interfaces;
 using Pc.Servico.Interfaces;
 using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Interacoes;
 using Pc.WebApi.Extensions;
+using Pc.WebApi.Helpers;
 
 namespace Pc.WebApi.Controllers
 {
@@ -14,21 +16,32 @@ namespace Pc.WebApi.Controllers
     public class FavoritosController : ControllerBase
     {
         private readonly IFavoritoServico _favoritoServico;
+        private readonly IOfertaRepositorio _ofertaRepositorio;
 
-        public FavoritosController(IFavoritoServico favoritoServico)
+        public FavoritosController(IFavoritoServico favoritoServico, IOfertaRepositorio ofertaRepositorio)
         {
             _favoritoServico = favoritoServico;
+            _ofertaRepositorio = ofertaRepositorio;
         }
 
         [HttpGet("cliente/{clienteId:guid}")]
         [Authorize(Roles = "Cliente,Admin")]
-        public async Task<IActionResult> ListarPorCliente(Guid clienteId)
+        public async Task<IActionResult> ListarPorCliente(
+            Guid clienteId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
         {
             if (!Authz.IsSelfOrAdmin(this, clienteId))
                 return Forbid();
 
-            var favoritos = await _favoritoServico.ListarPorClienteAsync(clienteId);
-            return Ok(favoritos.Select(MapResposta));
+            var paginacao = PaginacaoHelper.Normalizar(page, pageSize);
+            var favoritos = await _favoritoServico.ListarPorClientePaginadoAsync(clienteId, paginacao);
+            var produtoIds = favoritos.Items
+                .Where(f => f.ProdutoId.HasValue)
+                .Select(f => f.ProdutoId!.Value);
+            var ofertas = await _ofertaRepositorio.ObterMelhorOfertaPorProdutosAsync(produtoIds);
+
+            return Ok(PaginacaoHelper.ParaResposta(favoritos, f => MapResposta(f, ofertas)));
         }
 
         [HttpGet("{id:guid}")]
@@ -42,7 +55,11 @@ namespace Pc.WebApi.Controllers
             if (!Authz.IsSelfOrAdmin(this, favorito.ClienteId))
                 return Forbid();
 
-            return Ok(MapResposta(favorito));
+            var ofertas = favorito.ProdutoId.HasValue
+                ? await _ofertaRepositorio.ObterMelhorOfertaPorProdutosAsync(new[] { favorito.ProdutoId.Value })
+                : new Dictionary<Guid, Pc.Dominio.Entities.Estabelecimentos.Oferta>();
+
+            return Ok(MapResposta(favorito, ofertas));
         }
 
         [HttpPost]
@@ -60,7 +77,7 @@ namespace Pc.WebApi.Controllers
             };
 
             var novoFavorito = await _favoritoServico.AdicionarAsync(favorito);
-            return CreatedAtAction(nameof(ObterPorId), new { id = novoFavorito.Id }, MapResposta(novoFavorito));
+            return CreatedAtAction(nameof(ObterPorId), new { id = novoFavorito.Id }, MapResposta(novoFavorito, new Dictionary<Guid, Pc.Dominio.Entities.Estabelecimentos.Oferta>()));
         }
 
         [HttpDelete("{id:guid}")]
@@ -111,15 +128,33 @@ namespace Pc.WebApi.Controllers
             return Ok(new { ehFavorito });
         }
 
-        private static FavoritoRespostaDto MapResposta(Favorito f) => new()
+        private static FavoritoRespostaDto MapResposta(
+            Favorito f,
+            Dictionary<Guid, Pc.Dominio.Entities.Estabelecimentos.Oferta> ofertas)
         {
-            Id = f.Id,
-            ClienteId = f.ClienteId,
-            ProdutoId = f.ProdutoId,
-            NomeProduto = f.Produto?.NomeProduto ?? string.Empty,
-            LojaId = f.LojaId,
-            NomeLoja = f.Loja?.NomeFantasia ?? string.Empty,
-            DataCriacao = f.DataCriacao
-        };
+            ofertas.TryGetValue(f.ProdutoId ?? Guid.Empty, out var oferta);
+            var precoBase = f.Produto?.Preco;
+            decimal? precoExibicao = precoBase;
+            if (oferta != null && precoBase.HasValue)
+                precoExibicao = Math.Min(oferta.Preco, precoBase.Value);
+            else if (oferta != null)
+                precoExibicao = oferta.Preco;
+
+            return new FavoritoRespostaDto
+            {
+                Id = f.Id,
+                ClienteId = f.ClienteId,
+                ProdutoId = f.ProdutoId,
+                NomeProduto = f.Produto?.NomeProduto ?? string.Empty,
+                LojaId = f.LojaId,
+                NomeLoja = f.Loja?.NomeFantasia ?? string.Empty,
+                DataCriacao = f.DataCriacao,
+                ImagemUrl = f.Produto?.ImagemUrl,
+                PrecoBase = precoBase,
+                PrecoExibicao = precoExibicao,
+                PrecoAnterior = oferta?.PrecoAnterior,
+                EmPromocao = oferta?.EmPromocao ?? false
+            };
+        }
     }
 }

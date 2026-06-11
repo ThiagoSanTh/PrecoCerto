@@ -3,6 +3,12 @@ using Pc.Dominio.Entities.Interacoes;
 namespace Pc.Servico.Interfaces
 {
     /// <summary>
+    /// Linha de relatório de BI: termo pesquisado e quantas vezes apareceu
+    /// vinculado à loja, com a data da pesquisa mais recente.
+    /// </summary>
+    public record RelatorioPesquisaTermo(string Termo, int Quantidade, DateTime UltimaPesquisa);
+
+    /// <summary>
     /// Interface do serviço de HistoricoPesquisa
     /// Define contrato para operações de negócio relacionadas ao histórico
     /// Inclui validações e organização de dados
@@ -45,5 +51,11 @@ namespace Pc.Servico.Interfaces
         /// Remove um registro específico do histórico
         /// </summary>
         Task RemoverAsync(Guid id);
+
+        /// <summary>
+        /// Gera o relatório de BI de uma loja: termos mais pesquisados que
+        /// estão vinculados aos produtos/loja, ordenados por quantidade.
+        /// </summary>
+        Task<List<RelatorioPesquisaTermo>> ObterRelatorioLojaAsync(Guid lojaId);
     }
 }

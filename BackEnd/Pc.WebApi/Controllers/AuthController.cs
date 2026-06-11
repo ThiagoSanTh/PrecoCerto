@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Pc.Dominio.Entities.Usuarios;
 using Pc.Dominio.Enums;
 using Pc.Servico.Interfaces;
 using Pc.WebApi.DTOs.Comum;
@@ -13,27 +14,34 @@ namespace Pc.WebApi.Controllers
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
-        private readonly IClienteServico _clienteServico;
-        private readonly ILojistaServico _lojistaServico;
+        private readonly IClienteServico _usuarioServico;
         private readonly IAdminServico _adminServico;
         private readonly IJwtTokenService _jwtTokenService;
+        private readonly IEmailService _emailService;
+        private readonly IIdCodificador _idCodificador;
 
         public AuthController(
-            IClienteServico clienteServico,
-            ILojistaServico lojistaServico,
+            IClienteServico usuarioServico,
             IAdminServico adminServico,
-            IJwtTokenService jwtTokenService)
+            IJwtTokenService jwtTokenService,
+            IEmailService emailService,
+            IIdCodificador idCodificador)
         {
-            _clienteServico = clienteServico;
-            _lojistaServico = lojistaServico;
+            _usuarioServico = usuarioServico;
             _adminServico = adminServico;
             _jwtTokenService = jwtTokenService;
+            _emailService = emailService;
+            _idCodificador = idCodificador;
         }
 
         /// <summary>POST /api/auth/login — login unificado com JWT.</summary>
         [HttpPost("login")]
         [AllowAnonymous]
         [EnableRateLimiting("login")]
+        [ProducesResponseType(typeof(AuthLoginRespostaDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
         public async Task<IActionResult> Login([FromBody] AuthLoginDto dto)
         {
             try
@@ -41,15 +49,11 @@ namespace Pc.WebApi.Controllers
                 if (!ModelState.IsValid)
                     return ValidationProblem(ModelState);
 
-                var tipo = (dto.Tipo ?? "cliente").Trim().ToLowerInvariant();
+                var tipo = (dto.Tipo ?? "").Trim().ToLowerInvariant();
+                if (tipo == "admin")
+                    return await LoginAdminAsync(dto);
 
-                return tipo switch
-                {
-                    "cliente" => await LoginClienteAsync(dto),
-                    "lojista" => await LoginLojistaAsync(dto),
-                    "admin" => await LoginAdminAsync(dto),
-                    _ => BadRequest("Tipo inválido. Use: cliente, lojista ou admin.")
-                };
+                return await LoginUsuarioAsync(dto);
             }
             catch (Exception ex)
             {
@@ -57,38 +61,88 @@ namespace Pc.WebApi.Controllers
             }
         }
 
-        private async Task<IActionResult> LoginClienteAsync(AuthLoginDto dto)
+        /// <summary>POST /api/auth/esqueci-senha — envia link de redefinição por e-mail.</summary>
+        [HttpPost("esqueci-senha")]
+        [AllowAnonymous]
+        [EnableRateLimiting("login")]
+        public async Task<IActionResult> EsqueciSenha([FromBody] EsqueciSenhaDto dto)
         {
-            var cliente = await _clienteServico.ValidarLoginAsync(dto.Email, dto.Senha);
-            if (cliente == null)
-                return Unauthorized("Email ou senha incorretos.");
+            if (!ModelState.IsValid)
+                return ValidationProblem(ModelState);
 
-            var perfil = MapCliente(cliente);
-            var token = _jwtTokenService.GenerateToken(cliente.Id, TipoUsuario.Cliente);
-
-            return Ok(new AuthLoginRespostaDto
+            var token = await _usuarioServico.GerarTokenRecuperacaoSenhaAsync(dto.Email);
+            if (token != null)
             {
-                Token = token,
-                Tipo = "cliente",
-                Perfil = perfil
+                await _emailService.EnviarRecuperacaoSenhaAsync(dto.Email.Trim(), token);
+            }
+
+            return Ok(new
+            {
+                mensagem = "Se o e-mail estiver cadastrado, enviamos instruções para redefinir a senha."
             });
         }
 
-        private async Task<IActionResult> LoginLojistaAsync(AuthLoginDto dto)
+        /// <summary>POST /api/auth/redefinir-senha — redefine senha com token recebido por e-mail.</summary>
+        [HttpPost("redefinir-senha")]
+        [AllowAnonymous]
+        [EnableRateLimiting("login")]
+        public async Task<IActionResult> RedefinirSenha([FromBody] RedefinirSenhaDto dto)
         {
-            var lojista = await _lojistaServico.ValidarLoginAsync(dto.Email, dto.Senha);
-            if (lojista == null)
+            if (!ModelState.IsValid)
+                return ValidationProblem(ModelState);
+
+            try
+            {
+                var ok = await _usuarioServico.RedefinirSenhaComTokenAsync(dto.Token, dto.NovaSenha);
+                if (!ok)
+                    return BadRequest(new { message = "Token inválido ou expirado." });
+
+                return Ok(new { mensagem = "Senha redefinida com sucesso." });
+            }
+            catch (Exception ex) when (ex.Message == "Senha deve ter pelo menos 6 caracteres.")
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        private async Task<IActionResult> LoginUsuarioAsync(AuthLoginDto dto)
+        {
+            var usuario = await _usuarioServico.ValidarLoginAsync(dto.Email, dto.Senha);
+            if (usuario == null)
                 return Unauthorized("Email ou senha incorretos.");
 
-            var lojaId = lojista.Loja?.Id;
-            var perfil = MapLojista(lojista);
-            var token = _jwtTokenService.GenerateToken(lojista.Id, TipoUsuario.Lojista, lojaId);
+            var lojaId = usuario.Papel switch
+            {
+                PapelUsuario.Lojista => usuario.LojaPropria?.Id,
+                PapelUsuario.Vendedor => usuario.LojaVinculadaId,
+                _ => null
+            };
 
+            var tipoJwt = usuario.Papel switch
+            {
+                PapelUsuario.Lojista => TipoUsuario.Lojista,
+                PapelUsuario.Vendedor => TipoUsuario.Vendedor,
+                _ => TipoUsuario.Cliente
+            };
+
+            var token = _jwtTokenService.GenerateToken(usuario.Id, tipoJwt, lojaId);
+
+            if (usuario.Papel == PapelUsuario.Cliente)
+            {
+                return Ok(new AuthLoginRespostaDto
+                {
+                    Token = token,
+                    Tipo = "cliente",
+                    Perfil = MapCliente(usuario)
+                });
+            }
+
+            var tipoStr = usuario.Papel == PapelUsuario.Vendedor ? "vendedor" : "lojista";
             return Ok(new AuthLoginRespostaDto
             {
                 Token = token,
-                Tipo = "lojista",
-                Perfil = perfil
+                Tipo = tipoStr,
+                Perfil = MapLojista(usuario, lojaId)
             });
         }
 
@@ -109,13 +163,15 @@ namespace Pc.WebApi.Controllers
             });
         }
 
-        private static ClienteRespostaDto MapCliente(Pc.Dominio.Entities.Usuarios.Cliente c) => new()
+        private ClienteRespostaDto MapCliente(Usuario c) => new()
         {
             Id = c.Id,
+            CodigoPublico = _idCodificador.Codificar(c.Id),
             NomeUsuario = c.NomeUsuario,
             Email = c.Email,
             Telefone = c.Telefone,
             Tipo = (int)c.Tipo,
+            Papel = (int)c.Papel,
             UltimoLogin = c.UltimoLogin,
             LatitudeAtual = c.LatitudeAtual,
             LongitudeAtual = c.LongitudeAtual,
@@ -123,19 +179,20 @@ namespace Pc.WebApi.Controllers
             DataCriacao = c.DataCriacao
         };
 
-        private static LojistaRespostaDto MapLojista(Pc.Dominio.Entities.Usuarios.Lojista l) => new()
+        private static LojistaRespostaDto MapLojista(Usuario u, Guid? lojaId) => new()
         {
-            Id = l.Id,
-            NomeUsuario = l.NomeUsuario,
-            Email = l.Email,
-            Telefone = l.Telefone,
-            Tipo = (int)l.Tipo,
-            UltimoLogin = l.UltimoLogin,
-            LojaId = l.Loja?.Id,
-            NomeLoja = l.Loja?.NomeFantasia ?? string.Empty,
-            Cargo = l.Cargo,
-            Ativo = l.Ativo,
-            DataCriacao = l.DataCriacao
+            Id = u.Id,
+            NomeUsuario = u.NomeUsuario,
+            Email = u.Email,
+            Telefone = u.Telefone,
+            Tipo = (int)u.Tipo,
+            Papel = (int)u.Papel,
+            UltimoLogin = u.UltimoLogin,
+            LojaId = lojaId,
+            NomeLoja = u.LojaPropria?.NomeFantasia ?? string.Empty,
+            Cargo = u.Cargo,
+            Ativo = u.Ativo,
+            DataCriacao = u.DataCriacao
         };
 
         private static AdminRespostaDto MapAdmin(Pc.Dominio.Entities.Usuarios.Admin a) => new()

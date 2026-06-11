@@ -1,8 +1,21 @@
 import api from './api';
 
-export async function listarOfertas() {
-  const { data } = await api.get('/Ofertas');
-  return data;
+function normalizarPaginado(data) {
+  if (Array.isArray(data)) {
+    return { items: data, page: 1, pageSize: data.length, total: data.length, hasNext: false };
+  }
+  return {
+    items: Array.isArray(data?.items) ? data.items : [],
+    page: data?.page ?? 1,
+    pageSize: data?.pageSize ?? 20,
+    total: data?.total ?? 0,
+    hasNext: data?.hasNext ?? false,
+  };
+}
+
+export async function listarOfertas(page = 1, pageSize = 50) {
+  const { data } = await api.get('/Ofertas', { params: { page, pageSize } });
+  return normalizarPaginado(data);
 }
 
 export async function listarOfertasPorProduto(produtoId) {

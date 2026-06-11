@@ -9,7 +9,7 @@ namespace Pc.Dominio.Entities.Interacoes
     public class PreferenciaCliente : BaseEntity
     {
         public Guid ClienteId { get; set; }
-        public Cliente? Cliente { get; set; }
+        public Usuario? Cliente { get; set; }
 
         public string Chave { get; set; } = string.Empty;
         public string Valor { get; set; } = string.Empty;

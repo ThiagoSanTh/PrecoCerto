@@ -75,6 +75,9 @@ namespace Pc.Infraestrutura.Migrations
                     b.Property<bool>("Ativo")
                         .HasColumnType("boolean");
 
+                    b.Property<int>("Categoria")
+                        .HasColumnType("integer");
+
                     b.Property<string>("CodigoBarras")
                         .HasColumnType("text");
 
@@ -137,9 +140,6 @@ namespace Pc.Infraestrutura.Migrations
                     b.Property<Guid>("EnderecoId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("LojistaId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("NomeFantasia")
                         .IsRequired()
                         .HasColumnType("text");
@@ -150,11 +150,14 @@ namespace Pc.Infraestrutura.Migrations
                     b.Property<string>("Telefone")
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("UsuarioId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("EnderecoId");
 
-                    b.HasIndex("LojistaId")
+                    b.HasIndex("UsuarioId")
                         .IsUnique();
 
                     b.ToTable("Lojas");
@@ -253,6 +256,40 @@ namespace Pc.Infraestrutura.Migrations
                     b.ToTable("Avaliacoes");
                 });
 
+            modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.Conversa", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("ClienteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DataAtualizacao")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("LojaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UltimaMensagemEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LojaId");
+
+                    b.HasIndex("ClienteId", "LojaId")
+                        .IsUnique();
+
+                    b.ToTable("Conversas");
+                });
+
             modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.Favorito", b =>
                 {
                     b.Property<Guid>("Id")
@@ -309,6 +346,12 @@ namespace Pc.Infraestrutura.Migrations
                     b.Property<DateTime>("DataPesquisa")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("LojaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ProdutoId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("TermoPesquisa")
                         .IsRequired()
                         .HasColumnType("text");
@@ -317,7 +360,52 @@ namespace Pc.Infraestrutura.Migrations
 
                     b.HasIndex("ClienteId");
 
+                    b.HasIndex("LojaId");
+
+                    b.HasIndex("ProdutoId");
+
                     b.ToTable("HistoricosPesquisa");
+                });
+
+            modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.Mensagem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("ConversaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DataAtualizacao")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("EnviadaEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Lida")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("RemetenteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("RemetentePapel")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Texto")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConversaId", "EnviadaEm");
+
+                    b.ToTable("Mensagens");
                 });
 
             modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.PreferenciaCliente", b =>
@@ -400,54 +488,7 @@ namespace Pc.Infraestrutura.Migrations
                     b.ToTable("Admins");
                 });
 
-            modelBuilder.Entity("Pc.Dominio.Entities.Usuarios.Cliente", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("Ativo")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime?>("DataAtualizacao")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("DataCriacao")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<decimal?>("LatitudeAtual")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("LongitudeAtual")
-                        .HasColumnType("numeric");
-
-                    b.Property<string>("NomeUsuario")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("SenhaHash")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Telefone")
-                        .HasColumnType("text");
-
-                    b.Property<int>("Tipo")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UltimoLogin")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Clientes");
-                });
-
-            modelBuilder.Entity("Pc.Dominio.Entities.Usuarios.Lojista", b =>
+            modelBuilder.Entity("Pc.Dominio.Entities.Usuarios.Usuario", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -469,9 +510,24 @@ namespace Pc.Infraestrutura.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<bool>("EmailConfirmado")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal?>("LatitudeAtual")
+                        .HasColumnType("numeric");
+
+                    b.Property<Guid?>("LojaVinculadaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("LongitudeAtual")
+                        .HasColumnType("numeric");
+
                     b.Property<string>("NomeUsuario")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int>("Papel")
+                        .HasColumnType("integer");
 
                     b.Property<string>("SenhaHash")
                         .IsRequired()
@@ -483,12 +539,23 @@ namespace Pc.Infraestrutura.Migrations
                     b.Property<int>("Tipo")
                         .HasColumnType("integer");
 
+                    b.Property<string>("TokenConfirmacao")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("TokenRecuperacaoExpira")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TokenRecuperacaoSenha")
+                        .HasColumnType("text");
+
                     b.Property<DateTime?>("UltimoLogin")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Lojistas");
+                    b.HasIndex("LojaVinculadaId");
+
+                    b.ToTable("Usuarios");
                 });
 
             modelBuilder.Entity("Pc.Dominio.Entities.Catalogo.Produto", b =>
@@ -509,13 +576,14 @@ namespace Pc.Infraestrutura.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Pc.Dominio.Entities.Usuarios.Lojista", "Lojista")
-                        .WithOne("Loja")
-                        .HasForeignKey("Pc.Dominio.Entities.Estabelecimentos.Loja", "LojistaId");
+                    b.HasOne("Pc.Dominio.Entities.Usuarios.Usuario", "Usuario")
+                        .WithOne("LojaPropria")
+                        .HasForeignKey("Pc.Dominio.Entities.Estabelecimentos.Loja", "UsuarioId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Endereco");
 
-                    b.Navigation("Lojista");
+                    b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("Pc.Dominio.Entities.Estabelecimentos.Oferta", b =>
@@ -539,8 +607,27 @@ namespace Pc.Infraestrutura.Migrations
 
             modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.Avaliacao", b =>
                 {
-                    b.HasOne("Pc.Dominio.Entities.Usuarios.Cliente", "Cliente")
+                    b.HasOne("Pc.Dominio.Entities.Usuarios.Usuario", "Cliente")
                         .WithMany("Avaliacoes")
+                        .HasForeignKey("ClienteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Pc.Dominio.Entities.Estabelecimentos.Loja", "Loja")
+                        .WithMany()
+                        .HasForeignKey("LojaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Cliente");
+
+                    b.Navigation("Loja");
+                });
+
+            modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.Conversa", b =>
+                {
+                    b.HasOne("Pc.Dominio.Entities.Usuarios.Usuario", "Cliente")
+                        .WithMany()
                         .HasForeignKey("ClienteId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -558,7 +645,7 @@ namespace Pc.Infraestrutura.Migrations
 
             modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.Favorito", b =>
                 {
-                    b.HasOne("Pc.Dominio.Entities.Usuarios.Cliente", "Cliente")
+                    b.HasOne("Pc.Dominio.Entities.Usuarios.Usuario", "Cliente")
                         .WithMany("Favoritos")
                         .HasForeignKey("ClienteId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -581,18 +668,43 @@ namespace Pc.Infraestrutura.Migrations
 
             modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.HistoricoPesquisa", b =>
                 {
-                    b.HasOne("Pc.Dominio.Entities.Usuarios.Cliente", "Cliente")
+                    b.HasOne("Pc.Dominio.Entities.Usuarios.Usuario", "Cliente")
                         .WithMany("HistoricosPesquisa")
                         .HasForeignKey("ClienteId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Pc.Dominio.Entities.Estabelecimentos.Loja", "Loja")
+                        .WithMany()
+                        .HasForeignKey("LojaId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Pc.Dominio.Entities.Catalogo.Produto", "Produto")
+                        .WithMany()
+                        .HasForeignKey("ProdutoId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Cliente");
+
+                    b.Navigation("Loja");
+
+                    b.Navigation("Produto");
+                });
+
+            modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.Mensagem", b =>
+                {
+                    b.HasOne("Pc.Dominio.Entities.Interacoes.Conversa", "Conversa")
+                        .WithMany("Mensagens")
+                        .HasForeignKey("ConversaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Conversa");
                 });
 
             modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.PreferenciaCliente", b =>
                 {
-                    b.HasOne("Pc.Dominio.Entities.Usuarios.Cliente", "Cliente")
+                    b.HasOne("Pc.Dominio.Entities.Usuarios.Usuario", "Cliente")
                         .WithMany("Preferencias")
                         .HasForeignKey("ClienteId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -601,12 +713,27 @@ namespace Pc.Infraestrutura.Migrations
                     b.Navigation("Cliente");
                 });
 
+            modelBuilder.Entity("Pc.Dominio.Entities.Usuarios.Usuario", b =>
+                {
+                    b.HasOne("Pc.Dominio.Entities.Estabelecimentos.Loja", "LojaVinculada")
+                        .WithMany()
+                        .HasForeignKey("LojaVinculadaId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("LojaVinculada");
+                });
+
             modelBuilder.Entity("Pc.Dominio.Entities.Estabelecimentos.Loja", b =>
                 {
                     b.Navigation("Ofertas");
                 });
 
-            modelBuilder.Entity("Pc.Dominio.Entities.Usuarios.Cliente", b =>
+            modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.Conversa", b =>
+                {
+                    b.Navigation("Mensagens");
+                });
+
+            modelBuilder.Entity("Pc.Dominio.Entities.Usuarios.Usuario", b =>
                 {
                     b.Navigation("Avaliacoes");
 
@@ -614,12 +741,9 @@ namespace Pc.Infraestrutura.Migrations
 
                     b.Navigation("HistoricosPesquisa");
 
-                    b.Navigation("Preferencias");
-                });
+                    b.Navigation("LojaPropria");
 
-            modelBuilder.Entity("Pc.Dominio.Entities.Usuarios.Lojista", b =>
-                {
-                    b.Navigation("Loja");
+                    b.Navigation("Preferencias");
                 });
 #pragma warning restore 612, 618
         }

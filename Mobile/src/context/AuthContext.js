@@ -9,8 +9,23 @@ const AuthContext = createContext(null);
 const SESSION_KEY = '@session';
 const MODE_KEY = '@userMode';
 
+export function podeUsarModoLoja(session) {
+  if (!session) return false;
+  return (
+    session.tipo === 'lojista' ||
+    session.tipo === 'vendedor' ||
+    !!session.perfil?.lojaId
+  );
+}
+
+function modoPadraoParaSessao(session) {
+  if (!session) return 'user';
+  return session.tipo === 'lojista' || session.tipo === 'vendedor' ? 'store' : 'user';
+}
+
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
+  const [appMode, setAppModeState] = useState('user');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,20 +36,52 @@ export function AuthProvider({ children }) {
     try {
       const token = await getToken();
       const raw = await AsyncStorage.getItem(SESSION_KEY);
+      const savedMode = await AsyncStorage.getItem(MODE_KEY);
+
       if (token && raw) {
-        setSession(JSON.parse(raw));
+        const parsed = JSON.parse(raw);
+        setSession(parsed);
+
+        const modoValido =
+          savedMode === 'store' && podeUsarModoLoja(parsed)
+            ? 'store'
+            : savedMode === 'user'
+              ? 'user'
+              : modoPadraoParaSessao(parsed);
+
+        setAppModeState(modoValido);
+        if (modoValido !== savedMode) {
+          await AsyncStorage.setItem(MODE_KEY, modoValido);
+        }
       } else if (!token) {
         await AsyncStorage.multiRemove([SESSION_KEY, MODE_KEY]);
+        setAppModeState('user');
       }
     } finally {
       setLoading(false);
     }
   }
 
-  async function salvarSessao(novaSessao, modo = 'user') {
+  async function setAppMode(modo) {
+    const modoFinal = modo === 'store' && podeUsarModoLoja(session) ? 'store' : 'user';
+    await AsyncStorage.setItem(MODE_KEY, modoFinal);
+    setAppModeState(modoFinal);
+  }
+
+  async function salvarSessao(novaSessao, modo) {
     await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(novaSessao));
-    await AsyncStorage.setItem(MODE_KEY, modo);
     setSession(novaSessao);
+
+    if (modo !== undefined) {
+      const modoFinal =
+        modo === 'store' && podeUsarModoLoja(novaSessao)
+          ? 'store'
+          : modo === 'user'
+            ? 'user'
+            : modoPadraoParaSessao(novaSessao);
+      await AsyncStorage.setItem(MODE_KEY, modoFinal);
+      setAppModeState(modoFinal);
+    }
   }
 
   async function atualizarPerfilSessao(perfilAtualizado, modo = null) {
@@ -48,15 +95,14 @@ export function AuthProvider({ children }) {
       },
     };
 
-    await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(novaSessao));
-    if (modo) await AsyncStorage.setItem(MODE_KEY, modo);
-    setSession(novaSessao);
+    await salvarSessao(novaSessao, modo === null ? undefined : modo);
   }
 
   async function logout() {
     await clearToken();
     await AsyncStorage.multiRemove([SESSION_KEY, MODE_KEY]);
     setSession(null);
+    setAppModeState('user');
   }
 
   async function sincronizarGpsCliente(clienteIdOverride = null) {
@@ -85,17 +131,25 @@ export function AuthProvider({ children }) {
     }
   }
 
+  const temModoLoja = podeUsarModoLoja(session);
+  const emModoLoja = appMode === 'store' && temModoLoja;
+
   return (
     <AuthContext.Provider
       value={{
         session,
         loading,
+        appMode,
+        emModoLoja,
+        temModoLoja,
+        setAppMode,
         salvarSessao,
         atualizarPerfilSessao,
         logout,
         sincronizarGpsCliente,
         isCliente: session?.tipo === 'cliente',
         isLojista: session?.tipo === 'lojista',
+        isVendedor: session?.tipo === 'vendedor',
       }}
     >
       {children}

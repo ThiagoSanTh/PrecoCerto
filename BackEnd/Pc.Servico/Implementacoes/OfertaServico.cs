@@ -1,4 +1,5 @@
-﻿using Pc.Dominio.Entities.Estabelecimentos;
+﻿using Pc.Dominio.Comum;
+using Pc.Dominio.Entities.Estabelecimentos;
 using Pc.Repositorio.Interfaces;
 using Pc.Servico.Interfaces;
 
@@ -30,6 +31,9 @@ namespace Pc.Servico.Implementacoes
         {
             return await _ofertaRepositorio.ListarAsync();
         }
+
+        public Task<PaginacaoResultado<Oferta>> ListarPaginadoAsync(PaginacaoParametros paginacao) =>
+            _ofertaRepositorio.ListarPaginadoAsync(paginacao);
 
         public async Task<List<Oferta>> ObterPorProdutoAsync(Guid produtoId)
         {
