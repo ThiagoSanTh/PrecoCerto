@@ -1,8 +1,9 @@
 import { View, Text, Pressable } from 'react-native';
-import { formStyles as s } from './formStyles';
+import { useFormStyles } from '../../hooks/useFormStyles';
 import { useTheme } from '../../context/ThemeContext';
 
 export default function FormTabs({ options, value, onChange }) {
+  const s = useFormStyles();
   const { colors } = useTheme();
 
   return (

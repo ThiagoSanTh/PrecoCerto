@@ -6,7 +6,7 @@ namespace Pc.Servico.Excecoes
     public class EmailJaRegistradoException : Exception
     {
         public EmailJaRegistradoException()
-            : base("Este e-mail já está cadastrado.")
+            : base("Este e-mail já está registrado no nosso sistema. Por favor, faça login.")
         {
         }
     }

@@ -42,7 +42,7 @@ namespace Pc.WebApi.Controllers
         {
             var produto = await _produtoServico.ObterPorIdAsync(id);
             if (produto is null)
-                return NotFound("Produto não encontrado.");
+                return NotFound(new { code = "PRODUCT_NOT_FOUND", message = "Produto não encontrado." });
 
             return Ok(ProdutoMapper.ParaRespostaDto(produto));
         }

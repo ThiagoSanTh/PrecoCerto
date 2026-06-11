@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Pc.Dominio.Entities.Usuarios;
 using Pc.Dominio.Enums;
 using Pc.Servico.Interfaces;
+using Pc.Servico.Modelos;
 using Pc.WebApi.DTOs.Comum;
 using Pc.WebApi.DTOs.Usuarios;
 using Pc.WebApi.Services;
@@ -107,9 +108,26 @@ namespace Pc.WebApi.Controllers
 
         private async Task<IActionResult> LoginUsuarioAsync(AuthLoginDto dto)
         {
-            var usuario = await _usuarioServico.ValidarLoginAsync(dto.Email, dto.Senha);
-            if (usuario == null)
-                return Unauthorized("Email ou senha incorretos.");
+            var result = await _usuarioServico.ValidarLoginDetalhadoAsync(dto.Email, dto.Senha);
+            if (result.Erro == LoginErroCodigo.EmailNaoEncontrado)
+            {
+                return Unauthorized(new
+                {
+                    code = "EMAIL_NOT_FOUND",
+                    message = "Este e-mail não existe. Por favor, insira um e-mail válido."
+                });
+            }
+
+            if (result.Erro == LoginErroCodigo.SenhaIncorreta)
+            {
+                return Unauthorized(new
+                {
+                    code = "WRONG_PASSWORD",
+                    message = "Senha incorreta."
+                });
+            }
+
+            var usuario = result.Usuario!;
 
             var lojaId = usuario.Papel switch
             {

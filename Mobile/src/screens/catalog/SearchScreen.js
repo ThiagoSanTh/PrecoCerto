@@ -1,4 +1,4 @@
-import { FlatList, Alert, ActivityIndicator, View, StyleSheet } from 'react-native';
+import { FlatList, ActivityIndicator, View, StyleSheet } from 'react-native';
 import { useCallback, useState, useMemo, useEffect, useRef } from 'react';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { listarFeedComStale, listarFeed } from '../../services/feedService';
@@ -7,6 +7,8 @@ import { registrarPesquisa } from '../../services/historicoService';
 import { obterLocalizacaoAtual } from '../../services/locationService';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useLayoutProfile } from '../../hooks/useLayoutProfile';
+import { mapApiError } from '../../utils/apiErrorUtils';
 import LojasMapView from '../../components/LojasMapView';
 import ProductGridCard from '../../components/feed/ProductGridCard';
 import {
@@ -55,8 +57,10 @@ export default function SearchScreen() {
   const [carregandoMais, setCarregandoMais] = useState(false);
   const [page, setPage] = useState(1);
   const [hasNext, setHasNext] = useState(false);
+  const [feedError, setFeedError] = useState(null);
   const { session, isCliente, sincronizarGpsCliente } = useAuth();
   const { colors } = useTheme();
+  const { gridColumns } = useLayoutProfile();
 
   const clienteId = session?.perfil?.id;
   const buscaIdRef = useRef(0);
@@ -99,10 +103,11 @@ export default function SearchScreen() {
         setProdutos((prev) =>
           append ? [...prev, ...resultado.items] : resultado.items
         );
+        setFeedError(null);
       } catch (error) {
         console.error('carregar feed:', error.message);
         if (pagina === 1 && !append) {
-          Alert.alert('Erro', 'Não foi possível carregar o feed.');
+          setFeedError(mapApiError(error));
         }
       } finally {
         loader(false);
@@ -211,7 +216,13 @@ export default function SearchScreen() {
   }
 
   return (
-    <FormScreen title="Buscar produtos" subtitle="Encontre as melhores ofertas" scrollable={false}>
+    <FormScreen
+      title="Buscar produtos"
+      subtitle="Encontre as melhores ofertas"
+      scrollable={false}
+      fullBleed
+      error={feedError}
+    >
       <View style={styles.searchRow}>
         <View style={styles.searchInputWrap}>
           <FormField
@@ -256,8 +267,9 @@ export default function SearchScreen() {
           data={produtos}
           keyExtractor={(item) => String(item.id)}
           renderItem={renderItem}
-          numColumns={2}
-          columnWrapperStyle={styles.gridRow}
+          numColumns={gridColumns}
+          key={`grid-${gridColumns}`}
+          columnWrapperStyle={gridColumns > 1 ? styles.gridRow : undefined}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           windowSize={5}
@@ -293,7 +305,7 @@ const styles = StyleSheet.create({
   searchInputWrap: { flex: 1 },
   searchButton: { marginBottom: 10, paddingHorizontal: 16, paddingVertical: 12 },
   buscandoIndicator: { marginVertical: 4 },
-  gridList: { flex: 1, marginHorizontal: -16 },
+  gridList: { flex: 1 },
   gridContent: { paddingHorizontal: 8, paddingTop: 8, paddingBottom: 16 },
   gridRow: { gap: 8 },
   emptyText: { textAlign: 'center', marginTop: 24 },

@@ -1,4 +1,5 @@
 using Pc.Dominio.Entities.Usuarios;
+using Pc.Servico.Modelos;
 
 namespace Pc.Servico.Interfaces
 {
@@ -11,6 +12,8 @@ namespace Pc.Servico.Interfaces
         Task<Usuario> RegistrarAsync(Usuario cliente);
 
         Task<Usuario?> ValidarLoginAsync(string email, string senha);
+
+        Task<LoginValidacaoResult> ValidarLoginDetalhadoAsync(string email, string senha);
 
         Task<Usuario?> ObterPorIdAsync(Guid id);
 

@@ -4,7 +4,7 @@ import ProductsScreen from '../screens/store/ProductsScreen';
 import StoreScreen from '../screens/store/StoreScreen';
 import MensagensStack from './mensagensStack.routes';
 import ProfileScreen from '../screens/user/ProfileScreen';
-import CustomTabBar from '../components/CustomTabBar';
+import TabShell from './TabShell';
 import { contarNaoLidas } from '../services/chatService';
 
 const Tab = createBottomTabNavigator();
@@ -31,14 +31,18 @@ export default function StoreTabs() {
   }, []);
 
   return (
-    <Tab.Navigator
-      tabBar={(props) => <CustomTabBar {...props} badgeCount={badge} />}
-      screenOptions={{ headerShown: false }}
-    >
-      <Tab.Screen name="Produtos" component={ProductsScreen} />
-      <Tab.Screen name="Loja" component={StoreScreen} />
-      <Tab.Screen name="Mensagens" component={MensagensStack} options={{ tabBarLabel: 'Chat' }} />
-      <Tab.Screen name="Conta" component={ProfileScreen} />
-    </Tab.Navigator>
+    <TabShell>
+      {(renderTabBar) => (
+        <Tab.Navigator
+          tabBar={(props) => renderTabBar({ ...props, badgeCount: badge })}
+          screenOptions={{ headerShown: false }}
+        >
+          <Tab.Screen name="Produtos" component={ProductsScreen} />
+          <Tab.Screen name="Loja" component={StoreScreen} />
+          <Tab.Screen name="Mensagens" component={MensagensStack} options={{ tabBarLabel: 'Chat' }} />
+          <Tab.Screen name="Conta" component={ProfileScreen} />
+        </Tab.Navigator>
+      )}
+    </TabShell>
   );
 }

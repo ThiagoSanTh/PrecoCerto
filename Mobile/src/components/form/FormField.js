@@ -1,5 +1,5 @@
 import { View, Text, TextInput } from 'react-native';
-import { formStyles as s } from './formStyles';
+import { useFormStyles } from '../../hooks/useFormStyles';
 import { useTheme } from '../../context/ThemeContext';
 
 export default function FormField({
@@ -19,6 +19,7 @@ export default function FormField({
   returnKeyType,
   onBlur,
 }) {
+  const s = useFormStyles();
   const { colors } = useTheme();
 
   return (

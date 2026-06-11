@@ -1,10 +1,12 @@
-import { FlatList, Alert, ActivityIndicator, StyleSheet } from 'react-native';
+import { FlatList, ActivityIndicator, StyleSheet } from 'react-native';
 import { useCallback, useState, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { listarProdutos } from '../../services/productService';
 import { listarOfertas } from '../../services/ofertaService';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useLayoutProfile } from '../../hooks/useLayoutProfile';
+import { mapApiError } from '../../utils/apiErrorUtils';
 import ProductGridCard from '../../components/feed/ProductGridCard';
 import {
   FormScreen,
@@ -24,6 +26,8 @@ export default function ProductsScreen({ navigation }) {
   const [produtos, setProdutos] = useState([]);
   const [ofertasMap, setOfertasMap] = useState(new Map());
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+  const { gridColumns } = useLayoutProfile();
 
   useFocusEffect(
     useCallback(() => {
@@ -52,9 +56,10 @@ export default function ProductsScreen({ navigation }) {
 
       setProdutos(meusProdutos);
       setOfertasMap(mapaOfertasPorProduto(ofertasDaLoja));
+      setLoadError(null);
     } catch (error) {
       console.error(error?.response?.data || error.message);
-      Alert.alert('Erro', 'Não foi possível carregar os produtos');
+      setLoadError(mapApiError(error));
     } finally {
       setLoading(false);
     }
@@ -102,6 +107,7 @@ export default function ProductsScreen({ navigation }) {
       title="Meus produtos"
       subtitle="Produtos que você cadastrou"
       scrollable={false}
+      error={loadError}
     >
       <PrimaryButton
         label="+ Novo produto"
@@ -127,8 +133,9 @@ export default function ProductsScreen({ navigation }) {
           data={produtosExibidos}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
-          numColumns={2}
-          columnWrapperStyle={styles.gridRow}
+          numColumns={gridColumns}
+          key={`grid-${gridColumns}`}
+          columnWrapperStyle={gridColumns > 1 ? styles.gridRow : undefined}
           showsVerticalScrollIndicator={false}
           windowSize={5}
           maxToRenderPerBatch={10}
@@ -150,7 +157,6 @@ export default function ProductsScreen({ navigation }) {
 const styles = StyleSheet.create({
   gridList: {
     flex: 1,
-    marginHorizontal: -16,
   },
   gridContent: {
     paddingHorizontal: 8,

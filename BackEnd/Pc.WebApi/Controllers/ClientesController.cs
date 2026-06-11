@@ -6,6 +6,7 @@ using Pc.Dominio.Entities.Usuarios;
 using Pc.Dominio.Enums;
 using Pc.Servico.Excecoes;
 using Pc.Servico.Interfaces;
+using Pc.Servico.Modelos;
 using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Comum;
 using Pc.WebApi.DTOs.Usuarios;
@@ -66,11 +67,19 @@ namespace Pc.WebApi.Controllers
             }
             catch (DbUpdateException)
             {
-                return Conflict(new { message = "Este e-mail já está cadastrado." });
+                return Conflict(new
+                {
+                    code = "EMAIL_ALREADY_REGISTERED",
+                    message = "Este e-mail já está registrado no nosso sistema. Por favor, faça login."
+                });
             }
             catch (EmailJaRegistradoException ex)
             {
-                return Conflict(new { message = ex.Message });
+                return Conflict(new
+                {
+                    code = "EMAIL_ALREADY_REGISTERED",
+                    message = ex.Message
+                });
             }
             catch (EmailInvalidoException ex)
             {
@@ -93,10 +102,27 @@ namespace Pc.WebApi.Controllers
             if (!ModelState.IsValid)
                 return ValidationProblem(ModelState);
 
-            Usuario? cliente = await _clienteServico.ValidarLoginAsync(dto.Email, dto.Senha);
+            var result = await _clienteServico.ValidarLoginDetalhadoAsync(dto.Email, dto.Senha);
 
-            if (cliente == null)
-                return Unauthorized("Email ou senha incorretos.");
+            if (result.Erro == LoginErroCodigo.EmailNaoEncontrado)
+            {
+                return Unauthorized(new
+                {
+                    code = "EMAIL_NOT_FOUND",
+                    message = "Este e-mail não existe. Por favor, insira um e-mail válido."
+                });
+            }
+
+            if (result.Erro == LoginErroCodigo.SenhaIncorreta)
+            {
+                return Unauthorized(new
+                {
+                    code = "WRONG_PASSWORD",
+                    message = "Senha incorreta."
+                });
+            }
+
+            var cliente = result.Usuario!;
 
             var perfil = MapResposta(cliente);
             var token = _jwtTokenService.GenerateToken(cliente.Id, Pc.Dominio.Enums.TipoUsuario.Cliente);

@@ -51,6 +51,7 @@ import {
   SecondaryButton,
 } from '../../components/form';
 import { labelCategoria } from '../../utils/categoriasProduto';
+import { mapApiError } from '../../utils/apiErrorUtils';
 import { colors } from '../../theme';
 
 function preencherFormularioProduto(prod, ofertaLoja) {
@@ -91,6 +92,7 @@ export default function ProductDetailScreen({ route, navigation }) {
   const [avaliacoes, setAvaliacoes] = useState([]);
   const [media, setMedia] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [salvando, setSalvando] = useState(false);
   const [ehFavorito, setEhFavorito] = useState(false);
   const [favoritoLoading, setFavoritoLoading] = useState(false);
@@ -140,6 +142,7 @@ export default function ProductDetailScreen({ route, navigation }) {
 
   async function carregar() {
     setLoading(true);
+    setLoadError(null);
     try {
       const prod = await buscarProdutoPorId(productId);
       const ofertas = await listarOfertasPorProduto(productId);
@@ -183,9 +186,8 @@ export default function ProductDetailScreen({ route, navigation }) {
       } else {
         setEhFavorito(false);
       }
-    } catch {
-      Alert.alert('Erro', 'Não foi possível carregar o produto.');
-      navigation.goBack();
+    } catch (err) {
+      setLoadError(mapApiError(err, { resource: 'product' }));
     } finally {
       setLoading(false);
     }
@@ -412,6 +414,16 @@ export default function ProductDetailScreen({ route, navigation }) {
     }
   }
 
+  if (loadError) {
+    return (
+      <FormScreen
+        title="Produto"
+        onBack={() => navigation.goBack()}
+        error={loadError}
+      />
+    );
+  }
+
   if (loading || !produto) {
     return (
       <FormScreen title="Produto" onBack={() => navigation.goBack()} scrollable={false}>
@@ -471,7 +483,7 @@ export default function ProductDetailScreen({ route, navigation }) {
       scrollable
       footer={footer}
     >
-      <View style={{ marginHorizontal: -16, marginTop: -12 }}>
+      <View style={{ marginTop: -12 }}>
         <ProductImageGallery imagens={imagemExibida ? [imagemExibida] : []} />
       </View>
 

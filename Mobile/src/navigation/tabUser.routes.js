@@ -5,7 +5,7 @@ import FavoritosScreen from '../screens/user/FavoritosScreen';
 import HistoricoScreen from '../screens/user/HistoricoScreen';
 import MensagensStack from './mensagensStack.routes';
 import ProfileScreen from '../screens/user/ProfileScreen';
-import CustomTabBar from '../components/CustomTabBar';
+import TabShell from './TabShell';
 import { contarNaoLidas } from '../services/chatService';
 
 const Tab = createBottomTabNavigator();
@@ -32,15 +32,19 @@ export default function UserTabs() {
   }, []);
 
   return (
-    <Tab.Navigator
-      tabBar={(props) => <CustomTabBar {...props} badgeCount={badge} />}
-      screenOptions={{ headerShown: false }}
-    >
-      <Tab.Screen name="Buscar" component={BuscarStack} options={{ tabBarLabel: 'Buscar' }} />
-      <Tab.Screen name="Favoritos" component={FavoritosScreen} />
-      <Tab.Screen name="Histórico" component={HistoricoScreen} />
-      <Tab.Screen name="Mensagens" component={MensagensStack} />
-      <Tab.Screen name="Perfil" component={ProfileScreen} />
-    </Tab.Navigator>
+    <TabShell>
+      {(renderTabBar) => (
+        <Tab.Navigator
+          tabBar={(props) => renderTabBar({ ...props, badgeCount: badge })}
+          screenOptions={{ headerShown: false }}
+        >
+          <Tab.Screen name="Buscar" component={BuscarStack} options={{ tabBarLabel: 'Buscar' }} />
+          <Tab.Screen name="Favoritos" component={FavoritosScreen} />
+          <Tab.Screen name="Histórico" component={HistoricoScreen} />
+          <Tab.Screen name="Mensagens" component={MensagensStack} />
+          <Tab.Screen name="Perfil" component={ProfileScreen} />
+        </Tab.Navigator>
+      )}
+    </TabShell>
   );
 }

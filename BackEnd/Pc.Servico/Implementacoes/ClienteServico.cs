@@ -4,6 +4,7 @@ using Pc.Dominio.Validacoes;
 using Pc.Repositorio.Interfaces;
 using Pc.Servico.Excecoes;
 using Pc.Servico.Interfaces;
+using Pc.Servico.Modelos;
 
 namespace Pc.Servico.Implementacoes
 {
@@ -59,13 +60,22 @@ namespace Pc.Servico.Implementacoes
 
         public async Task<Usuario?> ValidarLoginAsync(string email, string senha)
         {
+            var result = await ValidarLoginDetalhadoAsync(email, senha);
+            return result.Usuario;
+        }
+
+        public async Task<LoginValidacaoResult> ValidarLoginDetalhadoAsync(string email, string senha)
+        {
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(senha))
-                return null;
+                return LoginValidacaoResult.EmailNaoEncontrado();
 
             var cliente = await _clienteRepositorio.ObterPorEmailAsync(EmailValidator.Normalizar(email));
 
-            if (cliente == null || !await VerificarSenhaAsync(cliente, senha))
-                return null;
+            if (cliente == null)
+                return LoginValidacaoResult.EmailNaoEncontrado();
+
+            if (!await VerificarSenhaAsync(cliente, senha))
+                return LoginValidacaoResult.SenhaIncorreta();
 
             try
             {
@@ -78,7 +88,7 @@ namespace Pc.Servico.Implementacoes
                 // Não impede login se atualização de UltimoLogin falhar
             }
 
-            return cliente;
+            return LoginValidacaoResult.Ok(cliente);
         }
 
         public async Task<Usuario?> ObterPorIdAsync(Guid id)

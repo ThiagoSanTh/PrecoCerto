@@ -1,8 +1,10 @@
 import { Pressable, Text, ActivityIndicator } from 'react-native';
-import { formStyles as s } from './formStyles';
+import { useFormStyles } from '../../hooks/useFormStyles';
 import { useTheme } from '../../context/ThemeContext';
 
 export function PrimaryButton({ label, onPress, loading, disabled, style }) {
+  const s = useFormStyles();
+
   return (
     <Pressable
       style={[s.primaryButton, (loading || disabled) && s.buttonDisabled, style]}
@@ -19,6 +21,7 @@ export function PrimaryButton({ label, onPress, loading, disabled, style }) {
 }
 
 export function SecondaryButton({ label, onPress, disabled, style }) {
+  const s = useFormStyles();
   const { colors } = useTheme();
 
   return (
