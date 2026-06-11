@@ -9,6 +9,16 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { FormScreen } from '../../components/form';
 
+const PAPEL_POR_TIPO = { cliente: 1, lojista: 2, vendedor: 3 };
+
+function isMinhaMensagem(item, session) {
+  const meuCodigo = session?.perfil?.codigoPublico;
+  if (meuCodigo && item.codigoRemetente === meuCodigo) return true;
+
+  const meuPapel = PAPEL_POR_TIPO[session?.tipo];
+  return meuPapel != null && item.remetentePapel === meuPapel;
+}
+
 export default function ChatScreen({ route, navigation }) {
   const { conversaCodigo, titulo } = route.params;
   const { session } = useAuth();
@@ -19,8 +29,6 @@ export default function ChatScreen({ route, navigation }) {
   const ultimaDataRef = useRef(null);
   const hubRef = useRef(null);
   const pollRef = useRef(null);
-
-  const meuCodigo = session?.perfil?.codigoPublico;
 
   async function carregarMensagens() {
     const apos = ultimaDataRef.current;
@@ -95,7 +103,7 @@ export default function ChatScreen({ route, navigation }) {
         keyExtractor={(item) => item.codigoPublico}
         style={{ flex: 1, marginBottom: 8 }}
         renderItem={({ item }) => {
-          const minha = item.codigoRemetente === meuCodigo;
+          const minha = isMinhaMensagem(item, session);
           return (
             <View
               style={{

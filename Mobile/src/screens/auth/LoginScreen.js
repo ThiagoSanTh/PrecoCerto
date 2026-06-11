@@ -25,7 +25,7 @@ export default function LoginScreen({ navigation }) {
 
     setLoading(true);
     try {
-      const { tipo, perfil } = await authLogin(email.trim(), senha);
+      const { tipo, perfil } = await authLogin(email.trim().toLowerCase(), senha);
       const ehLojaUser = tipo === 'lojista' || tipo === 'vendedor';
       const modo = ehLojaUser ? 'store' : 'user';
       await salvarSessao({ tipo, perfil }, modo);
@@ -45,6 +45,7 @@ export default function LoginScreen({ navigation }) {
     <FormScreen
       title="Preço Certo"
       subtitle="Entre com sua conta"
+      webVariant="auth"
       footer={<PrimaryButton label="Entrar" onPress={handleLogin} loading={loading} />}
     >
       <Text style={formStyles.sectionHint}>

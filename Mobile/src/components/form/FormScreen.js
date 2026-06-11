@@ -9,6 +9,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formStyles as s } from './formStyles';
 import { useTheme } from '../../context/ThemeContext';
+import WebShell from '../layout/WebShell';
 
 export default function FormScreen({
   title,
@@ -20,6 +21,7 @@ export default function FormScreen({
   scrollable = true,
   steps,
   currentStep = 0,
+  webVariant = 'default',
 }) {
   const { colors } = useTheme();
 
@@ -37,10 +39,11 @@ export default function FormScreen({
   );
 
   return (
-    <SafeAreaView
-      style={[s.safe, { backgroundColor: colors.background }]}
-      edges={['top', 'bottom', 'left', 'right']}
-    >
+    <WebShell variant={webVariant}>
+      <SafeAreaView
+        style={[s.safe, { backgroundColor: colors.background }]}
+        edges={['top', 'bottom', 'left', 'right']}
+      >
       <KeyboardAvoidingView
         style={s.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -82,6 +85,7 @@ export default function FormScreen({
           </View>
         ) : null}
       </KeyboardAvoidingView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </WebShell>
   );
 }

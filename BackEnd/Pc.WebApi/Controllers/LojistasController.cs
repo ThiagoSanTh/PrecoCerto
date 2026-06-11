@@ -7,6 +7,7 @@ using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Comum;
 using Pc.WebApi.DTOs.Usuarios;
 using Pc.WebApi.Extensions;
+using Pc.WebApi.Services;
 
 namespace Pc.WebApi.Controllers
 {
@@ -20,10 +21,12 @@ namespace Pc.WebApi.Controllers
     public class LojistasController : ControllerBase
     {
         private readonly IClienteServico _usuarioServico;
+        private readonly IIdCodificador _idCodificador;
 
-        public LojistasController(IClienteServico usuarioServico)
+        public LojistasController(IClienteServico usuarioServico, IIdCodificador idCodificador)
         {
             _usuarioServico = usuarioServico;
+            _idCodificador = idCodificador;
         }
 
         [HttpGet("{id:guid}")]
@@ -147,9 +150,10 @@ namespace Pc.WebApi.Controllers
             return NoContent();
         }
 
-        private static LojistaRespostaDto MapResposta(Usuario u) => new()
+        private LojistaRespostaDto MapResposta(Usuario u) => new()
         {
             Id = u.Id,
+            CodigoPublico = _idCodificador.Codificar(u.Id),
             NomeUsuario = u.NomeUsuario,
             Email = u.Email,
             Telefone = u.Telefone,
