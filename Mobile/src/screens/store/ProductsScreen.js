@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { listarProdutos } from '../../services/productService';
 import { listarOfertas } from '../../services/ofertaService';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import ProductGridCard from '../../components/feed/ProductGridCard';
 import {
   FormScreen,
@@ -11,12 +12,12 @@ import {
   PrimaryButton,
   ListCardText,
 } from '../../components/form';
-import { colors } from '../../theme';
 import { filtrarProdutosPorTermo, produtoPertenceALoja } from '../../utils/produtoUtils';
 import { mapaOfertasPorProduto } from '../../utils/precoUtils';
 
 export default function ProductsScreen({ navigation }) {
   const { session } = useAuth();
+  const { colors } = useTheme();
   const lojaId = session?.perfil?.lojaId;
 
   const [termoBusca, setTermoBusca] = useState('');
@@ -39,16 +40,13 @@ export default function ProductsScreen({ navigation }) {
 
     setLoading(true);
     try {
-      const [dados, ofertas] = await Promise.all([
-        listarProdutos(lojaId),
-        listarOfertas().catch(() => []),
+      const [dadosRes, ofertasRes] = await Promise.all([
+        listarProdutos(lojaId, 1, 100),
+        listarOfertas(1, 100),
       ]);
 
-      const meusProdutos = (Array.isArray(dados) ? dados : []).filter((p) =>
-        produtoPertenceALoja(p, lojaId)
-      );
-
-      const ofertasDaLoja = (Array.isArray(ofertas) ? ofertas : []).filter(
+      const meusProdutos = dadosRes.items.filter((p) => produtoPertenceALoja(p, lojaId));
+      const ofertasDaLoja = ofertasRes.items.filter(
         (o) => String(o.lojaId) === String(lojaId)
       );
 
@@ -124,7 +122,7 @@ export default function ProductsScreen({ navigation }) {
         <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 24 }} />
       ) : (
         <FlatList
-          style={styles.gridList}
+          style={[styles.gridList, { backgroundColor: colors.listBackground }]}
           contentContainerStyle={styles.gridContent}
           data={produtosExibidos}
           keyExtractor={(item) => item.id}
@@ -132,9 +130,12 @@ export default function ProductsScreen({ navigation }) {
           numColumns={2}
           columnWrapperStyle={styles.gridRow}
           showsVerticalScrollIndicator={false}
+          windowSize={5}
+          maxToRenderPerBatch={10}
+          removeClippedSubviews
           keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
-            <ListCardText style={styles.emptyText}>
+            <ListCardText style={[styles.emptyText, { color: colors.textMuted }]}>
               {termoBusca.trim()
                 ? 'Nenhum produto encontrado.'
                 : 'Nenhum produto cadastrado ainda.'}
@@ -149,7 +150,6 @@ export default function ProductsScreen({ navigation }) {
 const styles = StyleSheet.create({
   gridList: {
     flex: 1,
-    backgroundColor: '#EBEBEB',
     marginHorizontal: -16,
   },
   gridContent: {
@@ -163,6 +163,5 @@ const styles = StyleSheet.create({
   emptyText: {
     textAlign: 'center',
     marginTop: 24,
-    color: '#64748B',
   },
 });

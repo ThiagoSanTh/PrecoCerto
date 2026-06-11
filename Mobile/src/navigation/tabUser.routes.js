@@ -1,48 +1,46 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
+import { useEffect, useState } from 'react';
 import BuscarStack from './buscarStack.routes';
 import FavoritosScreen from '../screens/user/FavoritosScreen';
 import HistoricoScreen from '../screens/user/HistoricoScreen';
-import CartScreen from '../screens/user/CartScreen';
-import UserScreen from '../screens/user/UserScreen';
-import { useCarrinho } from '../context/CarrinhoContext';
-import { colors } from '../theme';
+import MensagensStack from './mensagensStack.routes';
+import ProfileScreen from '../screens/user/ProfileScreen';
+import CustomTabBar from '../components/CustomTabBar';
+import { contarNaoLidas } from '../services/chatService';
 
 const Tab = createBottomTabNavigator();
 
-const ICONS = {
-  Buscar: 'search',
-  Favoritos: 'heart',
-  Histórico: 'time',
-  Carrinho: 'cart',
-  Perfil: 'person',
-};
-
 export default function UserTabs() {
-  const { quantidadeItens } = useCarrinho();
+  const [badge, setBadge] = useState(0);
+
+  useEffect(() => {
+    let ativo = true;
+    async function carregar() {
+      try {
+        const total = await contarNaoLidas();
+        if (ativo) setBadge(total);
+      } catch {
+        if (ativo) setBadge(0);
+      }
+    }
+    carregar();
+    const interval = setInterval(carregar, 15000);
+    return () => {
+      ativo = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: '#94A3B8',
-        tabBarIcon: ({ color, size, focused }) => {
-          const base = ICONS[route.name] || 'ellipse';
-          const name = focused ? base : `${base}-outline`;
-          return <Ionicons name={name} size={size} color={color} />;
-        },
-      })}
+      tabBar={(props) => <CustomTabBar {...props} badgeCount={badge} />}
+      screenOptions={{ headerShown: false }}
     >
-      <Tab.Screen name="Buscar" component={BuscarStack} />
+      <Tab.Screen name="Buscar" component={BuscarStack} options={{ tabBarLabel: 'Buscar' }} />
       <Tab.Screen name="Favoritos" component={FavoritosScreen} />
       <Tab.Screen name="Histórico" component={HistoricoScreen} />
-      <Tab.Screen
-        name="Carrinho"
-        component={CartScreen}
-        options={{ tabBarBadge: quantidadeItens > 0 ? quantidadeItens : undefined }}
-      />
-      <Tab.Screen name="Perfil" component={UserScreen} />
+      <Tab.Screen name="Mensagens" component={MensagensStack} />
+      <Tab.Screen name="Perfil" component={ProfileScreen} />
     </Tab.Navigator>
   );
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Pc.Dominio.Comum;
 using Pc.Dominio.Entities.Interacoes;
 
 namespace Pc.Repositorio.Interfaces
@@ -19,6 +20,7 @@ namespace Pc.Repositorio.Interfaces
         /// <param name="clienteId">ID do cliente</param>
         /// <returns>Lista de favoritos do cliente</returns>
         Task<List<Favorito>> ObterPorClienteAsync(Guid clienteId);
+        Task<PaginacaoResultado<Favorito>> ObterPorClientePaginadoAsync(Guid clienteId, PaginacaoParametros paginacao);
 
         /// <summary>
         /// Verifica se um cliente tem um produto específico como favorito

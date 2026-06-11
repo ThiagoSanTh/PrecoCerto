@@ -16,9 +16,31 @@ namespace Pc.Infraestrutura.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // 0) Pré-voo: aborta cedo se houver dados que quebrariam a unificação.
+            migrationBuilder.Sql(@"
+                DO $$
+                DECLARE dup_count int;
+                BEGIN
+                    SELECT COUNT(*) INTO dup_count
+                    FROM ""Lojistas"" l
+                    INNER JOIN ""Clientes"" c ON lower(l.""Email"") = lower(c.""Email"");
+                    IF dup_count > 0 THEN
+                        RAISE EXCEPTION 'UnificarUsuarios: % e-mail(s) duplicado(s) entre Clientes e Lojistas. Resolva antes de migrar.', dup_count;
+                    END IF;
+                END $$;");
+
             // 1) Remove as FKs que apontavam para Clientes / Lojistas.
             migrationBuilder.DropForeignKey(name: "FK_Avaliacoes_Clientes_ClienteId", table: "Avaliacoes");
-            migrationBuilder.DropForeignKey(name: "FK_Carrinhos_Clientes_ClienteId", table: "Carrinhos");
+            // Carrinho pode não existir em bancos que ainda não aplicaram AddCarrinho.
+            migrationBuilder.Sql(@"
+                DO $$ BEGIN
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.tables
+                        WHERE table_schema = 'public' AND table_name = 'Carrinhos'
+                    ) THEN
+                        ALTER TABLE ""Carrinhos"" DROP CONSTRAINT IF EXISTS ""FK_Carrinhos_Clientes_ClienteId"";
+                    END IF;
+                END $$;");
             migrationBuilder.DropForeignKey(name: "FK_Favoritos_Clientes_ClienteId", table: "Favoritos");
             migrationBuilder.DropForeignKey(name: "FK_HistoricosPesquisa_Clientes_ClienteId", table: "HistoricosPesquisa");
             migrationBuilder.DropForeignKey(name: "FK_PreferenciasClientes_Clientes_ClienteId", table: "PreferenciasClientes");
@@ -58,6 +80,28 @@ namespace Pc.Infraestrutura.Migrations
 
             // 6) Remove a tabela Lojistas (dados já migrados).
             migrationBuilder.DropTable(name: "Lojistas");
+
+            // 6b) Garante Papel/Tipo de quem possui loja (cinto e suspensório).
+            migrationBuilder.Sql(@"
+                UPDATE ""Usuarios"" u
+                SET ""Papel"" = 2, ""Tipo"" = 2
+                WHERE u.""Id"" IN (
+                    SELECT l.""UsuarioId"" FROM ""Lojas"" l WHERE l.""UsuarioId"" IS NOT NULL
+                );");
+
+            // 6c) Aborta se alguma loja apontar para usuário inexistente.
+            migrationBuilder.Sql(@"
+                DO $$
+                DECLARE orphan_count int;
+                BEGIN
+                    SELECT COUNT(*) INTO orphan_count
+                    FROM ""Lojas"" l
+                    WHERE l.""UsuarioId"" IS NOT NULL
+                      AND NOT EXISTS (SELECT 1 FROM ""Usuarios"" u WHERE u.""Id"" = l.""UsuarioId"");
+                    IF orphan_count > 0 THEN
+                        RAISE EXCEPTION 'UnificarUsuarios: % loja(s) com UsuarioId orfao.', orphan_count;
+                    END IF;
+                END $$;");
 
             // 7) Índice e FKs apontando para Usuarios.
             migrationBuilder.CreateIndex(

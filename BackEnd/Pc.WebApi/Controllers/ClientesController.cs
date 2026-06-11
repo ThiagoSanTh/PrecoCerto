@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Pc.Dominio.Entities.Usuarios;
+using Pc.Servico.Excecoes;
 using Pc.Servico.Interfaces;
 using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Comum;
@@ -19,15 +20,18 @@ namespace Pc.WebApi.Controllers
         private readonly IClienteServico _clienteServico;
         private readonly IJwtTokenService _jwtTokenService;
         private readonly IEmailService _emailService;
+        private readonly IIdCodificador _idCodificador;
 
         public ClientesController(
             IClienteServico clienteServico,
             IJwtTokenService jwtTokenService,
-            IEmailService emailService)
+            IEmailService emailService,
+            IIdCodificador idCodificador)
         {
             _clienteServico = clienteServico;
             _jwtTokenService = jwtTokenService;
             _emailService = emailService;
+            _idCodificador = idCodificador;
         }
 
         [HttpPost("registrar")]
@@ -37,23 +41,39 @@ namespace Pc.WebApi.Controllers
             if (!ModelState.IsValid)
                 return ValidationProblem(ModelState);
 
-            var cliente = new Usuario
+            try
             {
-                NomeUsuario = dto.NomeUsuario,
-                Email = dto.Email,
-                SenhaHash = dto.Senha,
-                Telefone = dto.Telefone,
-                LatitudeAtual = dto.LatitudeAtual,
-                LongitudeAtual = dto.LongitudeAtual
-            };
+                var cliente = new Usuario
+                {
+                    NomeUsuario = dto.NomeUsuario,
+                    Email = dto.Email,
+                    SenhaHash = dto.Senha,
+                    Telefone = dto.Telefone,
+                    LatitudeAtual = dto.LatitudeAtual,
+                    LongitudeAtual = dto.LongitudeAtual
+                };
 
-            var novoCliente = await _clienteServico.RegistrarAsync(cliente);
+                var novoCliente = await _clienteServico.RegistrarAsync(cliente);
 
-            if (!string.IsNullOrWhiteSpace(novoCliente.TokenConfirmacao))
-                await _emailService.EnviarConfirmacaoEmailAsync(
-                    novoCliente.Email, novoCliente.NomeUsuario, novoCliente.TokenConfirmacao, "cliente");
+                await _emailService.EnviarBoasVindasAsync(novoCliente.Email, novoCliente.NomeUsuario);
 
-            return CreatedAtAction(nameof(ObterPorId), new { id = novoCliente.Id }, MapResposta(novoCliente));
+                return CreatedAtAction(nameof(ObterPorId), new { id = novoCliente.Id }, MapResposta(novoCliente));
+            }
+            catch (EmailJaRegistradoException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
+            catch (EmailInvalidoException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex) when (
+                ex.Message is "Email é obrigatório."
+                    or "Nome de usuário é obrigatório."
+                    or "Senha deve ter pelo menos 6 caracteres.")
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPost("login")]
@@ -64,7 +84,8 @@ namespace Pc.WebApi.Controllers
             if (!ModelState.IsValid)
                 return ValidationProblem(ModelState);
 
-            var cliente = await _clienteServico.ValidarLoginAsync(dto.Email, dto.Senha);
+            Usuario? cliente = await _clienteServico.ValidarLoginAsync(dto.Email, dto.Senha);
+
             if (cliente == null)
                 return Unauthorized("Email ou senha incorretos.");
 
@@ -117,11 +138,51 @@ namespace Pc.WebApi.Controllers
                 return NotFound("Cliente não encontrado.");
 
             cliente.NomeUsuario = dto.NomeUsuario;
-            cliente.Email = dto.Email;
             cliente.Telefone = dto.Telefone;
 
             await _clienteServico.AtualizarAsync(cliente);
             return Ok(MapResposta(cliente));
+        }
+
+        [HttpPut("{id:guid}/email")]
+        public async Task<IActionResult> AlterarEmail(Guid id, [FromBody] AlterarEmailDto dto)
+        {
+            var denied = Authz.ForbidUnlessSelfOrAdmin(this, id);
+            if (denied != null) return denied;
+
+            if (!ModelState.IsValid)
+                return ValidationProblem(ModelState);
+
+            try
+            {
+                var cliente = await _clienteServico.ObterPorIdAsync(id);
+                if (cliente == null)
+                    return NotFound("Cliente não encontrado.");
+
+                var emailAntigo = cliente.Email;
+                await _clienteServico.AlterarEmailAsync(id, dto.SenhaAtual, dto.NovoEmail);
+
+                var atualizado = await _clienteServico.ObterPorIdAsync(id);
+                if (atualizado != null)
+                {
+                    await _emailService.EnviarNotificacaoAlteracaoEmailAsync(
+                        emailAntigo, atualizado.Email, atualizado.NomeUsuario);
+                }
+
+                return Ok(MapResposta(atualizado!));
+            }
+            catch (EmailJaRegistradoException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
+            catch (EmailInvalidoException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex) when (ex.Message is "Senha atual incorreta." or "Usuário não encontrado.")
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPut("{id:guid}/localizacao")]
@@ -163,9 +224,10 @@ namespace Pc.WebApi.Controllers
             return NoContent();
         }
 
-        private static ClienteRespostaDto MapResposta(Usuario c) => new()
+        private ClienteRespostaDto MapResposta(Usuario c) => new()
         {
             Id = c.Id,
+            CodigoPublico = _idCodificador.Codificar(c.Id),
             NomeUsuario = c.NomeUsuario,
             Email = c.Email,
             Telefone = c.Telefone,

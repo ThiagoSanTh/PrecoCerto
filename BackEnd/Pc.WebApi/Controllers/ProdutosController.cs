@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Pc.Dominio.Entities.Catalogo;
 using Pc.Servico.Excecoes;
 using Pc.Servico.Interfaces;
 using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Catalogo;
+using Pc.WebApi.Helpers;
 using Pc.WebApi.Mappings;
 
 namespace Pc.WebApi.Controllers
@@ -22,14 +24,20 @@ namespace Pc.WebApi.Controllers
 
         [HttpGet]
         [AllowAnonymous]
-        public async Task<IActionResult> Listar([FromQuery] Guid? lojaId)
+        [EnableRateLimiting("catalogo")]
+        public async Task<IActionResult> Listar(
+            [FromQuery] Guid? lojaId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
         {
-            var produtos = await _produtoServico.ListarProdutosAsync(lojaId);
-            return Ok(produtos.Select(ProdutoMapper.ParaRespostaDto));
+            var paginacao = PaginacaoHelper.Normalizar(page, pageSize);
+            var produtos = await _produtoServico.ListarProdutosPaginadoAsync(paginacao, lojaId);
+            return Ok(PaginacaoHelper.ParaResposta(produtos, ProdutoMapper.ParaResumoDto));
         }
 
         [HttpGet("{id:guid}")]
         [AllowAnonymous]
+        [EnableRateLimiting("catalogo")]
         public async Task<IActionResult> ObterPorId(Guid id)
         {
             var produto = await _produtoServico.ObterPorIdAsync(id);
@@ -41,10 +49,12 @@ namespace Pc.WebApi.Controllers
 
         [HttpPost("Buscar")]
         [AllowAnonymous]
+        [EnableRateLimiting("catalogo")]
         public async Task<IActionResult> BuscarPorNome([FromBody] ProdutoBuscarDto dto)
         {
-            var produtos = await _produtoServico.BuscarPorNomeAsync(dto.Nome, dto.LojaId);
-            return Ok(produtos.Select(ProdutoMapper.ParaRespostaDto));
+            var paginacao = PaginacaoHelper.Normalizar(dto.Page, dto.PageSize);
+            var produtos = await _produtoServico.BuscarPorNomePaginadoAsync(dto.Nome, paginacao, dto.LojaId);
+            return Ok(PaginacaoHelper.ParaResposta(produtos, ProdutoMapper.ParaResumoDto));
         }
 
         [HttpPost]

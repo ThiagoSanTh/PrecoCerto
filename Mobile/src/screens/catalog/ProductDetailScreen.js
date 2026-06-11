@@ -30,7 +30,7 @@ import {
   verificarFavorito,
 } from '../../services/favoritoService';
 import { useAuth } from '../../context/AuthContext';
-import { useCarrinho } from '../../context/CarrinhoContext';
+import { abrirConversa } from '../../services/chatService';
 import { nomeProduto, produtoPertenceALoja } from '../../utils/produtoUtils';
 import { formatarPrecoBrl } from '../../utils/mapaUtils';
 import { formatarDataBr, parseDataBr } from '../../utils/dataUtils';
@@ -81,7 +81,6 @@ function preencherFormularioProduto(prod, ofertaLoja) {
 export default function ProductDetailScreen({ route, navigation }) {
   const { productId } = route.params;
   const { session, isCliente } = useAuth();
-  const { adicionar: adicionarAoCarrinho } = useCarrinho();
   const lojaId = session?.perfil?.lojaId;
   const clienteId = isCliente ? session?.perfil?.id : null;
 
@@ -352,24 +351,26 @@ export default function ProductDetailScreen({ route, navigation }) {
     }
   }
 
-  async function handleCarrinho() {
+  async function handleChatLoja() {
     if (!clienteId) {
-      Alert.alert('Atenção', 'Faça login como cliente para usar o carrinho.');
+      Alert.alert('Atenção', 'Faça login como cliente para conversar com a loja.');
       return;
     }
     if (!produto) return;
 
-    const historico = montarHistoricoPrecos(produto, oferta);
+    const lojaCodigo = oferta?.codigoLoja || produto?.lojaCodigoPublico || produto?.lojaId || oferta?.lojaId;
+    if (!lojaCodigo) {
+      Alert.alert('Chat', 'Loja não identificada para este produto.');
+      return;
+    }
     try {
-      await adicionarAoCarrinho({
-        produtoId: productId,
-        quantidade: 1,
-        precoUnitario: historico.precoAtual ?? 0,
-        ofertaId: oferta?.id ?? null,
+      const data = await abrirConversa(lojaCodigo);
+      navigation.navigate('Chat', {
+        conversaCodigo: data.codigoPublico,
+        titulo: produto.lojaNomeFantasia || oferta?.nomeLoja || 'Loja',
       });
-      Alert.alert('Carrinho', 'Produto adicionado ao carrinho.');
     } catch {
-      Alert.alert('Erro', 'Não foi possível adicionar ao carrinho.');
+      Alert.alert('Erro', 'Não foi possível abrir o chat com a loja.');
     }
   }
 
@@ -457,7 +458,7 @@ export default function ProductDetailScreen({ route, navigation }) {
       onFavorito={handleToggleFavorito}
       favoritoLoading={favoritoLoading}
       mostrarFavorito={Boolean(clienteId)}
-      onCarrinho={handleCarrinho}
+      onChat={handleChatLoja}
       onCompartilhar={handleCompartilhar}
     />
   ) : null;

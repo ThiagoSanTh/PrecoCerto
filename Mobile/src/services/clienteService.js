@@ -18,10 +18,15 @@ export async function obterCliente(id) {
 export async function atualizarCliente(id, dados) {
   const { data } = await api.put(`/Clientes/${id}`, {
     nomeUsuario: dados.nomeUsuario,
-    email: dados.email,
+    email: dados.email || 'nao-alterar@placeholder.com',
     telefone: dados.telefone,
     senha: dados.senha || 'nao-alterar',
   });
+  return data;
+}
+
+export async function alterarEmailCliente(id, senhaAtual, novoEmail) {
+  const { data } = await api.put(`/Clientes/${id}/email`, { senhaAtual, novoEmail });
   return data;
 }
 

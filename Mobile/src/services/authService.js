@@ -18,3 +18,13 @@ export async function login(email, senha, tipo = undefined) {
 export async function logoutApi() {
   // Stateless JWT — nada no servidor; token removido no cliente.
 }
+
+export async function solicitarRecuperacaoSenha(email) {
+  const { data } = await api.post('/Auth/esqueci-senha', { email: email.trim() });
+  return data;
+}
+
+export async function redefinirSenha(token, novaSenha) {
+  const { data } = await api.post('/Auth/redefinir-senha', { token, novaSenha });
+  return data;
+}

@@ -1,4 +1,5 @@
-﻿using Pc.Dominio.Entities.Catalogo;
+﻿using Pc.Dominio.Comum;
+using Pc.Dominio.Entities.Catalogo;
 using Pc.Dominio.Entities.Estabelecimentos;
 
 namespace Pc.Servico.Interfaces
@@ -8,6 +9,7 @@ namespace Pc.Servico.Interfaces
         Task<Oferta> AdicionarAsync(Oferta oferta);
         Task<Oferta?> ObterPorIdAsync(Guid id);
         Task<List<Oferta>> ListarAsync();
+        Task<PaginacaoResultado<Oferta>> ListarPaginadoAsync(PaginacaoParametros paginacao);
         Task<List<Oferta>> ObterPorProdutoAsync(Guid produtoId);
         Task AtualizarAsync(Oferta oferta);
         Task RemoverAsync(Guid id);

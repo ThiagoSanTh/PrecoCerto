@@ -3,6 +3,7 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
@@ -120,9 +121,29 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret)),
             ClockSkew = TimeSpan.FromMinutes(1),
         };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/chat"))
+                    context.Token = accessToken;
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorization();
+builder.Services.AddSignalR();
+builder.Services.AddMemoryCache();
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<BrotliCompressionProvider>();
+    options.Providers.Add<GzipCompressionProvider>();
+});
 
 // Respeita X-Forwarded-Proto/For atras de proxy (Render/Railway) para que
 // a deteccao de HTTPS funcione sem causar loops de redirecionamento.
@@ -142,14 +163,65 @@ builder.Services.AddRateLimiter(options =>
         limiter.PermitLimit = 10;
         limiter.QueueLimit = 0;
     });
+    options.AddFixedWindowLimiter("catalogo", limiter =>
+    {
+        limiter.Window = TimeSpan.FromMinutes(1);
+        limiter.PermitLimit = 120;
+        limiter.QueueLimit = 0;
+    });
+    options.AddFixedWindowLimiter("api", limiter =>
+    {
+        limiter.Window = TimeSpan.FromMinutes(1);
+        limiter.PermitLimit = 300;
+        limiter.QueueLimit = 0;
+    });
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+    {
+        var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var path = context.Request.Path.Value ?? string.Empty;
+        if (path.Contains("/Auth/login", StringComparison.OrdinalIgnoreCase)
+            || path.Contains("/Clientes/login", StringComparison.OrdinalIgnoreCase))
+        {
+            return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+            {
+                Window = TimeSpan.FromMinutes(1),
+                PermitLimit = 10,
+                QueueLimit = 0
+            });
+        }
+
+        if (path.StartsWith("/api/Feed", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("/api/Produtos", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("/api/Lojas", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("/api/Ofertas", StringComparison.OrdinalIgnoreCase))
+        {
+            return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+            {
+                Window = TimeSpan.FromMinutes(1),
+                PermitLimit = 120,
+                QueueLimit = 0
+            });
+        }
+
+        return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+        {
+            Window = TimeSpan.FromMinutes(1),
+            PermitLimit = 300,
+            QueueLimit = 0
+        });
+    });
 });
 
 builder.Services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 
-// ✉️ E-mail (confirmação de cadastro)
+// ✉️ E-mail (boas-vindas, recuperação de senha)
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection(EmailSettings.SectionName));
+builder.Services.Configure<ConsultaCnpjSettings>(builder.Configuration.GetSection(ConsultaCnpjSettings.SectionName));
+builder.Services.Configure<IdEncodingSettings>(builder.Configuration.GetSection(IdEncodingSettings.SectionName));
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
+builder.Services.AddSingleton<IIdCodificador, IdCodificadorServico>();
+builder.Services.AddHttpClient<IConsultaCnpjServico, ConsultaCnpjServico>();
 
 // Repositórios — Catálogo e Estabelecimentos
 builder.Services.AddScoped<IProdutoRepositorio, ProdutoRepositorio>();
@@ -165,14 +237,16 @@ builder.Services.AddScoped<IFavoritoRepositorio, FavoritoRepositorio>();
 builder.Services.AddScoped<IHistoricoPesquisaRepositorio, HistoricoPesquisaRepositorio>();
 builder.Services.AddScoped<IAvaliacaoRepositorio, AvaliacaoRepositorio>();
 builder.Services.AddScoped<IPreferenciaClienteRepositorio, PreferenciaClienteRepositorio>();
-builder.Services.AddScoped<ICarrinhoRepositorio, CarrinhoRepositorio>();
+builder.Services.AddScoped<IConversaRepositorio, ConversaRepositorio>();
 
 // Serviços — Catálogo e Estabelecimentos
 builder.Services.AddScoped<IProdutoServico, ProdutoServico>();
+builder.Services.AddScoped<IFeedServico, FeedServico>();
 builder.Services.AddScoped<ILojaServico, LojaServico>();
 builder.Services.AddScoped<IOfertaServico, OfertaServico>();
 
 // Serviços — Usuários
+builder.Services.AddScoped<IValidadorEmail, ValidadorEmailServico>();
 builder.Services.AddScoped<IClienteServico, ClienteServico>();
 builder.Services.AddScoped<IAdminServico, AdminServico>();
 
@@ -181,7 +255,7 @@ builder.Services.AddScoped<IFavoritoServico, FavoritoServico>();
 builder.Services.AddScoped<IHistoricoPesquisaServico, HistoricoPesquisaServico>();
 builder.Services.AddScoped<IAvaliacaoServico, AvaliacaoServico>();
 builder.Services.AddScoped<IPreferenciaClienteServico, PreferenciaClienteServico>();
-builder.Services.AddScoped<ICarrinhoServico, CarrinhoServico>();
+builder.Services.AddScoped<IConversaServico, ConversaServico>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(
@@ -208,6 +282,7 @@ using (var scope = app.Services.CreateScope())
 
 app.UseForwardedHeaders();
 
+app.UseResponseCompression();
 app.UseSerilogRequestLogging();
 
 if (app.Environment.IsDevelopment())
@@ -227,5 +302,6 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<Pc.WebApi.Hubs.ChatHub>("/hubs/chat");
 
 app.Run();

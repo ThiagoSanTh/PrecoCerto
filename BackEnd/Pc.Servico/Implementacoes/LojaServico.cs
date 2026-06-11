@@ -1,4 +1,5 @@
-﻿using Pc.Dominio.Entities.Estabelecimentos;
+﻿using Pc.Dominio.Comum;
+using Pc.Dominio.Entities.Estabelecimentos;
 using Pc.Repositorio.Interfaces;
 using Pc.Servico.Interfaces;
 
@@ -26,15 +27,30 @@ namespace Pc.Servico.Implementacoes
             return await _lojaRepositorio.ObterPorIdAsync(id);
         }
 
+        public async Task<Loja?> ObterPorUsuarioIdAsync(Guid usuarioId)
+        {
+            return await _lojaRepositorio.ObterPorUsuarioIdAsync(usuarioId);
+        }
+
         public async Task<List<Loja>> ListarAsync()
         {
             return await _lojaRepositorio.ListarAsync();
         }
 
+        public Task<PaginacaoResultado<Loja>> ListarPaginadoAsync(PaginacaoParametros paginacao) =>
+            _lojaRepositorio.ListarPaginadoAsync(paginacao);
+
         public async Task<List<Loja>> BuscarPorNomeAsync(string nome)
         {
             return await _lojaRepositorio.BuscarPorNomeAsync(nome);
         }
+
+        public Task<PaginacaoResultado<Loja>> BuscarPorNomePaginadoAsync(string nome, PaginacaoParametros paginacao) =>
+            _lojaRepositorio.BuscarPorNomePaginadoAsync(nome, paginacao);
+
+        public Task<List<Loja>> ListarPorProximidadeAsync(
+            decimal latitude, decimal longitude, decimal raioKm, int limite = 500) =>
+            _lojaRepositorio.ListarPorProximidadeAsync(latitude, longitude, raioKm, limite);
 
         public async Task AtualizarAsync(Loja loja)
         {

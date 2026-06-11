@@ -256,7 +256,7 @@ namespace Pc.Infraestrutura.Migrations
                     b.ToTable("Avaliacoes");
                 });
 
-            modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.Carrinho", b =>
+            modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.Conversa", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -274,11 +274,20 @@ namespace Pc.Infraestrutura.Migrations
                     b.Property<DateTime>("DataCriacao")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid>("LojaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UltimaMensagemEm")
+                        .HasColumnType("timestamp with time zone");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("ClienteId");
+                    b.HasIndex("LojaId");
 
-                    b.ToTable("Carrinhos");
+                    b.HasIndex("ClienteId", "LojaId")
+                        .IsUnique();
+
+                    b.ToTable("Conversas");
                 });
 
             modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.Favorito", b =>
@@ -358,7 +367,7 @@ namespace Pc.Infraestrutura.Migrations
                     b.ToTable("HistoricosPesquisa");
                 });
 
-            modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.ItemCarrinho", b =>
+            modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.Mensagem", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -367,7 +376,7 @@ namespace Pc.Infraestrutura.Migrations
                     b.Property<bool>("Ativo")
                         .HasColumnType("boolean");
 
-                    b.Property<Guid>("CarrinhoId")
+                    b.Property<Guid>("ConversaId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("DataAtualizacao")
@@ -376,27 +385,27 @@ namespace Pc.Infraestrutura.Migrations
                     b.Property<DateTime>("DataCriacao")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid?>("OfertaId")
+                    b.Property<DateTime>("EnviadaEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Lida")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("RemetenteId")
                         .HasColumnType("uuid");
 
-                    b.Property<decimal>("PrecoUnitario")
-                        .HasColumnType("numeric");
-
-                    b.Property<Guid>("ProdutoId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("Quantidade")
+                    b.Property<int>("RemetentePapel")
                         .HasColumnType("integer");
+
+                    b.Property<string>("Texto")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CarrinhoId");
+                    b.HasIndex("ConversaId", "EnviadaEm");
 
-                    b.HasIndex("OfertaId");
-
-                    b.HasIndex("ProdutoId");
-
-                    b.ToTable("ItensCarrinho");
+                    b.ToTable("Mensagens");
                 });
 
             modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.PreferenciaCliente", b =>
@@ -533,6 +542,12 @@ namespace Pc.Infraestrutura.Migrations
                     b.Property<string>("TokenConfirmacao")
                         .HasColumnType("text");
 
+                    b.Property<DateTime?>("TokenRecuperacaoExpira")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TokenRecuperacaoSenha")
+                        .HasColumnType("text");
+
                     b.Property<DateTime?>("UltimoLogin")
                         .HasColumnType("timestamp with time zone");
 
@@ -609,7 +624,7 @@ namespace Pc.Infraestrutura.Migrations
                     b.Navigation("Loja");
                 });
 
-            modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.Carrinho", b =>
+            modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.Conversa", b =>
                 {
                     b.HasOne("Pc.Dominio.Entities.Usuarios.Usuario", "Cliente")
                         .WithMany()
@@ -617,7 +632,15 @@ namespace Pc.Infraestrutura.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Pc.Dominio.Entities.Estabelecimentos.Loja", "Loja")
+                        .WithMany()
+                        .HasForeignKey("LojaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Cliente");
+
+                    b.Navigation("Loja");
                 });
 
             modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.Favorito", b =>
@@ -668,30 +691,15 @@ namespace Pc.Infraestrutura.Migrations
                     b.Navigation("Produto");
                 });
 
-            modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.ItemCarrinho", b =>
+            modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.Mensagem", b =>
                 {
-                    b.HasOne("Pc.Dominio.Entities.Interacoes.Carrinho", "Carrinho")
-                        .WithMany("Itens")
-                        .HasForeignKey("CarrinhoId")
+                    b.HasOne("Pc.Dominio.Entities.Interacoes.Conversa", "Conversa")
+                        .WithMany("Mensagens")
+                        .HasForeignKey("ConversaId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Pc.Dominio.Entities.Estabelecimentos.Oferta", "Oferta")
-                        .WithMany()
-                        .HasForeignKey("OfertaId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("Pc.Dominio.Entities.Catalogo.Produto", "Produto")
-                        .WithMany()
-                        .HasForeignKey("ProdutoId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Carrinho");
-
-                    b.Navigation("Oferta");
-
-                    b.Navigation("Produto");
+                    b.Navigation("Conversa");
                 });
 
             modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.PreferenciaCliente", b =>
@@ -720,9 +728,9 @@ namespace Pc.Infraestrutura.Migrations
                     b.Navigation("Ofertas");
                 });
 
-            modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.Carrinho", b =>
+            modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.Conversa", b =>
                 {
-                    b.Navigation("Itens");
+                    b.Navigation("Mensagens");
                 });
 
             modelBuilder.Entity("Pc.Dominio.Entities.Usuarios.Usuario", b =>

@@ -1,3 +1,4 @@
+using Pc.Dominio.Comum;
 using Pc.Dominio.Entities.Interacoes;
 using Pc.Repositorio.Interfaces;
 using Pc.Servico.Interfaces;
@@ -56,6 +57,15 @@ namespace Pc.Servico.Implementacoes
                 throw new Exception("ClienteId é obrigatório.");
 
             return await _favoritoRepositorio.ObterPorClienteAsync(clienteId);
+        }
+
+        public async Task<PaginacaoResultado<Favorito>> ListarPorClientePaginadoAsync(
+            Guid clienteId, PaginacaoParametros paginacao)
+        {
+            if (clienteId == Guid.Empty)
+                throw new Exception("ClienteId é obrigatório.");
+
+            return await _favoritoRepositorio.ObterPorClientePaginadoAsync(clienteId, paginacao);
         }
 
         /// <summary>

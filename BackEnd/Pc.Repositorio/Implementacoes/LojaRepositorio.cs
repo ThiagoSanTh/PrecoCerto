@@ -1,6 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Pc.Dominio.Comum;
 using Pc.Dominio.Entities.Estabelecimentos;
 using Pc.Infraestrutura;
+using Pc.Repositorio.Comum;
 using Pc.Repositorio.Interfaces;
 
 namespace Pc.Repositorio.Implementacoes
@@ -11,26 +13,104 @@ namespace Pc.Repositorio.Implementacoes
         {
         }
 
+        private IQueryable<Loja> QueryComEndereco() =>
+            _context.Lojas.AsNoTracking().Include(l => l.Endereco);
+
         public override async Task<Loja?> ObterPorIdAsync(Guid id)
         {
-            return await _context.Lojas
-                .Include(l => l.Endereco)
+            return await QueryComEndereco()
                 .FirstOrDefaultAsync(l => l.Id == id);
         }
 
         public override async Task<List<Loja>> ListarAsync()
         {
-            return await _context.Lojas
-                .Include(l => l.Endereco)
+            return await QueryComEndereco().ToListAsync();
+        }
+
+        public async Task<PaginacaoResultado<Loja>> ListarPaginadoAsync(PaginacaoParametros paginacao)
+        {
+            var query = QueryComEndereco();
+            var total = await query.CountAsync();
+            var items = await query
+                .OrderBy(l => l.NomeFantasia)
+                .Skip(paginacao.Skip)
+                .Take(paginacao.PageSize)
                 .ToListAsync();
+
+            return new PaginacaoResultado<Loja>
+            {
+                Items = items,
+                Page = paginacao.Page,
+                PageSize = paginacao.PageSize,
+                Total = total
+            };
         }
 
         public async Task<List<Loja>> BuscarPorNomeAsync(string nome)
         {
-            return await _context.Lojas
-                .Include(l => l.Endereco)
-                .Where(l => l.NomeFantasia.ToLower().Contains(nome.ToLower()))
+            var pattern = $"%{nome.Trim()}%";
+            return await QueryComEndereco()
+                .Where(l => EF.Functions.ILike(l.NomeFantasia, pattern))
                 .ToListAsync();
+        }
+
+        public async Task<PaginacaoResultado<Loja>> BuscarPorNomePaginadoAsync(string nome, PaginacaoParametros paginacao)
+        {
+            var pattern = $"%{nome.Trim()}%";
+            var query = QueryComEndereco()
+                .Where(l => EF.Functions.ILike(l.NomeFantasia, pattern));
+
+            var total = await query.CountAsync();
+            var items = await query
+                .OrderBy(l => l.NomeFantasia)
+                .Skip(paginacao.Skip)
+                .Take(paginacao.PageSize)
+                .ToListAsync();
+
+            return new PaginacaoResultado<Loja>
+            {
+                Items = items,
+                Page = paginacao.Page,
+                PageSize = paginacao.PageSize,
+                Total = total
+            };
+        }
+
+        public async Task<List<Loja>> ListarPorProximidadeAsync(
+            decimal latitude, decimal longitude, decimal raioKm, int limite = 500)
+        {
+            var lojas = await QueryComEndereco()
+                .Where(l => l.Endereco.Latitude != null && l.Endereco.Longitude != null)
+                .ToListAsync();
+
+            return lojas
+                .Where(l => GeoHelper.CalcularDistanciaKm(
+                    latitude, longitude,
+                    l.Endereco.Latitude!.Value, l.Endereco.Longitude!.Value) <= raioKm)
+                .OrderBy(l => GeoHelper.CalcularDistanciaKm(
+                    latitude, longitude,
+                    l.Endereco.Latitude!.Value, l.Endereco.Longitude!.Value))
+                .Take(limite)
+                .ToList();
+        }
+
+        public async Task<Loja?> ObterPorUsuarioIdAsync(Guid usuarioId)
+        {
+            return await QueryComEndereco()
+                .FirstOrDefaultAsync(l => l.UsuarioId == usuarioId);
+        }
+
+        public override async Task<Loja> AdicionarAsync(Loja loja)
+        {
+            if (loja.Endereco is not null)
+            {
+                if (loja.EnderecoId == Guid.Empty)
+                    loja.EnderecoId = loja.Endereco.Id;
+            }
+
+            await _dbSet.AddAsync(loja);
+            await _context.SaveChangesAsync();
+            return loja;
         }
     }
 }

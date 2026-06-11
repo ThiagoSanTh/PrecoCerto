@@ -32,6 +32,10 @@ namespace Pc.Dominio.Entities.Usuarios
         public bool EmailConfirmado { get; set; } = false;
         public string? TokenConfirmacao { get; set; }
 
+        // 🔑 Recuperação de senha
+        public string? TokenRecuperacaoSenha { get; set; }
+        public DateTime? TokenRecuperacaoExpira { get; set; }
+
         // 📍 Geolocalização
         public decimal? LatitudeAtual { get; set; }
         public decimal? LongitudeAtual { get; set; }

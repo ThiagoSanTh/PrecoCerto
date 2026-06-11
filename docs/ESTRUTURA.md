@@ -2,6 +2,8 @@
 
 Monorepo com backend .NET e app mobile Expo.
 
+Documentação detalhada (pastas, arquivos, fluxos): [`.cursor/PROJETO.md`](../.cursor/PROJETO.md)
+
 ## BackEnd
 
 Solução em camadas (`BackEnd/PrecoCerto.slnx`):
@@ -13,10 +15,12 @@ Solução em camadas (`BackEnd/PrecoCerto.slnx`):
 | `Pc.Repositorio` | Interfaces e implementações de repositório |
 | `Pc.Servico` | Regras de negócio e serviços de aplicação |
 | `Pc.WebApi` | API REST, controllers, DTOs, JWT |
-| `scripts/` | Scripts SQL para Supabase e ajustes manuais |
+| `scripts/` | Scripts SQL para Supabase, ajustes manuais e benchmarks de desempenho (`perf-load-test.mjs`, `perf-microbench/`) |
 | `docs/` | Segredos, setup e notas do backend |
 
 **Rodar a API:** `BackEnd/Pc.WebApi` → `dotnet run`
+
+**Benchmarks de desempenho:** `BackEnd/scripts/perf-load-test.mjs` (API) e `BackEnd/scripts/perf-microbench/` (validadores/bcrypt)
 
 **Deploy:** `render.yaml` aponta para `BackEnd/Pc.WebApi`
 

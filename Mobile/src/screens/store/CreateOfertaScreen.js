@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { listarProdutosParaFeed } from '../../services/productService';
 import { nomeProduto } from '../../utils/produtoUtils';
 import { criarOferta } from '../../services/ofertaService';
+import { invalidarFeedCache } from '../../services/feedService';
 import { useAuth } from '../../context/AuthContext';
 import {
   FormScreen,
@@ -48,6 +49,7 @@ export default function CreateOfertaScreen({ navigation }) {
         emPromocao: false,
         quantidadeEstoque: quantidadeEstoque ? parseInt(quantidadeEstoque, 10) : null,
       });
+      invalidarFeedCache('feed');
       Alert.alert('Sucesso', 'Oferta criada');
       navigation.goBack();
     } catch (error) {

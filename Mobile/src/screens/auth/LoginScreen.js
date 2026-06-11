@@ -25,7 +25,6 @@ export default function LoginScreen({ navigation }) {
 
     setLoading(true);
     try {
-      // O papel (cliente/lojista/vendedor) é determinado pelo servidor.
       const { tipo, perfil } = await authLogin(email.trim(), senha);
       const ehLojaUser = tipo === 'lojista' || tipo === 'vendedor';
       const modo = ehLojaUser ? 'store' : 'user';

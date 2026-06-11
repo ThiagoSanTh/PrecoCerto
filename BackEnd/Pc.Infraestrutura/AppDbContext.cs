@@ -26,22 +26,19 @@ namespace Pc.Infraestrutura
         public DbSet<Avaliacao> Avaliacoes { get; set; }
         public DbSet<PreferenciaCliente> PreferenciasClientes { get; set; }
 
-        public DbSet<Carrinho> Carrinhos { get; set; }
-        public DbSet<ItemCarrinho> ItensCarrinho { get; set; }
+        public DbSet<Conversa> Conversas { get; set; }
+        public DbSet<Mensagem> Mensagens { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // Loja 1:1 com o proprietário (Usuario com Papel = Lojista).
             modelBuilder.Entity<Loja>()
                 .HasOne(l => l.Usuario)
                 .WithOne(u => u.LojaPropria)
-                // FK em Loja.UsuarioId: o usuário pode existir antes da loja ser criada.
                 .HasForeignKey<Loja>(l => l.UsuarioId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // Vínculo de Vendedor: usuário atua no estoque de uma loja.
             modelBuilder.Entity<Usuario>()
                 .HasOne(u => u.LojaVinculada)
                 .WithMany()
@@ -54,7 +51,15 @@ namespace Pc.Infraestrutura
                 .HasForeignKey(p => p.LojaId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // Histórico de pesquisa: vínculos opcionais com produto/loja (BI).
+            modelBuilder.Entity<Produto>()
+                .HasIndex(p => p.LojaId);
+
+            modelBuilder.Entity<Oferta>()
+                .HasIndex(o => o.ProdutoId);
+
+            modelBuilder.Entity<Mensagem>()
+                .HasIndex(m => new { m.ConversaId, m.EnviadaEm });
+
             modelBuilder.Entity<HistoricoPesquisa>()
                 .HasOne(h => h.Produto)
                 .WithMany()
@@ -67,24 +72,27 @@ namespace Pc.Infraestrutura
                 .HasForeignKey(h => h.LojaId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // Carrinho 1:N ItemCarrinho (remoção em cascata dos itens).
-            modelBuilder.Entity<Carrinho>()
-                .HasMany(c => c.Itens)
-                .WithOne(i => i.Carrinho)
-                .HasForeignKey(i => i.CarrinhoId)
+            modelBuilder.Entity<Conversa>()
+                .HasIndex(c => new { c.ClienteId, c.LojaId })
+                .IsUnique();
+
+            modelBuilder.Entity<Conversa>()
+                .HasOne(c => c.Cliente)
+                .WithMany()
+                .HasForeignKey(c => c.ClienteId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<ItemCarrinho>()
-                .HasOne(i => i.Produto)
+            modelBuilder.Entity<Conversa>()
+                .HasOne(c => c.Loja)
                 .WithMany()
-                .HasForeignKey(i => i.ProdutoId)
+                .HasForeignKey(c => c.LojaId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<ItemCarrinho>()
-                .HasOne(i => i.Oferta)
-                .WithMany()
-                .HasForeignKey(i => i.OfertaId)
-                .OnDelete(DeleteBehavior.SetNull);
+            modelBuilder.Entity<Mensagem>()
+                .HasOne(m => m.Conversa)
+                .WithMany(c => c.Mensagens)
+                .HasForeignKey(m => m.ConversaId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

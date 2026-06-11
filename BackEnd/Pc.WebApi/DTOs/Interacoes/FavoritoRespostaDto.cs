@@ -9,5 +9,10 @@ namespace Pc.WebApi.DTOs.Interacoes
         public Guid? LojaId { get; set; }
         public string? NomeLoja { get; set; }
         public DateTime DataCriacao { get; set; }
+        public string? ImagemUrl { get; set; }
+        public decimal? PrecoBase { get; set; }
+        public decimal? PrecoExibicao { get; set; }
+        public decimal? PrecoAnterior { get; set; }
+        public bool EmPromocao { get; set; }
     }
 }

@@ -17,20 +17,24 @@ namespace Pc.WebApi.Controllers
         private readonly IClienteServico _usuarioServico;
         private readonly IAdminServico _adminServico;
         private readonly IJwtTokenService _jwtTokenService;
+        private readonly IEmailService _emailService;
+        private readonly IIdCodificador _idCodificador;
 
         public AuthController(
             IClienteServico usuarioServico,
             IAdminServico adminServico,
-            IJwtTokenService jwtTokenService)
+            IJwtTokenService jwtTokenService,
+            IEmailService emailService,
+            IIdCodificador idCodificador)
         {
             _usuarioServico = usuarioServico;
             _adminServico = adminServico;
             _jwtTokenService = jwtTokenService;
+            _emailService = emailService;
+            _idCodificador = idCodificador;
         }
 
         /// <summary>POST /api/auth/login — login unificado com JWT.</summary>
-        /// <param name="dto">Credenciais e tipo opcional (admin para login administrativo).</param>
-        /// <returns>Token JWT e perfil do usuário autenticado (papel derivado do servidor).</returns>
         [HttpPost("login")]
         [AllowAnonymous]
         [EnableRateLimiting("login")]
@@ -57,13 +61,56 @@ namespace Pc.WebApi.Controllers
             }
         }
 
+        /// <summary>POST /api/auth/esqueci-senha — envia link de redefinição por e-mail.</summary>
+        [HttpPost("esqueci-senha")]
+        [AllowAnonymous]
+        [EnableRateLimiting("login")]
+        public async Task<IActionResult> EsqueciSenha([FromBody] EsqueciSenhaDto dto)
+        {
+            if (!ModelState.IsValid)
+                return ValidationProblem(ModelState);
+
+            var token = await _usuarioServico.GerarTokenRecuperacaoSenhaAsync(dto.Email);
+            if (token != null)
+            {
+                await _emailService.EnviarRecuperacaoSenhaAsync(dto.Email.Trim(), token);
+            }
+
+            return Ok(new
+            {
+                mensagem = "Se o e-mail estiver cadastrado, enviamos instruções para redefinir a senha."
+            });
+        }
+
+        /// <summary>POST /api/auth/redefinir-senha — redefine senha com token recebido por e-mail.</summary>
+        [HttpPost("redefinir-senha")]
+        [AllowAnonymous]
+        [EnableRateLimiting("login")]
+        public async Task<IActionResult> RedefinirSenha([FromBody] RedefinirSenhaDto dto)
+        {
+            if (!ModelState.IsValid)
+                return ValidationProblem(ModelState);
+
+            try
+            {
+                var ok = await _usuarioServico.RedefinirSenhaComTokenAsync(dto.Token, dto.NovaSenha);
+                if (!ok)
+                    return BadRequest(new { message = "Token inválido ou expirado." });
+
+                return Ok(new { mensagem = "Senha redefinida com sucesso." });
+            }
+            catch (Exception ex) when (ex.Message == "Senha deve ter pelo menos 6 caracteres.")
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         private async Task<IActionResult> LoginUsuarioAsync(AuthLoginDto dto)
         {
             var usuario = await _usuarioServico.ValidarLoginAsync(dto.Email, dto.Senha);
             if (usuario == null)
                 return Unauthorized("Email ou senha incorretos.");
 
-            // Papel e lojaId são derivados no servidor (não confiamos no cliente).
             var lojaId = usuario.Papel switch
             {
                 PapelUsuario.Lojista => usuario.LojaPropria?.Id,
@@ -116,34 +163,10 @@ namespace Pc.WebApi.Controllers
             });
         }
 
-        /// <summary>
-        /// GET /api/auth/confirmar-email?token=...
-        /// Confirma o e-mail do usuário a partir do token enviado no cadastro.
-        /// </summary>
-        [HttpGet("confirmar-email")]
-        [AllowAnonymous]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> ConfirmarEmail([FromQuery] string token)
-        {
-            if (string.IsNullOrWhiteSpace(token))
-                return BadRequest("Token inválido.");
-
-            var confirmado = await _usuarioServico.ConfirmarEmailAsync(token);
-            if (!confirmado)
-                return BadRequest("Token inválido ou e-mail já confirmado.");
-
-            return Content(
-                "<html><body style='font-family:sans-serif;text-align:center;padding:40px'>" +
-                "<h2>E-mail confirmado com sucesso!</h2>" +
-                "<p>Você já pode usar o Preço Certo normalmente.</p>" +
-                "</body></html>",
-                "text/html");
-        }
-
-        private static ClienteRespostaDto MapCliente(Usuario c) => new()
+        private ClienteRespostaDto MapCliente(Usuario c) => new()
         {
             Id = c.Id,
+            CodigoPublico = _idCodificador.Codificar(c.Id),
             NomeUsuario = c.NomeUsuario,
             Email = c.Email,
             Telefone = c.Telefone,

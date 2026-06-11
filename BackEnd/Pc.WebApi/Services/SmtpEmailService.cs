@@ -6,11 +6,6 @@ using Pc.WebApi.Configuration;
 
 namespace Pc.WebApi.Services
 {
-    /// <summary>
-    /// Implementação SMTP do envio de e-mail. É tolerante a falhas: se o SMTP
-    /// não estiver configurado ou ocorrer erro, apenas registra um log e não
-    /// interrompe o fluxo de cadastro.
-    /// </summary>
     public class SmtpEmailService : IEmailService
     {
         private readonly EmailSettings _settings;
@@ -22,31 +17,57 @@ namespace Pc.WebApi.Services
             _logger = logger;
         }
 
-        public async Task EnviarConfirmacaoEmailAsync(string destinatario, string nome, string token, string tipo)
+        public async Task EnviarBoasVindasAsync(string destinatario, string nome)
         {
-            var link = $"{_settings.AppBaseUrl.TrimEnd('/')}/api/auth/confirmar-email?token={token}&tipo={tipo}";
+            var corpo =
+                $"Olá {nome},\n\n" +
+                "Seja bem-vindo(a) ao Preço Certo!\n\n" +
+                "Sua conta foi criada com sucesso. Agora você pode comparar preços, " +
+                "encontrar ofertas perto de você e favoritar produtos e lojas.\n\n" +
+                "Obrigado por fazer parte da nossa comunidade.\n\n" +
+                "Equipe Preço Certo";
 
+            await EnviarAsync(destinatario, "Bem-vindo(a) ao Preço Certo!", corpo, "boas-vindas");
+        }
+
+        public async Task EnviarRecuperacaoSenhaAsync(string destinatario, string token)
+        {
+            var link = $"{_settings.AppBaseUrl.TrimEnd('/')}/redefinir-senha?token={token}";
+            var corpo =
+                "Recebemos uma solicitação para redefinir sua senha no Preço Certo.\n\n" +
+                $"Use o token abaixo no aplicativo (válido por 1 hora):\n\n{token}\n\n" +
+                $"Ou acesse: {link}\n\n" +
+                "Se você não solicitou, ignore este e-mail.";
+
+            await EnviarAsync(destinatario, "Redefinição de senha - Preço Certo", corpo, "recuperação-senha");
+        }
+
+        public async Task EnviarNotificacaoAlteracaoEmailAsync(string destinatarioAntigo, string novoEmail, string nome)
+        {
+            var corpo =
+                $"Olá {nome},\n\n" +
+                $"O e-mail da sua conta no Preço Certo foi alterado para {novoEmail}.\n\n" +
+                "Se você não fez esta alteração, entre em contato conosco imediatamente.";
+
+            await EnviarAsync(destinatarioAntigo, "Alteração de e-mail - Preço Certo", corpo, "alteração-e-mail");
+        }
+
+        private async Task EnviarAsync(string destinatario, string assunto, string corpo, string tipoLog)
+        {
             if (!_settings.Configurado)
             {
                 _logger.LogWarning(
-                    "SMTP não configurado. E-mail de confirmação para {Email} não enviado. Link: {Link}",
-                    destinatario, link);
+                    "SMTP não configurado. E-mail de {Tipo} para {Email} não enviado.",
+                    tipoLog, destinatario);
                 return;
             }
-
-            var corpo =
-                $"Olá {nome},\n\n" +
-                "Obrigado por se cadastrar no Preço Certo!\n" +
-                "Confirme seu e-mail acessando o link abaixo:\n\n" +
-                link + "\n\n" +
-                "Se você não criou esta conta, ignore esta mensagem.";
 
             try
             {
                 using var mensagem = new MailMessage
                 {
                     From = new MailAddress(_settings.From, _settings.FromName),
-                    Subject = "Confirme seu e-mail - Preço Certo",
+                    Subject = assunto,
                     Body = corpo,
                     IsBodyHtml = false
                 };
@@ -59,11 +80,11 @@ namespace Pc.WebApi.Services
                 };
 
                 await client.SendMailAsync(mensagem);
-                _logger.LogInformation("E-mail de confirmação enviado para {Email}.", destinatario);
+                _logger.LogInformation("E-mail de {Tipo} enviado para {Email}.", tipoLog, destinatario);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Falha ao enviar e-mail de confirmação para {Email}.", destinatario);
+                _logger.LogError(ex, "Falha ao enviar e-mail de {Tipo} para {Email}.", tipoLog, destinatario);
             }
         }
     }

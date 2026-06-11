@@ -23,8 +23,7 @@ namespace Pc.WebApi.Controllers
             try
             {
                 await _db.Database.CanConnectAsync(cancellationToken);
-                var usuarios = await _db.Usuarios.CountAsync(cancellationToken);
-                return Ok(new { status = "ok", database = "connected", usuarios });
+                return Ok(new { status = "ok", database = "connected" });
             }
             catch (Exception ex)
             {

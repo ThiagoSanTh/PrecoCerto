@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { criarLoja } from '../../services/lojaService';
 import { useAuth } from '../../context/AuthContext';
 import { buscarEnderecoPorCep, geocodificarEndereco } from '../../services/enderecoService';
+import { consultarCnpj } from '../../services/consultaService';
 import { obterLocalizacaoAtual } from '../../services/locationService';
 import StoreLocationMapView from '../../components/StoreLocationMapView';
 import {
@@ -12,7 +13,8 @@ import {
   SecondaryButton,
   formStyles,
 } from '../../components/form';
-import { isCnpjValido } from '../../utils/validacaoUtils';
+import { isCnpjValido, isEmailValido, isTelefoneValido } from '../../utils/validacaoUtils';
+import { formatApiError } from '../../utils/apiErrorUtils';
 import { colors } from '../../theme';
 
 const STEPS = [
@@ -42,7 +44,40 @@ export default function CreateStoreScreen({ navigation }) {
 
   const [loading, setLoading] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
+  const [loadingCnpj, setLoadingCnpj] = useState(false);
   const [loadingCoords, setLoadingCoords] = useState(false);
+  const [cnpjVerificado, setCnpjVerificado] = useState(false);
+
+  async function buscarDadosCnpj() {
+    if (!isCnpjValido(cnpj) || cnpjVerificado) return;
+    setLoadingCnpj(true);
+    try {
+      const data = await consultarCnpj(cnpj);
+      setCnpjVerificado(true);
+      if (data.nomeFantasia && !nomeFantasia.trim()) setNomeFantasia(data.nomeFantasia);
+      if (data.razaoSocial && !nomeFantasia.trim()) setNomeFantasia(data.razaoSocial);
+    } catch (error) {
+      setCnpjVerificado(false);
+      Alert.alert('CNPJ', formatApiError(error));
+    } finally {
+      setLoadingCnpj(false);
+    }
+  }
+
+  async function garantirCnpjNaReceita() {
+    if (cnpjVerificado) return true;
+    setLoadingCnpj(true);
+    try {
+      await consultarCnpj(cnpj);
+      setCnpjVerificado(true);
+      return true;
+    } catch (error) {
+      Alert.alert('CNPJ', formatApiError(error));
+      return false;
+    } finally {
+      setLoadingCnpj(false);
+    }
+  }
 
   function validarPassoLoja() {
     if (!nomeFantasia.trim()) {
@@ -58,19 +93,51 @@ export default function CreateStoreScreen({ navigation }) {
       Alert.alert('Loja', 'CNPJ inválido. Verifique os números informados.');
       return false;
     }
+    if (telefone.trim() && !isTelefoneValido(telefone)) {
+      Alert.alert(
+        'Loja',
+        'Telefone inválido. Informe 8 dígitos (fixo) ou 9 dígitos (celular), com DDD opcional.'
+      );
+      return false;
+    }
+    if (emailLoja.trim() && !isEmailValido(emailLoja)) {
+      Alert.alert('Loja', 'E-mail da loja inválido.');
+      return false;
+    }
     return true;
   }
 
   function validarPassoEndereco() {
-    if (!cep.trim() || !logradouro.trim() || !numero.trim() || !cidade.trim() || !estado.trim()) {
+    const cepLimpo = cep.replace(/\D/g, '');
+    if (cepLimpo.length !== 8 || !logradouro.trim() || !numero.trim() || !cidade.trim() || !estado.trim()) {
       Alert.alert('Endereço', 'Preencha CEP, logradouro, número, cidade e estado.');
       return false;
     }
     return true;
   }
 
-  function avancar() {
-    if (step === 0 && !validarPassoLoja()) return;
+  function montarEnderecoPayload(lat, lng) {
+    const cepLimpo = cep.replace(/\D/g, '');
+    const estadoSigla = estado.trim().toUpperCase().slice(0, 2);
+    const bairroNormalizado = bairro.trim() || 'Centro';
+
+    return {
+      cep: cepLimpo,
+      logradouro: logradouro.trim(),
+      numero: numero.trim(),
+      bairro: bairroNormalizado,
+      cidade: cidade.trim(),
+      estado: estadoSigla,
+      latitude: lat,
+      longitude: lng,
+    };
+  }
+
+  async function avancar() {
+    if (step === 0) {
+      if (!validarPassoLoja()) return;
+      if (!(await garantirCnpjNaReceita())) return;
+    }
     if (step === 1 && !validarPassoEndereco()) return;
     if (step < STEPS.length - 1) setStep((s) => s + 1);
   }
@@ -167,6 +234,11 @@ export default function CreateStoreScreen({ navigation }) {
       return;
     }
 
+    if (!(await garantirCnpjNaReceita())) {
+      setStep(0);
+      return;
+    }
+
     setLoading(true);
     try {
       let lat = latitude;
@@ -189,28 +261,24 @@ export default function CreateStoreScreen({ navigation }) {
         cnpj: cnpj.trim(),
         telefone: telefone.trim() || null,
         email: emailLoja.trim() || session.perfil.email,
-        endereco: {
-          cep,
-          logradouro,
-          numero,
-          bairro,
-          cidade,
-          estado,
-          latitude: lat,
-          longitude: lng,
-        },
+        endereco: montarEnderecoPayload(lat, lng),
       });
 
-      // Como o papel mudou para Lojista, é preciso reautenticar para obter um
-      // token com as permissões de loja.
       Alert.alert(
         'Loja criada!',
         'Sua conta agora é de lojista. Entre novamente para acessar o painel da loja.',
         [{ text: 'OK', onPress: () => logout() }]
       );
     } catch (error) {
-      const msg = error.response?.data || error.message;
-      Alert.alert('Erro', String(msg));
+      if (error.response?.status === 409) {
+        Alert.alert(
+          'Loja já cadastrada',
+          formatApiError(error),
+          [{ text: 'OK', onPress: () => logout() }]
+        );
+        return;
+      }
+      Alert.alert('Erro', formatApiError(error));
     } finally {
       setLoading(false);
     }
@@ -227,7 +295,7 @@ export default function CreateStoreScreen({ navigation }) {
       currentStep={step}
       footer={
         step < STEPS.length - 1 ? (
-          <PrimaryButton label="Continuar" onPress={avancar} />
+          <PrimaryButton label="Continuar" onPress={avancar} loading={loadingCnpj} />
         ) : (
           <PrimaryButton label="Criar loja" onPress={handleCreateStore} loading={loading} />
         )
@@ -242,7 +310,16 @@ export default function CreateStoreScreen({ navigation }) {
             onChangeText={setNomeFantasia}
             autoFocus
           />
-          <FormField label="CNPJ" value={cnpj} onChangeText={setCnpj} />
+          <FormField
+            label="CNPJ"
+            value={cnpj}
+            onChangeText={(value) => {
+              setCnpj(value);
+              setCnpjVerificado(false);
+            }}
+            onBlur={buscarDadosCnpj}
+          />
+          {loadingCnpj ? <ActivityIndicator color={colors.primary} style={{ marginBottom: 8 }} /> : null}
           <FormField
             label="Telefone"
             value={telefone}

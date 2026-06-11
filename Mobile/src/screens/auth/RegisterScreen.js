@@ -4,7 +4,7 @@ import { registrarCliente } from '../../services/clienteService';
 import { login as authLogin } from '../../services/authService';
 import { formatApiError } from '../../utils/apiErrorUtils';
 import { obterLocalizacaoAtual } from '../../services/locationService';
-import { isEmailValido } from '../../utils/validacaoUtils';
+import { isEmailValido, isTelefoneValido } from '../../utils/validacaoUtils';
 import { useAuth } from '../../context/AuthContext';
 import {
   FormScreen,
@@ -20,7 +20,7 @@ export default function RegisterScreen({ navigation }) {
   const [senha, setSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
   const [loading, setLoading] = useState(false);
-  const { salvarSessao } = useAuth();
+  const { salvarSessao, sincronizarGpsCliente } = useAuth();
 
   async function handleRegister() {
     if (!nomeUsuario || !email || !senha || !confirmarSenha) {
@@ -35,6 +35,14 @@ export default function RegisterScreen({ navigation }) {
 
     if (senha.length < 6) {
       Alert.alert('Erro', 'A senha deve ter pelo menos 6 caracteres.');
+      return;
+    }
+
+    if (telefone.trim() && !isTelefoneValido(telefone)) {
+      Alert.alert(
+        'Erro',
+        'Telefone inválido. Informe 8 dígitos (fixo) ou 9 dígitos (celular), com DDD opcional.'
+      );
       return;
     }
 
@@ -58,21 +66,21 @@ export default function RegisterScreen({ navigation }) {
 
       await registrarCliente({
         nomeUsuario: nomeUsuario.trim(),
-        email: email.trim(),
+        email: email.trim().toLowerCase(),
         senha,
         telefone: telefone.trim() || null,
         latitudeAtual,
         longitudeAtual,
       });
 
-      const { tipo, perfil } = await authLogin(email.trim(), senha);
+      const emailNormalizado = email.trim().toLowerCase();
+      const { tipo, perfil } = await authLogin(emailNormalizado, senha);
       await salvarSessao({ tipo: tipo || 'cliente', perfil }, 'user');
       navigation.replace('Home');
-      Alert.alert(
-        'Sucesso',
-        'Conta criada! Enviamos um e-mail de confirmação — verifique sua caixa de entrada. ' +
-          'Você pode abrir uma loja a qualquer momento informando um CNPJ válido.'
-      );
+
+      if (perfil?.id) {
+        sincronizarGpsCliente(perfil.id).catch(() => {});
+      }
     } catch (error) {
       Alert.alert('Erro', formatApiError(error));
     } finally {

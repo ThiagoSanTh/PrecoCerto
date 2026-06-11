@@ -1,6 +1,8 @@
 using Pc.Dominio.Entities.Usuarios;
 using Pc.Dominio.Enums;
+using Pc.Dominio.Validacoes;
 using Pc.Repositorio.Interfaces;
+using Pc.Servico.Excecoes;
 using Pc.Servico.Interfaces;
 
 namespace Pc.Servico.Implementacoes
@@ -13,11 +15,16 @@ namespace Pc.Servico.Implementacoes
     {
         private readonly IClienteRepositorio _clienteRepositorio;
         private readonly IPasswordHasher _passwordHasher;
+        private readonly IValidadorEmail _validadorEmail;
 
-        public ClienteServico(IClienteRepositorio clienteRepositorio, IPasswordHasher passwordHasher)
+        public ClienteServico(
+            IClienteRepositorio clienteRepositorio,
+            IPasswordHasher passwordHasher,
+            IValidadorEmail validadorEmail)
         {
             _clienteRepositorio = clienteRepositorio;
             _passwordHasher = passwordHasher;
+            _validadorEmail = validadorEmail;
         }
 
         public async Task<Usuario> RegistrarAsync(Usuario cliente)
@@ -25,23 +32,27 @@ namespace Pc.Servico.Implementacoes
             if (string.IsNullOrWhiteSpace(cliente.Email))
                 throw new Exception("Email é obrigatório.");
 
+            await _validadorEmail.ValidarAsync(cliente.Email);
+
+            cliente.Email = EmailValidator.Normalizar(cliente.Email);
+
             if (string.IsNullOrWhiteSpace(cliente.NomeUsuario))
                 throw new Exception("Nome de usuário é obrigatório.");
 
             if (string.IsNullOrWhiteSpace(cliente.SenhaHash) || cliente.SenhaHash.Length < 6)
                 throw new Exception("Senha deve ter pelo menos 6 caracteres.");
 
-            var clientes = await _clienteRepositorio.ListarAsync();
-            if (clientes.Exists(c => c.Email.ToLower() == cliente.Email.ToLower()))
-                throw new Exception("Email já registrado.");
+            var existente = await _clienteRepositorio.ObterPorEmailCadastroAsync(cliente.Email);
+            if (existente != null)
+                throw new EmailJaRegistradoException();
 
             cliente.Ativo = true;
             cliente.DataCriacao = DateTime.UtcNow;
             cliente.Tipo = TipoUsuario.Cliente;
             cliente.Papel = PapelUsuario.Cliente;
             cliente.SenhaHash = _passwordHasher.Hash(cliente.SenhaHash);
-            cliente.EmailConfirmado = false;
-            cliente.TokenConfirmacao = Guid.NewGuid().ToString("N");
+            cliente.EmailConfirmado = true;
+            cliente.TokenConfirmacao = null;
 
             return await _clienteRepositorio.AdicionarAsync(cliente);
         }
@@ -161,20 +172,59 @@ namespace Pc.Servico.Implementacoes
             }
         }
 
-        public async Task<bool> ConfirmarEmailAsync(string token)
+        public async Task<string?> GerarTokenRecuperacaoSenhaAsync(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return null;
+
+            var cliente = await _clienteRepositorio.ObterPorEmailAsync(email.Trim());
+            if (cliente == null)
+                return null;
+
+            var token = Guid.NewGuid().ToString("N");
+            cliente.TokenRecuperacaoSenha = token;
+            cliente.TokenRecuperacaoExpira = DateTime.UtcNow.AddHours(1);
+            await _clienteRepositorio.AtualizarAsync(cliente);
+            return token;
+        }
+
+        public async Task<bool> RedefinirSenhaComTokenAsync(string token, string novaSenha)
         {
             if (string.IsNullOrWhiteSpace(token))
                 return false;
 
-            var clientes = await _clienteRepositorio.ListarAsync();
-            var cliente = clientes.Find(c => c.TokenConfirmacao == token);
+            if (string.IsNullOrWhiteSpace(novaSenha) || novaSenha.Length < 6)
+                throw new Exception("Senha deve ter pelo menos 6 caracteres.");
+
+            var cliente = await _clienteRepositorio.ObterPorTokenRecuperacaoSenhaAsync(token);
             if (cliente == null)
                 return false;
 
-            cliente.EmailConfirmado = true;
-            cliente.TokenConfirmacao = null;
+            cliente.SenhaHash = _passwordHasher.Hash(novaSenha);
+            cliente.TokenRecuperacaoSenha = null;
+            cliente.TokenRecuperacaoExpira = null;
             await _clienteRepositorio.AtualizarAsync(cliente);
             return true;
+        }
+
+        public async Task AlterarEmailAsync(Guid usuarioId, string senhaAtual, string novoEmail)
+        {
+            var cliente = await _clienteRepositorio.ObterPorIdAsync(usuarioId)
+                ?? throw new Exception("Usuário não encontrado.");
+
+            if (!await VerificarSenhaAsync(cliente, senhaAtual))
+                throw new Exception("Senha atual incorreta.");
+
+            await _validadorEmail.ValidarAsync(novoEmail);
+            var emailNormalizado = EmailValidator.Normalizar(novoEmail);
+
+            var existente = await _clienteRepositorio.ObterPorEmailCadastroAsync(emailNormalizado);
+            if (existente != null && existente.Id != usuarioId)
+                throw new EmailJaRegistradoException();
+
+            cliente.Email = emailNormalizado;
+            cliente.EmailConfirmado = true;
+            await _clienteRepositorio.AtualizarAsync(cliente);
         }
 
         public async Task DefinirComoLojistaAsync(Guid usuarioId)

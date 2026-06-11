@@ -2,89 +2,89 @@ import { FlatList, Alert, ActivityIndicator, StyleSheet } from 'react-native';
 import { useCallback, useState } from 'react';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { listarFavoritosCliente } from '../../services/favoritoService';
-import { listarProdutos } from '../../services/productService';
-import { listarOfertas } from '../../services/ofertaService';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import FavoritoListCard from '../../components/feed/FavoritoListCard';
 import { FormScreen, ListCardText } from '../../components/form';
-import { colors } from '../../theme';
-import { mapaOfertasPorProduto } from '../../utils/precoUtils';
+
+const PAGE_SIZE = 20;
 
 export default function FavoritosScreen() {
   const navigation = useNavigation();
   const [itens, setItens] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [carregandoMais, setCarregandoMais] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
   const { session } = useAuth();
+  const { colors } = useTheme();
   const clienteId = session?.perfil?.id;
+
+  const carregar = useCallback(
+    async (pagina = 1, append = false) => {
+      if (!clienteId) return;
+      if (pagina === 1 && !append) setLoading(true);
+      else setCarregandoMais(true);
+
+      try {
+        const res = await listarFavoritosCliente(clienteId, pagina, PAGE_SIZE);
+        setPage(res.page);
+        setHasNext(res.hasNext);
+        setItens((prev) => (append ? [...prev, ...res.items] : res.items));
+      } catch {
+        Alert.alert('Erro', 'Não foi possível carregar favoritos.');
+      } finally {
+        setLoading(false);
+        setCarregandoMais(false);
+      }
+    },
+    [clienteId]
+  );
 
   useFocusEffect(
     useCallback(() => {
-      carregar();
-    }, [clienteId])
+      carregar(1, false);
+    }, [carregar])
   );
 
-  async function carregar() {
-    if (!clienteId) return;
-    setLoading(true);
-    try {
-      const [favoritos, produtos, ofertas] = await Promise.all([
-        listarFavoritosCliente(clienteId),
-        listarProdutos(),
-        listarOfertas().catch(() => []),
-      ]);
-
-      const prodMap = new Map((produtos || []).map((p) => [p.id, p]));
-      const ofertasMap = mapaOfertasPorProduto(ofertas);
-
-      const enriched = (Array.isArray(favoritos) ? favoritos : [])
-        .filter((f) => f.produtoId)
-        .map((fav) => ({
-          ...fav,
-          produto: prodMap.get(fav.produtoId) ?? null,
-          oferta: ofertasMap.get(fav.produtoId) ?? null,
-        }))
-        .filter((f) => f.produto);
-
-      setItens(enriched);
-    } catch {
-      Alert.alert('Erro', 'Não foi possível carregar favoritos');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function abrirProduto(produtoId) {
-    navigation.navigate('ProductDetail', { productId: produtoId });
-  }
-
-  if (!clienteId) {
-    return (
-      <FormScreen title="Favoritos" subtitle="Faça login como cliente">
-        <ListCardText>Nenhuma sessão de cliente ativa.</ListCardText>
-      </FormScreen>
-    );
+  function carregarMais() {
+    if (!hasNext || carregandoMais || loading) return;
+    carregar(page + 1, true);
   }
 
   return (
-    <FormScreen title="Favoritos" subtitle="Produtos salvos" scrollable={false}>
+    <FormScreen title="Favoritos" subtitle="Produtos que você salvou">
       {loading ? (
-        <ActivityIndicator color={colors.primary} style={{ marginTop: 24 }} />
+        <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 24 }} />
       ) : (
         <FlatList
-          style={styles.list}
-          contentContainerStyle={styles.listContent}
           data={itens}
-          keyExtractor={(item) => item.id}
-          showsVerticalScrollIndicator={false}
+          keyExtractor={(item) => String(item.id)}
           renderItem={({ item }) => (
             <FavoritoListCard
               produto={item.produto}
               oferta={item.oferta}
-              onPress={() => abrirProduto(item.produtoId)}
+              onPress={() =>
+                item.produto?.id &&
+                navigation.navigate('ProductDetail', { productId: item.produto.id })
+              }
             />
           )}
+          contentContainerStyle={styles.list}
+          windowSize={5}
+          maxToRenderPerBatch={10}
+          removeClippedSubviews
+          onEndReached={carregarMais}
+          onEndReachedThreshold={0.4}
+          ListFooterComponent={
+            carregandoMais ? (
+              <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 12 }} />
+            ) : null
+          }
           ListEmptyComponent={
-            <ListCardText style={styles.empty}>Nenhum favorito ainda.</ListCardText>
+            <ListCardText style={[styles.empty, { color: colors.textMuted }]}>
+              Nenhum favorito ainda.
+            </ListCardText>
           }
         />
       )}
@@ -93,19 +93,6 @@ export default function FavoritosScreen() {
 }
 
 const styles = StyleSheet.create({
-  list: {
-    flex: 1,
-    backgroundColor: '#EBEBEB',
-    marginHorizontal: -16,
-  },
-  listContent: {
-    paddingHorizontal: 8,
-    paddingTop: 8,
-    paddingBottom: 16,
-  },
-  empty: {
-    textAlign: 'center',
-    marginTop: 24,
-    color: '#64748B',
-  },
+  list: { paddingBottom: 16 },
+  empty: { textAlign: 'center', marginTop: 24 },
 });

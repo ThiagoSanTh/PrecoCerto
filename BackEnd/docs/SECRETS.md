@@ -36,3 +36,19 @@ dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=db.SEU_PROJE
 dotnet user-secrets set "Jwt:Secret" "sua-chave-secreta-com-pelo-menos-32-caracteres"
 dotnet ef database update
 ```
+
+## Pool de conexões (escala Growth)
+
+Com Supabase pooler, ajuste na connection string para evitar esgotar o pool sob carga (~1.000 usuários leitura-heavy):
+
+```text
+...;Maximum Pool Size=30;Timeout=15;Command Timeout=30;Keepalive=30
+```
+
+| Parâmetro | Valor sugerido | Motivo |
+|-----------|----------------|--------|
+| `Maximum Pool Size` | 20–40 por instância API | Pooler Supabase típico: 15–60 conexões totais |
+| `Timeout` | 15 s | Falha rápida em vez de fila infinita |
+| `Command Timeout` | 30 s | Evita queries longas segurando conexão |
+
+Use **Direct** só para migrations locais; em produção prefira o **pooler** (IPv4). Com rate limit de catálogo (120 req/min) e paginação, uma instância API sustenta leituras sem saturar o pool.

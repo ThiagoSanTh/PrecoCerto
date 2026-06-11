@@ -34,12 +34,12 @@ export default function StoreScreen({ navigation }) {
 
     setLoading(true);
     try {
-      const [lojaData, todasOfertas] = await Promise.all([
+      const [lojaData, ofertasRes] = await Promise.all([
         obterLoja(lojaId),
-        listarOfertas(),
+        listarOfertas(1, 100),
       ]);
       setLoja(lojaData);
-      setOfertas(todasOfertas.filter((o) => o.lojaId === lojaId));
+      setOfertas(ofertasRes.items.filter((o) => String(o.lojaId) === String(lojaId)));
     } catch {
       Alert.alert('Erro', 'Não foi possível carregar dados da loja');
     } finally {

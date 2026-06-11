@@ -55,14 +55,18 @@ export default function FormScreen({
           {subtitle ? <Text style={[s.subtitle, { color: colors.textMuted }]}>{subtitle}</Text> : null}
           {steps?.length > 0 ? (
             <>
-              <Text style={[s.subtitle, { marginTop: 4 }]}>
+              <Text style={[s.subtitle, { marginTop: 4, color: colors.textMuted }]}>
                 Passo {currentStep + 1} de {steps.length} · {steps[currentStep]?.label}
               </Text>
               <View style={s.progressRow}>
                 {steps.map((item, index) => (
                   <View
                     key={item.key}
-                    style={[s.progressDot, index <= currentStep && s.progressDotActive]}
+                    style={[
+                      s.progressDot,
+                      { backgroundColor: colors.border },
+                      index <= currentStep && { backgroundColor: colors.primary },
+                    ]}
                   />
                 ))}
               </View>

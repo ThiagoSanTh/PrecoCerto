@@ -43,9 +43,9 @@ namespace Pc.Repositorio.Implementacoes
         public async Task<List<HistoricoPesquisa>> BuscarPorTermoAsync(string termo)
         {
             return await _context.HistoricosPesquisa
-                .Where(h => h.TermoPesquisa.ToLower().Contains(termo.ToLower()))
-                .Distinct()
+                .Where(h => EF.Functions.ILike(h.TermoPesquisa, $"%{termo.Trim()}%"))
                 .OrderByDescending(h => h.DataPesquisa)
+                .Take(20)
                 .ToListAsync();
         }
 

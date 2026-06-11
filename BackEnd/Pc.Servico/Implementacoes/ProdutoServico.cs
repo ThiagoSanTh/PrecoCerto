@@ -1,4 +1,6 @@
-﻿using Pc.Dominio.Entities.Catalogo;
+﻿using Pc.Dominio.Comum;
+using Pc.Dominio.Entities.Catalogo;
+using Pc.Dominio.Enums;
 using Pc.Repositorio.Interfaces;
 using Pc.Servico.Excecoes;
 using Pc.Servico.Interfaces;
@@ -32,6 +34,10 @@ namespace Pc.Servico.Implementacoes
             return await _produtoRepositorio.ListarPorLojaAsync(lojaId);
         }
 
+        public Task<PaginacaoResultado<Produto>> ListarProdutosPaginadoAsync(
+            PaginacaoParametros paginacao, Guid? lojaId = null, CategoriaProduto? categoria = null) =>
+            _produtoRepositorio.ListarPorLojaPaginadoAsync(paginacao, lojaId, categoria);
+
         public async Task<List<Produto>> BuscarPorNomeAsync(string nome, Guid? lojaId = null)
         {
             if (string.IsNullOrWhiteSpace(nome))
@@ -39,6 +45,10 @@ namespace Pc.Servico.Implementacoes
 
             return await _produtoRepositorio.BuscarPorNomeAsync(nome, lojaId);
         }
+
+        public Task<PaginacaoResultado<Produto>> BuscarPorNomePaginadoAsync(
+            string nome, PaginacaoParametros paginacao, Guid? lojaId = null) =>
+            _produtoRepositorio.BuscarPorNomePaginadoAsync(nome, paginacao, lojaId);
 
         public async Task AtualizarAsync(Produto produto)
         {

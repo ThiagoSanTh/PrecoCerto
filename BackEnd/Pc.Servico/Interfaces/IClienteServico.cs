@@ -32,7 +32,11 @@ namespace Pc.Servico.Interfaces
 
         Task RemoverAsync(Guid id);
 
-        Task<bool> ConfirmarEmailAsync(string token);
+        Task<string?> GerarTokenRecuperacaoSenhaAsync(string email);
+
+        Task<bool> RedefinirSenhaComTokenAsync(string token, string novaSenha);
+
+        Task AlterarEmailAsync(Guid usuarioId, string senhaAtual, string novoEmail);
 
         /// <summary>Marca um usuário como Lojista (após abrir loja com CNPJ válido).</summary>
         Task DefinirComoLojistaAsync(Guid usuarioId);

@@ -1,7 +1,10 @@
 import { View, Text, Pressable } from 'react-native';
 import { formStyles as s } from './formStyles';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function FormTabs({ options, value, onChange }) {
+  const { colors } = useTheme();
+
   return (
     <View style={s.tabRow}>
       {options.map((opt) => {
@@ -9,10 +12,16 @@ export default function FormTabs({ options, value, onChange }) {
         return (
           <Pressable
             key={opt.value}
-            style={[s.tabButton, active && s.tabButtonActive]}
+            style={[
+              s.tabButton,
+              { borderColor: colors.primary },
+              active && { backgroundColor: colors.primary },
+            ]}
             onPress={() => onChange(opt.value)}
           >
-            <Text style={[s.tabText, active && s.tabTextActive]}>{opt.label}</Text>
+            <Text style={[s.tabText, { color: colors.primary }, active && s.tabTextActive]}>
+              {opt.label}
+            </Text>
           </Pressable>
         );
       })}

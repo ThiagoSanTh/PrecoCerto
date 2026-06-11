@@ -1,10 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Pc.Dominio.Entities.Catalogo;
+using Microsoft.AspNetCore.RateLimiting;
 using Pc.Dominio.Entities.Estabelecimentos;
 using Pc.Servico.Interfaces;
 using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Estabelecimentos;
+using Pc.WebApi.Helpers;
 
 namespace Pc.WebApi.Controllers
 {
@@ -21,28 +22,12 @@ namespace Pc.WebApi.Controllers
 
         [HttpGet]
         [AllowAnonymous]
-        public async Task<IActionResult> Listar()
+        [EnableRateLimiting("catalogo")]
+        public async Task<IActionResult> Listar([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         {
-            var ofertas = await _ofertaServico.ListarAsync();
-
-            var resposta = ofertas.Select(oferta => new OfertaRespostaDto
-            {
-                Id = oferta.Id,
-                ProdutoId = oferta.ProdutoId,
-                NomeProduto = oferta.Produto?.NomeProduto ?? string.Empty,
-                MarcaProduto = oferta.Produto?.Marca ?? string.Empty,
-                LojaId = oferta.LojaId,
-                NomeLoja = oferta.Loja?.NomeFantasia ?? string.Empty,
-                Preco = oferta.Preco,
-                PrecoAnterior = oferta.PrecoAnterior,
-                EmPromocao = oferta.EmPromocao,
-                DataInicioPromocao = oferta.DataInicioPromocao,
-                DataFimPromocao = oferta.DataFimPromocao,
-                Disponivel = oferta.Disponivel,
-                DataAtualizacaoPreco = oferta.DataAtualizacaoPreco
-            });
-
-            return Ok(resposta);
+            var paginacao = PaginacaoHelper.Normalizar(page, pageSize);
+            var ofertas = await _ofertaServico.ListarPaginadoAsync(paginacao);
+            return Ok(PaginacaoHelper.ParaResposta(ofertas, MapResposta));
         }
 
         [HttpGet("{id:guid}")]
@@ -52,52 +37,18 @@ namespace Pc.WebApi.Controllers
             var oferta = await _ofertaServico.ObterPorIdAsync(id);
 
             if (oferta == null)
-                return NotFound("Oferta n„o encontrada.");
+                return NotFound("Oferta nùo encontrada.");
 
-            var resposta = new OfertaRespostaDto
-            {
-                Id = oferta.Id,
-                ProdutoId = oferta.ProdutoId,
-                NomeProduto = oferta.Produto?.NomeProduto ?? string.Empty,
-                MarcaProduto = oferta.Produto?.Marca ?? string.Empty,
-                LojaId = oferta.LojaId,
-                NomeLoja = oferta.Loja?.NomeFantasia ?? string.Empty,
-                Preco = oferta.Preco,
-                PrecoAnterior = oferta.PrecoAnterior,
-                EmPromocao = oferta.EmPromocao,
-                DataInicioPromocao = oferta.DataInicioPromocao,
-                DataFimPromocao = oferta.DataFimPromocao,
-                Disponivel = oferta.Disponivel,
-                DataAtualizacaoPreco = oferta.DataAtualizacaoPreco
-            };
-
-            return Ok(resposta);
+            return Ok(MapResposta(oferta));
         }
 
         [HttpGet("produto/{produtoId:guid}")]
         [AllowAnonymous]
+        [EnableRateLimiting("catalogo")]
         public async Task<IActionResult> ObterPorProduto(Guid produtoId)
         {
             var ofertas = await _ofertaServico.ObterPorProdutoAsync(produtoId);
-
-            var resposta = ofertas.Select(oferta => new OfertaRespostaDto
-            {
-                Id = oferta.Id,
-                ProdutoId = oferta.ProdutoId,
-                NomeProduto = oferta.Produto?.NomeProduto ?? string.Empty,
-                MarcaProduto = oferta.Produto?.Marca ?? string.Empty,
-                LojaId = oferta.LojaId,
-                NomeLoja = oferta.Loja?.NomeFantasia ?? string.Empty,
-                Preco = oferta.Preco,
-                PrecoAnterior = oferta.PrecoAnterior,
-                EmPromocao = oferta.EmPromocao,
-                DataInicioPromocao = oferta.DataInicioPromocao,
-                DataFimPromocao = oferta.DataFimPromocao,
-                Disponivel = oferta.Disponivel,
-                DataAtualizacaoPreco = oferta.DataAtualizacaoPreco
-            });
-
-            return Ok(resposta);
+            return Ok(ofertas.Select(MapResposta));
         }
 
         [HttpPost]
@@ -147,7 +98,7 @@ namespace Pc.WebApi.Controllers
             var ofertaExistente = await _ofertaServico.ObterPorIdAsync(id);
 
             if (ofertaExistente == null)
-                return NotFound("Oferta n„o encontrada.");
+                return NotFound("Oferta nùo encontrada.");
 
             ofertaExistente.ProdutoId = dto.ProdutoId;
             ofertaExistente.LojaId = dto.LojaId;
@@ -171,7 +122,7 @@ namespace Pc.WebApi.Controllers
             var ofertaExistente = await _ofertaServico.ObterPorIdAsync(id);
 
             if (ofertaExistente == null)
-                return NotFound("Oferta n„o encontrada.");
+                return NotFound("Oferta nùo encontrada.");
 
             if (!Authz.OwnsLoja(this, ofertaExistente.LojaId))
                 return Forbid();
@@ -179,5 +130,22 @@ namespace Pc.WebApi.Controllers
             await _ofertaServico.RemoverAsync(id);
             return NoContent();
         }
+
+        private static OfertaRespostaDto MapResposta(Oferta oferta) => new()
+        {
+            Id = oferta.Id,
+            ProdutoId = oferta.ProdutoId,
+            NomeProduto = oferta.Produto?.NomeProduto ?? string.Empty,
+            MarcaProduto = oferta.Produto?.Marca ?? string.Empty,
+            LojaId = oferta.LojaId,
+            NomeLoja = oferta.Loja?.NomeFantasia ?? string.Empty,
+            Preco = oferta.Preco,
+            PrecoAnterior = oferta.PrecoAnterior,
+            EmPromocao = oferta.EmPromocao,
+            DataInicioPromocao = oferta.DataInicioPromocao,
+            DataFimPromocao = oferta.DataFimPromocao,
+            Disponivel = oferta.Disponivel,
+            DataAtualizacaoPreco = oferta.DataAtualizacaoPreco
+        };
     }
 }

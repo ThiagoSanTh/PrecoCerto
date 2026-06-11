@@ -1,12 +1,16 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using Pc.Dominio.Entities.Catalogo;
 using Pc.Dominio.Entities.Estabelecimentos;
 using Pc.Dominio.Validacoes;
+using Pc.Servico.Excecoes;
 using Pc.Servico.Interfaces;
 using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Estabelecimentos;
 using Pc.WebApi.Extensions;
+using Pc.WebApi.Helpers;
 using Pc.WebApi.Mappings;
 
 namespace Pc.WebApi.Controllers
@@ -17,47 +21,85 @@ namespace Pc.WebApi.Controllers
     {
         private readonly ILojaServico _lojaServico;
         private readonly IClienteServico _usuarioServico;
+        private readonly IConsultaCnpjServico _consultaCnpj;
+        private readonly IIdCodificador _idCodificador;
 
-        public LojasController(ILojaServico lojaServico, IClienteServico usuarioServico)
+        public LojasController(
+            ILojaServico lojaServico,
+            IClienteServico usuarioServico,
+            IConsultaCnpjServico consultaCnpj,
+            IIdCodificador idCodificador)
         {
             _lojaServico = lojaServico;
             _usuarioServico = usuarioServico;
+            _consultaCnpj = consultaCnpj;
+            _idCodificador = idCodificador;
         }
 
         [HttpGet]
         [AllowAnonymous]
-        public async Task<IActionResult> Listar()
+        [EnableRateLimiting("catalogo")]
+        public async Task<IActionResult> Listar([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         {
-            var lojas = await _lojaServico.ListarAsync();
-            return Ok(lojas.Select(LojaMapper.ParaRespostaDto));
+            var paginacao = PaginacaoHelper.Normalizar(page, pageSize);
+            var lojas = await _lojaServico.ListarPaginadoAsync(paginacao);
+            return Ok(PaginacaoHelper.ParaResposta(lojas, l => LojaMapper.ParaRespostaDto(l, _idCodificador)));
+        }
+
+        [HttpGet("mapa")]
+        [AllowAnonymous]
+        [EnableRateLimiting("catalogo")]
+        public async Task<IActionResult> ListarParaMapa(
+            [FromQuery] decimal latitude,
+            [FromQuery] decimal longitude,
+            [FromQuery] decimal raioKm = 15)
+        {
+            if (raioKm <= 0 || raioKm > 100)
+                return BadRequest("raioKm deve estar entre 0 e 100.");
+
+            var lojas = await _lojaServico.ListarPorProximidadeAsync(latitude, longitude, raioKm);
+            return Ok(lojas.Select(l => LojaMapper.ParaMapaDto(l, _idCodificador)));
         }
 
         [HttpGet("{id:guid}")]
         [AllowAnonymous]
+        [EnableRateLimiting("catalogo")]
         public async Task<IActionResult> ObterPorId(Guid id)
         {
             var loja = await _lojaServico.ObterPorIdAsync(id);
             if (loja is null)
                 return NotFound("Loja não encontrada.");
 
-            return Ok(LojaMapper.ParaRespostaDto(loja));
+            return Ok(LojaMapper.ParaRespostaDto(loja, _idCodificador));
         }
 
         [HttpPost("buscar")]
         [AllowAnonymous]
-        public async Task<IActionResult> BuscarPorNome([FromBody] string nome)
+        [EnableRateLimiting("catalogo")]
+        public async Task<IActionResult> BuscarPorNome(
+            [FromBody] string nome,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
         {
-            var lojas = await _lojaServico.BuscarPorNomeAsync(nome);
-            return Ok(lojas.Select(LojaMapper.ParaRespostaDto));
+            var paginacao = PaginacaoHelper.Normalizar(page, pageSize);
+            var lojas = await _lojaServico.BuscarPorNomePaginadoAsync(nome, paginacao);
+            return Ok(PaginacaoHelper.ParaResposta(lojas, l => LojaMapper.ParaRespostaDto(l, _idCodificador)));
         }
 
         [HttpPost]
         [Authorize]
         public async Task<IActionResult> Adicionar([FromBody] LojaCriarDto dto)
         {
+            if (!ModelState.IsValid)
+                return ValidationProblem(ModelState);
+
             // Abrir loja exige CNPJ válido — é isso que promove o usuário a Lojista.
             if (!CnpjValidator.IsValido(dto.Cnpj))
                 return BadRequest("CNPJ inválido. É necessário um CNPJ válido para abrir uma loja.");
+
+            var (consulta, erroCnpj) = await ValidarCnpjNaReceitaAsync(dto.Cnpj);
+            if (erroCnpj is not null)
+                return erroCnpj;
 
             // O dono da loja é o usuário autenticado (admin pode informar outro).
             var usuarioId = User.GetUserId();
@@ -67,24 +109,57 @@ namespace Pc.WebApi.Controllers
             if (usuarioId is null || usuarioId == Guid.Empty)
                 return BadRequest("Usuário inválido.");
 
+            var lojaDoUsuario = await _lojaServico.ObterPorUsuarioIdAsync(usuarioId.Value);
+            if (lojaDoUsuario is not null)
+            {
+                await _usuarioServico.DefinirComoLojistaAsync(usuarioId.Value);
+                return Ok(LojaMapper.ParaRespostaDto(lojaDoUsuario, _idCodificador));
+            }
+
+            var endereco = CriarEndereco(dto.Endereco);
             var loja = new Loja
             {
-                NomeFantasia = dto.NomeFantasia,
-                RazaoSocial = dto.RazaoSocial,
+                NomeFantasia = string.IsNullOrWhiteSpace(dto.NomeFantasia)
+                    ? consulta!.NomeFantasia ?? consulta.RazaoSocial
+                    : dto.NomeFantasia,
+                RazaoSocial = string.IsNullOrWhiteSpace(dto.RazaoSocial)
+                    ? consulta!.RazaoSocial
+                    : dto.RazaoSocial,
                 Cnpj = CnpjValidator.ApenasDigitos(dto.Cnpj),
                 Telefone = dto.Telefone,
                 Email = dto.Email,
                 Descricao = dto.Descricao,
                 UsuarioId = usuarioId,
-                Endereco = CriarEndereco(dto.Endereco)
+                Endereco = endereco,
+                EnderecoId = endereco.Id
             };
 
-            var novaLoja = await _lojaServico.AdicionarAsync(loja);
+            Loja novaLoja;
+            try
+            {
+                novaLoja = await _lojaServico.AdicionarAsync(loja);
+                await _usuarioServico.DefinirComoLojistaAsync(usuarioId.Value);
+            }
+            catch (DbUpdateException ex)
+            {
+                var detalhe = ex.InnerException?.Message ?? ex.Message;
+                if (detalhe.Contains("IX_Lojas_UsuarioId", StringComparison.OrdinalIgnoreCase)
+                    || detalhe.Contains("duplicate key", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Conflict(new
+                    {
+                        message = "Você já possui uma loja cadastrada. Saia e entre novamente para acessar o painel da loja."
+                    });
+                }
 
-            // Promove o usuário a Lojista (papel + tipo).
-            await _usuarioServico.DefinirComoLojistaAsync(usuarioId.Value);
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    message = "Não foi possível salvar a loja. Verifique os dados e tente novamente.",
+                    detail = detalhe
+                });
+            }
 
-            return CreatedAtAction(nameof(ObterPorId), new { id = novaLoja.Id }, LojaMapper.ParaRespostaDto(novaLoja));
+            return CreatedAtAction(nameof(ObterPorId), new { id = novaLoja.Id }, LojaMapper.ParaRespostaDto(novaLoja, _idCodificador));
         }
 
         [HttpPut("{id:guid}")]
@@ -136,19 +211,44 @@ namespace Pc.WebApi.Controllers
             return NoContent();
         }
 
+        private async Task<(CnpjConsultaResultado? Resultado, IActionResult? Erro)> ValidarCnpjNaReceitaAsync(string? cnpj)
+        {
+            try
+            {
+                var consulta = await _consultaCnpj.ConsultarAsync(cnpj!);
+                if (consulta == null)
+                    return (null, BadRequest(new { message = "CNPJ não encontrado na Receita Federal. Use um CNPJ cadastrado e ativo." }));
+                if (!consulta.Ativo)
+                    return (null, BadRequest(new { message = $"CNPJ com situação cadastral: {consulta.SituacaoCadastral}." }));
+                return (consulta, null);
+            }
+            catch (CnpjConsultaIndisponivelException ex)
+            {
+                return (null, StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = ex.Message }));
+            }
+        }
+
         private static Endereco CriarEndereco(EnderecoDto? endereco)
         {
             if (endereco is null)
                 return new Endereco();
+
+            var bairro = string.IsNullOrWhiteSpace(endereco.Bairro)
+                ? "Centro"
+                : endereco.Bairro.Trim();
+
+            var estado = endereco.Estado.Trim().ToUpperInvariant();
+            if (estado.Length > 2)
+                estado = estado[..2];
 
             return new Endereco
             {
                 Cep = endereco.Cep,
                 Logradouro = endereco.Logradouro,
                 Numero = endereco.Numero,
-                Bairro = endereco.Bairro,
+                Bairro = bairro,
                 Cidade = endereco.Cidade,
-                Estado = endereco.Estado,
+                Estado = estado,
                 Latitude = endereco.Latitude,
                 Longitude = endereco.Longitude
             };

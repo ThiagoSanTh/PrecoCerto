@@ -35,6 +35,27 @@ namespace Pc.Repositorio.Implementacoes
                 .FirstOrDefaultAsync(c => c.Email.ToLower() == email.ToLower() && c.Ativo);
         }
 
+        public async Task<Usuario?> ObterPorEmailCadastroAsync(string email)
+        {
+            return await _context.Usuarios
+                .FirstOrDefaultAsync(c => c.Email.ToLower() == email.ToLower());
+        }
+
+        public async Task<Usuario?> ObterPorTokenConfirmacaoAsync(string token)
+        {
+            return await _context.Usuarios
+                .FirstOrDefaultAsync(c => c.TokenConfirmacao == token);
+        }
+
+        public async Task<Usuario?> ObterPorTokenRecuperacaoSenhaAsync(string token)
+        {
+            return await _context.Usuarios
+                .FirstOrDefaultAsync(c =>
+                    c.TokenRecuperacaoSenha == token
+                    && c.TokenRecuperacaoExpira.HasValue
+                    && c.TokenRecuperacaoExpira > DateTime.UtcNow);
+        }
+
         public async Task<List<Usuario>> ListarAtivosAsync()
         {
             return await _context.Usuarios

@@ -1,11 +1,13 @@
 import { FlatList, Alert, ActivityIndicator, View, StyleSheet } from 'react-native';
-import { useCallback, useState, useMemo } from 'react';
+import { useCallback, useState, useMemo, useEffect, useRef } from 'react';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { listarProdutosParaFeed, buscarProdutosPorNome } from '../../services/productService';
-import { listarOfertas } from '../../services/ofertaService';
+import { listarFeedComStale, listarFeed } from '../../services/feedService';
+import { listarLojasMapa } from '../../services/lojaService';
 import { registrarPesquisa } from '../../services/historicoService';
+import { obterLocalizacaoAtual } from '../../services/locationService';
 import { useAuth } from '../../context/AuthContext';
-import SearchMapView from '../../components/SearchMapView';
+import { useTheme } from '../../context/ThemeContext';
+import LojasMapView from '../../components/LojasMapView';
 import ProductGridCard from '../../components/feed/ProductGridCard';
 import {
   FormScreen,
@@ -14,114 +16,178 @@ import {
   ListCardText,
   FormTabs,
 } from '../../components/form';
-import { colors } from '../../theme';
-import {
-  filtrarProdutosPorTermo,
-  normalizarListaProdutos,
-} from '../../utils/produtoUtils';
-import { mapaOfertasPorProduto } from '../../utils/precoUtils';
+import { nomeProduto } from '../../utils/produtoUtils';
+import { formatarPrecoBrl } from '../../utils/mapaUtils';
 
 const MODO_LISTA = 'lista';
 const MODO_MAPA = 'mapa';
+const DEBOUNCE_BUSCA_MS = 400;
+const PAGE_SIZE = 20;
+const MAX_PRODUTOS_POR_PIN = 4;
+
+function feedItemParaCard(item) {
+  return {
+    id: item.id,
+    nome: item.nome,
+    imagemUrl: item.imagemUrl,
+    lojaId: item.lojaId,
+    preco: item.preco,
+    lojaNomeFantasia: item.lojaNome,
+  };
+}
+
+function feedItemParaOferta(item) {
+  return {
+    preco: item.preco,
+    precoAnterior: item.precoAnterior,
+    emPromocao: item.emPromocao,
+  };
+}
 
 export default function SearchScreen() {
   const navigation = useNavigation();
   const [termoBusca, setTermoBusca] = useState('');
-  const [produtosBase, setProdutosBase] = useState([]);
-  const [resultadosBusca, setResultadosBusca] = useState(null);
-  const [ofertasMap, setOfertasMap] = useState(new Map());
-  const [modoVisualizacao, setModoVisualizacao] = useState(MODO_LISTA);
+  const [produtos, setProdutos] = useState([]);
+  const [lojas, setLojas] = useState([]);
+  const [modoVisualizacao, setModoVisualizacao] = useState(MODO_MAPA);
   const [loading, setLoading] = useState(true);
+  const [buscando, setBuscando] = useState(false);
+  const [carregandoMais, setCarregandoMais] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
   const { session, isCliente, sincronizarGpsCliente } = useAuth();
+  const { colors } = useTheme();
 
   const clienteId = session?.perfil?.id;
+  const buscaIdRef = useRef(0);
+  const termoAtivo = termoBusca.trim();
+
+  const carregarLojasMapa = useCallback(async () => {
+    try {
+      const coords = await obterLocalizacaoAtual();
+      const lista = await listarLojasMapa(coords.latitude, coords.longitude, 15);
+      setLojas(Array.isArray(lista) ? lista : []);
+    } catch {
+      setLojas([]);
+    }
+  }, []);
+
+  const carregarFeed = useCallback(
+    async (termo = '', pagina = 1, append = false, useStale = false) => {
+      const loader = pagina === 1 && !append ? setLoading : setCarregandoMais;
+      loader(true);
+      try {
+        let resultado;
+        if (useStale && pagina === 1 && !append) {
+          const res = await listarFeedComStale({
+            page: pagina,
+            pageSize: PAGE_SIZE,
+            termo,
+          });
+          resultado = res.data;
+        } else {
+          resultado = await listarFeed({
+            page: pagina,
+            pageSize: PAGE_SIZE,
+            termo,
+            force: true,
+          });
+        }
+
+        setPage(resultado.page);
+        setHasNext(resultado.hasNext);
+        setProdutos((prev) =>
+          append ? [...prev, ...resultado.items] : resultado.items
+        );
+      } catch (error) {
+        console.error('carregar feed:', error.message);
+        if (pagina === 1 && !append) {
+          Alert.alert('Erro', 'Não foi possível carregar o feed.');
+        }
+      } finally {
+        loader(false);
+        setBuscando(false);
+      }
+    },
+    []
+  );
 
   useFocusEffect(
     useCallback(() => {
-      carregar();
+      carregarFeed(termoAtivo, 1, false, true);
+      carregarLojasMapa();
       if (isCliente) sincronizarGpsCliente();
-    }, [clienteId, isCliente])
+    }, [termoAtivo, isCliente, carregarFeed, carregarLojasMapa, sincronizarGpsCliente])
   );
 
-  async function carregar() {
-    setLoading(true);
-    setResultadosBusca(null);
-    setModoVisualizacao(MODO_LISTA);
-    try {
-      const [lista, ofertas] = await Promise.all([
-        listarProdutosParaFeed(null),
-        listarOfertas().catch(() => []),
-      ]);
-      setProdutosBase(Array.isArray(lista) ? lista : []);
-      setOfertasMap(mapaOfertasPorProduto(ofertas));
-    } catch (error) {
-      const detalhe =
-        error.response?.data?.title ||
-        error.response?.data ||
-        error.message ||
-        'Erro desconhecido';
-      console.error('carregar produtos:', detalhe);
-      Alert.alert(
-        'Erro',
-        'Não foi possível carregar os produtos. Verifique se a API está rodando e se a migration AddLojaIdToProduto foi aplicada no banco.'
-      );
-    } finally {
-      setLoading(false);
+  const executarBusca = useCallback(
+    async (termo) => {
+      const buscaId = ++buscaIdRef.current;
+      setBuscando(true);
+      await carregarFeed(termo, 1, false, false);
+      if (buscaId !== buscaIdRef.current) return;
+    },
+    [carregarFeed]
+  );
+
+  useEffect(() => {
+    if (!termoAtivo) {
+      buscaIdRef.current += 1;
+      setBuscando(false);
+      carregarFeed('', 1, false, true);
+      return undefined;
     }
-  }
+
+    const timer = setTimeout(() => executarBusca(termoAtivo), DEBOUNCE_BUSCA_MS);
+    return () => clearTimeout(timer);
+  }, [termoAtivo, executarBusca, carregarFeed]);
 
   async function handleSearch() {
-    const termo = termoBusca.trim();
-
-    if (!termo) {
-      setResultadosBusca(null);
-      setModoVisualizacao(MODO_LISTA);
+    if (!termoAtivo) {
+      await carregarFeed('', 1, false, true);
       return;
     }
 
-    setLoading(true);
-    try {
-      const local = filtrarProdutosPorTermo(produtosBase, termo);
-      let daApi = [];
-      try {
-        daApi = await buscarProdutosPorNome(termo);
-      } catch {
-        /* usa só resultado local se API falhar */
-      }
+    if (isCliente) sincronizarGpsCliente()?.catch?.(() => {});
+    await executarBusca(termoAtivo);
 
-      const merged = new Map();
-      local.forEach((p) => merged.set(p.id, p));
-      daApi.forEach((p) => merged.set(p.id, p));
-
-      const normalizados = normalizarListaProdutos([...merged.values()]);
-      setResultadosBusca(normalizados);
-
-      if (normalizados.length > 0) {
-        setModoVisualizacao(MODO_MAPA);
-      } else {
-        setModoVisualizacao(MODO_LISTA);
-      }
-
-      if (clienteId) {
-        await registrarPesquisa(clienteId, termo);
-      }
-    } catch {
-      Alert.alert('Erro', 'Falha na busca');
-    } finally {
-      setLoading(false);
+    if (clienteId) {
+      registrarPesquisa(clienteId, termoAtivo).catch(() => {});
     }
   }
 
-  const produtosExibidos = useMemo(() => {
-    const base = resultadosBusca ?? produtosBase;
-    if (resultadosBusca) return resultadosBusca;
-    return filtrarProdutosPorTermo(base, termoBusca);
-  }, [produtosBase, resultadosBusca, termoBusca]);
+  function carregarMais() {
+    if (!hasNext || carregandoMais || loading) return;
+    carregarFeed(termoAtivo, page + 1, true, false);
+  }
+
+  const lojaIdsDestaque = useMemo(() => {
+    if (!termoAtivo) return null;
+    const ids = new Set(produtos.map((p) => p.lojaId).filter(Boolean));
+    return [...ids].map(String);
+  }, [produtos, termoAtivo]);
+
+  const produtosPorLoja = useMemo(() => {
+    if (!termoAtivo) return {};
+    const grupos = {};
+    produtos.forEach((p) => {
+      const lojaId = p.lojaId;
+      if (!lojaId) return;
+      const chave = String(lojaId);
+      if (!grupos[chave]) grupos[chave] = [];
+      if (grupos[chave].length >= MAX_PRODUTOS_POR_PIN) return;
+      grupos[chave].push({
+        id: p.id,
+        nome: nomeProduto(p),
+        preco: formatarPrecoBrl(p.preco),
+      });
+    });
+    return grupos;
+  }, [produtos, termoAtivo]);
 
   function abrirProduto(productId, produto) {
-    // BI: registra o clique no resultado vinculando termo + produto + loja.
-    if (clienteId && termoBusca.trim()) {
-      registrarPesquisa(clienteId, termoBusca.trim(), {
+    if (clienteId && termoAtivo) {
+      registrarPesquisa(clienteId, termoAtivo, {
         produtoId: productId,
         lojaId: produto?.lojaId ?? null,
       }).catch(() => {});
@@ -129,81 +195,84 @@ export default function SearchScreen() {
     navigation.navigate('ProductDetail', { productId });
   }
 
+  function abrirProdutoDoMapa(productId) {
+    const produto = produtos.find((p) => String(p.id) === String(productId));
+    abrirProduto(productId, produto);
+  }
+
   function renderItem({ item }) {
     return (
       <ProductGridCard
-        produto={item}
-        oferta={ofertasMap.get(item.id)}
+        produto={feedItemParaCard(item)}
+        oferta={feedItemParaOferta(item)}
         onPress={() => abrirProduto(item.id, item)}
       />
     );
   }
 
-  const mostrarToggle = resultadosBusca !== null && resultadosBusca.length > 0;
-
   return (
-    <FormScreen
-      title="Buscar produtos"
-      subtitle="Encontre as melhores ofertas"
-      scrollable={false}
-    >
+    <FormScreen title="Buscar produtos" subtitle="Encontre as melhores ofertas" scrollable={false}>
       <View style={styles.searchRow}>
         <View style={styles.searchInputWrap}>
           <FormField
             label=""
             value={termoBusca}
-            onChangeText={(texto) => {
-              setTermoBusca(texto);
-              if (!texto.trim()) {
-                setResultadosBusca(null);
-                setModoVisualizacao(MODO_LISTA);
-              }
-            }}
+            onChangeText={setTermoBusca}
             placeholder="Buscar produtos..."
             onSubmitEditing={handleSearch}
             returnKeyType="search"
             compact
           />
         </View>
-        <PrimaryButton
-          label="Buscar"
-          onPress={handleSearch}
-          style={styles.searchButton}
-        />
+        <PrimaryButton label="Buscar" onPress={handleSearch} style={styles.searchButton} />
       </View>
 
-      {mostrarToggle ? (
-        <FormTabs
-          options={[
-            { value: MODO_MAPA, label: 'Mapa' },
-            { value: MODO_LISTA, label: 'Lista' },
-          ]}
-          value={modoVisualizacao}
-          onChange={setModoVisualizacao}
-        />
+      <FormTabs
+        options={[
+          { value: MODO_MAPA, label: 'Mapa' },
+          { value: MODO_LISTA, label: 'Lista' },
+        ]}
+        value={modoVisualizacao}
+        onChange={setModoVisualizacao}
+      />
+
+      {buscando ? (
+        <ActivityIndicator size="small" color={colors.primary} style={styles.buscandoIndicator} />
       ) : null}
 
       {loading ? (
         <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 24 }} />
-      ) : modoVisualizacao === MODO_MAPA && resultadosBusca?.length > 0 ? (
-        <SearchMapView
-          produtos={resultadosBusca}
-          onProductPress={abrirProduto}
+      ) : modoVisualizacao === MODO_MAPA ? (
+        <LojasMapView
+          lojas={lojas}
+          lojaIdsDestaque={lojaIdsDestaque}
+          produtosPorLoja={produtosPorLoja}
+          onProductPress={abrirProdutoDoMapa}
         />
       ) : (
         <FlatList
-          style={styles.gridList}
+          style={[styles.gridList, { backgroundColor: colors.listBackground }]}
           contentContainerStyle={styles.gridContent}
-          data={produtosExibidos}
-          keyExtractor={(item) => item.id}
+          data={produtos}
+          keyExtractor={(item) => String(item.id)}
           renderItem={renderItem}
           numColumns={2}
           columnWrapperStyle={styles.gridRow}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          windowSize={5}
+          maxToRenderPerBatch={10}
+          removeClippedSubviews
+          onEndReached={carregarMais}
+          onEndReachedThreshold={0.4}
+          ListFooterComponent={
+            carregandoMais ? (
+              <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 12 }} />
+            ) : null
+          }
           ListEmptyComponent={
-            <ListCardText style={styles.emptyText}>
-              {termoBusca.trim()
+            <ListCardText style={[styles.emptyText, { color: colors.textMuted }]}>
+              {termoAtivo
                 ? 'Nenhum produto encontrado para essa busca.'
                 : 'Nenhum produto cadastrado ainda.'}
             </ListCardText>
@@ -221,30 +290,11 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 12,
   },
-  searchInputWrap: {
-    flex: 1,
-  },
-  searchButton: {
-    marginBottom: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  gridList: {
-    flex: 1,
-    backgroundColor: '#EBEBEB',
-    marginHorizontal: -16,
-  },
-  gridContent: {
-    paddingHorizontal: 8,
-    paddingTop: 8,
-    paddingBottom: 16,
-  },
-  gridRow: {
-    gap: 8,
-  },
-  emptyText: {
-    textAlign: 'center',
-    marginTop: 24,
-    color: '#64748B',
-  },
+  searchInputWrap: { flex: 1 },
+  searchButton: { marginBottom: 10, paddingHorizontal: 16, paddingVertical: 12 },
+  buscandoIndicator: { marginVertical: 4 },
+  gridList: { flex: 1, marginHorizontal: -16 },
+  gridContent: { paddingHorizontal: 8, paddingTop: 8, paddingBottom: 16 },
+  gridRow: { gap: 8 },
+  emptyText: { textAlign: 'center', marginTop: 24 },
 });

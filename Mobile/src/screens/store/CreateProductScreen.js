@@ -2,6 +2,7 @@ import { Alert, Image, Pressable, Text, StyleSheet, View } from 'react-native';
 import { useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { criarProduto } from '../../services/productService';
+import { invalidarFeedCache } from '../../services/feedService';
 import { uploadImagemProduto } from '../../services/storageService';
 import { useAuth } from '../../context/AuthContext';
 import { FormScreen, FormField, PrimaryButton, SecondaryButton } from '../../components/form';
@@ -85,6 +86,7 @@ export default function CreateProductScreen({ navigation }) {
         imagemUrl,
       });
 
+      invalidarFeedCache('feed');
       Alert.alert('Sucesso', 'Produto criado com sucesso');
       navigation.goBack();
     } catch (error) {
