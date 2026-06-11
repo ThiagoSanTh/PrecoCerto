@@ -4,32 +4,58 @@ import { getToken, clearToken } from './tokenStorage';
 
 const LOCALHOST_PC = 'http://localhost:5132/api';
 
-/** Garante https:// e sufixo /api (evita URL relativa na Vercel). */
+/**
+ * Garante URL absoluta com https:// e sufixo /api.
+ * Sem https:// o axios no browser trata o host como path relativo à Vercel
+ * (ex.: vercel.app/railway.app/Auth/login → 405).
+ */
 function normalizeApiBaseUrl(url) {
   if (!url || typeof url !== 'string') return null;
 
-  let normalized = url.trim().replace(/\/+$/, '');
+  let normalized = url.trim();
+  if (!normalized) return null;
+
+  // Evita path relativo (/host...) ou host sem protocolo
+  normalized = normalized.replace(/^\/+/, '');
+  normalized = normalized.replace(/\/+$/, '');
   if (!normalized) return null;
 
   if (!/^https?:\/\//i.test(normalized)) {
     normalized = `https://${normalized}`;
   }
 
-  if (!normalized.endsWith('/api')) {
-    normalized = `${normalized}/api`;
+  try {
+    const parsed = new URL(normalized);
+    let path = parsed.pathname.replace(/\/+$/, '') || '';
+    if (!path.endsWith('/api')) {
+      path = `${path}/api`.replace(/\/+/g, '/');
+    }
+    return `${parsed.origin}${path}`;
+  } catch {
+    return null;
   }
-
-  return normalized;
 }
 
-const baseURL =
-  normalizeApiBaseUrl(process.env.EXPO_PUBLIC_API_URL) ||
-  Platform.select({
+function resolveBaseUrl() {
+  const fromEnv = normalizeApiBaseUrl(process.env.EXPO_PUBLIC_API_URL);
+  if (fromEnv) return fromEnv;
+
+  if (typeof window !== 'undefined' && !__DEV__) {
+    console.error(
+      '[API] EXPO_PUBLIC_API_URL não definida no build da Vercel. ' +
+        'Configure https://SUA-URL-RAILWAY.up.railway.app/api e faça redeploy.'
+    );
+  }
+
+  return Platform.select({
     web: LOCALHOST_PC,
     default: LOCALHOST_PC,
   });
+}
 
-if (__DEV__) {
+const baseURL = resolveBaseUrl();
+
+if (__DEV__ || (typeof window !== 'undefined' && !baseURL.startsWith('http'))) {
   console.log('[API] baseURL:', baseURL);
 }
 
