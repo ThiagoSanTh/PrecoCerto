@@ -62,7 +62,7 @@ namespace Pc.Servico.Implementacoes
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(senha))
                 return null;
 
-            var cliente = await _clienteRepositorio.ObterPorEmailAsync(email);
+            var cliente = await _clienteRepositorio.ObterPorEmailAsync(EmailValidator.Normalizar(email));
 
             if (cliente == null || !await VerificarSenhaAsync(cliente, senha))
                 return null;
