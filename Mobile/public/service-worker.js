@@ -1,11 +1,22 @@
-const CACHE_NAME = 'preco-certo-v2';
-const SHELL_ASSETS = ['/', '/index.html', '/manifest.json'];
+const CACHE_NAME = 'preco-certo-v3';
+
+const SHELL_PATHS = new Set(['/', '/index.html']);
+
+function isDocumentRequest(request, url) {
+  return (
+    request.mode === 'navigate' ||
+    SHELL_PATHS.has(url.pathname) ||
+    request.headers.get('accept')?.includes('text/html')
+  );
+}
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_ASSETS).catch(() => undefined))
-  );
   self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) =>
+      cache.addAll(['/manifest.json']).catch(() => undefined)
+    )
+  );
 });
 
 self.addEventListener('activate', (event) => {
@@ -22,30 +33,43 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
 
   if (request.method !== 'GET') return;
+  if (url.hostname !== self.location.hostname) return;
 
-  if (url.pathname.includes('/api/') || url.hostname !== self.location.hostname) {
-    return;
-  }
+  if (url.pathname.includes('/api/')) return;
 
-  // Bundles JS: sempre buscar na rede (evita API URL antiga em cache após redeploy).
-  if (url.pathname.startsWith('/_expo/')) {
+  // Bundles Expo: sempre rede (hash muda a cada deploy).
+  if (url.pathname.startsWith('/_expo/') || url.pathname.startsWith('/assets/')) {
     event.respondWith(fetch(request));
     return;
   }
 
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      const network = fetch(request)
+  // HTML / navegação: rede primeiro para pegar index.html com hash JS correto.
+  if (isDocumentRequest(request, url)) {
+    event.respondWith(
+      fetch(request)
         .then((response) => {
-          if (response.ok && url.origin === self.location.origin) {
+          if (response.ok) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           }
           return response;
         })
-        .catch(() => cached);
+        .catch(() => caches.match(request).then((cached) => cached || caches.match('/index.html')))
+    );
+    return;
+  }
 
-      return cached || network;
-    })
+  event.respondWith(
+    caches.match(request).then(
+      (cached) =>
+        cached ||
+        fetch(request).then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        })
+    )
   );
 });

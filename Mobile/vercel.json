@@ -4,12 +4,19 @@
   "installCommand": "npm ci",
   "framework": null,
   "rewrites": [
-    { "source": "/((?!manifest\\.json|service-worker\\.js|assets/).*)", "destination": "/index.html" }
+    {
+      "source": "/((?!_expo|assets|manifest\\.json|service-worker\\.js|favicon\\.ico).*)",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
     {
       "source": "/service-worker.js",
-      "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+    },
+    {
+      "source": "/index.html",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
     }
   ]
 }

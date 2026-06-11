@@ -1,17 +1,20 @@
 import { Platform, View, StyleSheet } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Routes from './src/navigation';
 import { AuthProvider } from './src/context/AuthContext';
 import { ThemeProvider } from './src/context/ThemeContext';
 
 export default function App() {
   return (
-    <View style={styles.root}>
-      <ThemeProvider>
-        <AuthProvider>
-          <Routes />
-        </AuthProvider>
-      </ThemeProvider>
-    </View>
+    <SafeAreaProvider>
+      <View style={styles.root}>
+        <ThemeProvider>
+          <AuthProvider>
+            <Routes />
+          </AuthProvider>
+        </ThemeProvider>
+      </View>
+    </SafeAreaProvider>
   );
 }
 
