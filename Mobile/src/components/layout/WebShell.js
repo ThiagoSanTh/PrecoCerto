@@ -1,14 +1,13 @@
-import { View, StyleSheet } from 'react-native';
-import { Platform } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import { useTheme } from '../../context/ThemeContext';
 
 /**
- * Wrapper responsivo apenas para telas de auth no web.
- * Telas do app (mapa, tabs) usam largura total — wrapper quebra flex/altura.
+ * Wrapper visual só para telas de auth no web (card centralizado).
+ * Telas do app (tabs, mapa) não devem usar este wrapper — quebra flex no RN Web.
  */
 export default function WebShell({ children, variant = 'default' }) {
-  const { isWeb, isPhoneWeb, isDesktopWeb, authCardMaxWidth } = useLayoutProfile();
+  const { isWeb, isDesktopWeb, authCardMaxWidth } = useLayoutProfile();
   const { colors } = useTheme();
 
   if (!isWeb || variant !== 'auth') {
@@ -16,17 +15,22 @@ export default function WebShell({ children, variant = 'default' }) {
   }
 
   return (
-    <View style={[styles.root, { backgroundColor: isDesktopWeb ? '#E2E8F0' : colors.background }]}>
+    <View
+      style={[
+        styles.root,
+        isDesktopWeb && styles.rootDesktop,
+        { backgroundColor: isDesktopWeb ? '#E2E8F0' : colors.background },
+      ]}
+    >
       <View
         style={[
           styles.authInner,
+          isDesktopWeb && styles.authCard,
           {
             maxWidth: authCardMaxWidth,
-            backgroundColor: isDesktopWeb ? colors.surface : 'transparent',
+            backgroundColor: colors.surface,
             borderColor: colors.border,
           },
-          isDesktopWeb && styles.authCard,
-          isPhoneWeb && styles.phonePadding,
         ]}
       >
         {children}
@@ -41,14 +45,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
   },
-  authInner: {
-    flex: 1,
-    width: '100%',
+  rootDesktop: {
+    justifyContent: 'center',
   },
-  phonePadding: {
-    paddingHorizontal: 4,
+  authInner: {
+    width: '100%',
+    flex: 1,
+    maxHeight: '100%',
   },
   authCard: {
+    flex: 0,
     marginVertical: 32,
     borderRadius: 16,
     borderWidth: 1,

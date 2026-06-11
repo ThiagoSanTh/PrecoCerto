@@ -51,7 +51,10 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
               const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
               if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
             }}
-            style={variant === 'sidebar' ? styles.sidebarItem : styles.item}
+            style={[
+              variant === 'sidebar' ? styles.sidebarItem : styles.item,
+              variant === 'sidebar' && focused && { backgroundColor: `${colors.primary}18` },
+            ]}
           >
             <View>
               <Ionicons

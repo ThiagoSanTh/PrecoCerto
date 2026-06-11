@@ -57,7 +57,7 @@ export const formStyles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 8,
   },
-  bodyFill: {
+  bodyWeb: {
     minHeight: 0,
   },
   listFlex: {

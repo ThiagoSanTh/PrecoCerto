@@ -1,4 +1,4 @@
-import { Platform, View, StyleSheet, useWindowDimensions } from 'react-native';
+import { Platform, View, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 
@@ -13,8 +13,6 @@ const LeafletMapFrame = forwardRef(function LeafletMapFrame(
 ) {
   const iframeRef = useRef(null);
   const webViewRef = useRef(null);
-  const { height: windowHeight } = useWindowDimensions();
-  const webMapHeight = Math.max(320, Math.floor(windowHeight * 0.55));
 
   useImperativeHandle(ref, () => ({
     enviarMensagem(obj) {
@@ -43,13 +41,13 @@ const LeafletMapFrame = forwardRef(function LeafletMapFrame(
 
   if (Platform.OS === 'web') {
     return (
-      <View style={[styles.frame, style, { minHeight: webMapHeight, height: webMapHeight }]}>
+      <View style={[styles.frame, styles.frameWeb, style]}>
         <iframe
           ref={iframeRef}
           key={mapKey}
           title="Mapa"
           srcDoc={html}
-          style={{ ...styles.iframe, height: webMapHeight, minHeight: webMapHeight }}
+          style={styles.iframe}
           sandbox="allow-scripts allow-same-origin"
         />
       </View>
@@ -81,10 +79,15 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: '#e2e8f0',
   },
+  frameWeb: {
+    minHeight: 280,
+    height: '100%',
+  },
   iframe: {
     border: 'none',
     width: '100%',
     height: '100%',
-    minHeight: 260,
+    minHeight: 280,
+    display: 'block',
   },
 });

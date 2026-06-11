@@ -35,7 +35,7 @@ export default function FormScreen({
       {children}
     </ScrollView>
   ) : (
-    <View style={[s.body, s.bodyFill]}>{children}</View>
+    <View style={[s.body, Platform.OS === 'web' && s.bodyWeb]}>{children}</View>
   );
 
   return (

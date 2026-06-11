@@ -245,7 +245,7 @@ export default function SearchScreen() {
       {loading ? (
         <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 24 }} />
       ) : modoVisualizacao === MODO_MAPA ? (
-        <View style={styles.mapArea}>
+        <View style={styles.mapWrap}>
           <LojasMapView
             lojas={lojas}
             lojaIdsDestaque={lojaIdsDestaque}
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
   searchInputWrap: { flex: 1 },
   searchButton: { marginBottom: 10, paddingHorizontal: 16, paddingVertical: 12 },
   buscandoIndicator: { marginVertical: 4 },
-  mapArea: { flex: 1, minHeight: 320 },
+  mapWrap: { flex: 1, minHeight: 280, minWidth: 0 },
   gridList: { flex: 1, marginHorizontal: -16 },
   gridContent: { paddingHorizontal: 8, paddingTop: 8, paddingBottom: 16 },
   gridRow: { gap: 8 },
