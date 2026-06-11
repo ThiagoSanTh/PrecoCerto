@@ -560,13 +560,6 @@ export function buildLojasMapHtml(dadosMapa) {
       map.setView(DATA.view.center, DATA.view.zoom);
     }
 
-    function refreshMapSize() {
-      try { map.invalidateSize(); } catch (e) { /* ignore */ }
-    }
-    setTimeout(refreshMapSize, 50);
-    setTimeout(refreshMapSize, 300);
-    window.addEventListener('resize', refreshMapSize);
-
     // Avisa o app que o mapa está pronto para receber destaques.
     postToApp({ type: 'ready' });
   </script>

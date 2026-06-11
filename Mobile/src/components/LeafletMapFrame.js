@@ -41,7 +41,7 @@ const LeafletMapFrame = forwardRef(function LeafletMapFrame(
 
   if (Platform.OS === 'web') {
     return (
-      <View style={[styles.frame, styles.frameWeb, style]}>
+      <View style={[styles.frame, style]}>
         <iframe
           ref={iframeRef}
           key={mapKey}
@@ -79,15 +79,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: '#e2e8f0',
   },
-  frameWeb: {
-    minHeight: 280,
-    height: '100%',
-  },
   iframe: {
     border: 'none',
     width: '100%',
     height: '100%',
-    minHeight: 280,
-    display: 'block',
+    minHeight: 260,
   },
 });

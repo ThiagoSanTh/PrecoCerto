@@ -1,4 +1,3 @@
-import { View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useEffect, useState } from 'react';
 import BuscarStack from './buscarStack.routes';
@@ -8,36 +7,11 @@ import MensagensStack from './mensagensStack.routes';
 import ProfileScreen from '../screens/user/ProfileScreen';
 import CustomTabBar from '../components/CustomTabBar';
 import { contarNaoLidas } from '../services/chatService';
-import { useLayoutProfile } from '../hooks/useLayoutProfile';
 
 const Tab = createBottomTabNavigator();
 
-function desktopTabBarStyle(sidebarWidth) {
-  return {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: sidebarWidth,
-    height: '100%',
-    borderTopWidth: 0,
-    borderRightWidth: 1,
-    elevation: 0,
-    zIndex: 10,
-  };
-}
-
-function desktopSceneStyle(sidebarWidth) {
-  return {
-    flex: 1,
-    marginLeft: sidebarWidth,
-    minHeight: 0,
-  };
-}
-
 export default function UserTabs() {
   const [badge, setBadge] = useState(0);
-  const { isDesktopWeb, sidebarWidth } = useLayoutProfile();
 
   useEffect(() => {
     let ativo = true;
@@ -58,21 +32,15 @@ export default function UserTabs() {
   }, []);
 
   return (
-    <View style={{ flex: 1, minHeight: 0 }}>
-      <Tab.Navigator
-        tabBar={(props) => <CustomTabBar {...props} badgeCount={badge} />}
-        screenOptions={{
-          headerShown: false,
-          sceneStyle: isDesktopWeb ? desktopSceneStyle(sidebarWidth) : { flex: 1 },
-          tabBarStyle: isDesktopWeb ? desktopTabBarStyle(sidebarWidth) : undefined,
-        }}
-      >
-        <Tab.Screen name="Buscar" component={BuscarStack} options={{ tabBarLabel: 'Buscar' }} />
-        <Tab.Screen name="Favoritos" component={FavoritosScreen} />
-        <Tab.Screen name="Histórico" component={HistoricoScreen} />
-        <Tab.Screen name="Mensagens" component={MensagensStack} />
-        <Tab.Screen name="Perfil" component={ProfileScreen} />
-      </Tab.Navigator>
-    </View>
+    <Tab.Navigator
+      tabBar={(props) => <CustomTabBar {...props} badgeCount={badge} />}
+      screenOptions={{ headerShown: false }}
+    >
+      <Tab.Screen name="Buscar" component={BuscarStack} options={{ tabBarLabel: 'Buscar' }} />
+      <Tab.Screen name="Favoritos" component={FavoritosScreen} />
+      <Tab.Screen name="Histórico" component={HistoricoScreen} />
+      <Tab.Screen name="Mensagens" component={MensagensStack} />
+      <Tab.Screen name="Perfil" component={ProfileScreen} />
+    </Tab.Navigator>
   );
 }

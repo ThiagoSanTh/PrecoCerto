@@ -5,7 +5,6 @@ import { listarProdutos } from '../../services/productService';
 import { listarOfertas } from '../../services/ofertaService';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import ProductGridCard from '../../components/feed/ProductGridCard';
 import {
   FormScreen,
@@ -19,7 +18,6 @@ import { mapaOfertasPorProduto } from '../../utils/precoUtils';
 export default function ProductsScreen({ navigation }) {
   const { session } = useAuth();
   const { colors } = useTheme();
-  const { gridColumns } = useLayoutProfile();
   const lojaId = session?.perfil?.lojaId;
 
   const [termoBusca, setTermoBusca] = useState('');
@@ -124,14 +122,13 @@ export default function ProductsScreen({ navigation }) {
         <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 24 }} />
       ) : (
         <FlatList
-          key={`grid-${gridColumns}`}
           style={[styles.gridList, { backgroundColor: colors.listBackground }]}
           contentContainerStyle={styles.gridContent}
           data={produtosExibidos}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
-          numColumns={gridColumns}
-          columnWrapperStyle={gridColumns > 1 ? styles.gridRow : undefined}
+          numColumns={2}
+          columnWrapperStyle={styles.gridRow}
           showsVerticalScrollIndicator={false}
           windowSize={5}
           maxToRenderPerBatch={10}

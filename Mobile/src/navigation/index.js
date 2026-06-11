@@ -1,4 +1,3 @@
-import { View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
@@ -21,9 +20,8 @@ const Stack = createNativeStackNavigator();
 
 export default function Routes() {
   return (
-    <View style={{ flex: 1 }}>
-      <NavigationContainer>
-        <Stack.Navigator initialRouteName="Login">
+    <NavigationContainer>
+      <Stack.Navigator initialRouteName="Login">
         <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Cadastro" component={RegisterScreen} options={{ headerShown: false }} />
         <Stack.Screen name="EsqueciSenha" component={ForgotPasswordScreen} options={{ headerShown: false }} />
@@ -38,7 +36,6 @@ export default function Routes() {
         <Stack.Screen name="Chat" component={ChatScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Home" component={AppRoutes} options={{ headerShown: false }} />
       </Stack.Navigator>
-      </NavigationContainer>
-    </View>
+    </NavigationContainer>
   );
 }

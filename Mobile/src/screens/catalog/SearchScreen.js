@@ -7,7 +7,6 @@ import { registrarPesquisa } from '../../services/historicoService';
 import { obterLocalizacaoAtual } from '../../services/locationService';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import LojasMapView from '../../components/LojasMapView';
 import ProductGridCard from '../../components/feed/ProductGridCard';
 import {
@@ -58,7 +57,6 @@ export default function SearchScreen() {
   const [hasNext, setHasNext] = useState(false);
   const { session, isCliente, sincronizarGpsCliente } = useAuth();
   const { colors } = useTheme();
-  const { gridColumns } = useLayoutProfile();
 
   const clienteId = session?.perfil?.id;
   const buscaIdRef = useRef(0);
@@ -245,24 +243,21 @@ export default function SearchScreen() {
       {loading ? (
         <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 24 }} />
       ) : modoVisualizacao === MODO_MAPA ? (
-        <View style={styles.mapWrap}>
-          <LojasMapView
-            lojas={lojas}
-            lojaIdsDestaque={lojaIdsDestaque}
-            produtosPorLoja={produtosPorLoja}
-            onProductPress={abrirProdutoDoMapa}
-          />
-        </View>
+        <LojasMapView
+          lojas={lojas}
+          lojaIdsDestaque={lojaIdsDestaque}
+          produtosPorLoja={produtosPorLoja}
+          onProductPress={abrirProdutoDoMapa}
+        />
       ) : (
         <FlatList
-          key={`grid-${gridColumns}`}
           style={[styles.gridList, { backgroundColor: colors.listBackground }]}
           contentContainerStyle={styles.gridContent}
           data={produtos}
           keyExtractor={(item) => String(item.id)}
           renderItem={renderItem}
-          numColumns={gridColumns}
-          columnWrapperStyle={gridColumns > 1 ? styles.gridRow : undefined}
+          numColumns={2}
+          columnWrapperStyle={styles.gridRow}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           windowSize={5}
@@ -298,7 +293,6 @@ const styles = StyleSheet.create({
   searchInputWrap: { flex: 1 },
   searchButton: { marginBottom: 10, paddingHorizontal: 16, paddingVertical: 12 },
   buscandoIndicator: { marginVertical: 4 },
-  mapWrap: { flex: 1, minHeight: 280, minWidth: 0 },
   gridList: { flex: 1, marginHorizontal: -16 },
   gridContent: { paddingHorizontal: 8, paddingTop: 8, paddingBottom: 16 },
   gridRow: { gap: 8 },
