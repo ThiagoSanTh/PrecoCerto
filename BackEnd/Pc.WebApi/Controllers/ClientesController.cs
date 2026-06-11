@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using Pc.Dominio.Entities.Usuarios;
+using Pc.Dominio.Enums;
 using Pc.Servico.Excecoes;
 using Pc.Servico.Interfaces;
 using Pc.WebApi.Authorization;
@@ -55,9 +57,16 @@ namespace Pc.WebApi.Controllers
 
                 var novoCliente = await _clienteServico.RegistrarAsync(cliente);
 
-                await _emailService.EnviarBoasVindasAsync(novoCliente.Email, novoCliente.NomeUsuario);
+                _ = _emailService.EnviarBoasVindasAsync(novoCliente.Email, novoCliente.NomeUsuario);
 
-                return CreatedAtAction(nameof(ObterPorId), new { id = novoCliente.Id }, MapResposta(novoCliente));
+                var perfil = MapResposta(novoCliente);
+                var token = _jwtTokenService.GenerateToken(novoCliente.Id, TipoUsuario.Cliente);
+
+                return Ok(new AuthLoginRespostaDto { Token = token, Tipo = "cliente", Perfil = perfil });
+            }
+            catch (DbUpdateException)
+            {
+                return Conflict(new { message = "Este e-mail já está cadastrado." });
             }
             catch (EmailJaRegistradoException ex)
             {

@@ -3,6 +3,7 @@ namespace Pc.WebApi.DTOs.Usuarios
     public class LojistaRespostaDto
     {
         public Guid Id { get; set; }
+        public string CodigoPublico { get; set; } = string.Empty;
         public string NomeUsuario { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string? Telefone { get; set; }

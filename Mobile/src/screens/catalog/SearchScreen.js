@@ -7,6 +7,7 @@ import { registrarPesquisa } from '../../services/historicoService';
 import { obterLocalizacaoAtual } from '../../services/locationService';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import LojasMapView from '../../components/LojasMapView';
 import ProductGridCard from '../../components/feed/ProductGridCard';
 import {
@@ -57,6 +58,7 @@ export default function SearchScreen() {
   const [hasNext, setHasNext] = useState(false);
   const { session, isCliente, sincronizarGpsCliente } = useAuth();
   const { colors } = useTheme();
+  const { gridColumns } = useLayoutProfile();
 
   const clienteId = session?.perfil?.id;
   const buscaIdRef = useRef(0);
@@ -266,13 +268,14 @@ export default function SearchScreen() {
 >>>>>>> fd252bd9 (fix: resolve conflitos de stash e corrige layout do mapa no web)
       ) : (
         <FlatList
+          key={`grid-${gridColumns}`}
           style={[styles.gridList, { backgroundColor: colors.listBackground }]}
           contentContainerStyle={styles.gridContent}
           data={produtos}
           keyExtractor={(item) => String(item.id)}
           renderItem={renderItem}
-          numColumns={2}
-          columnWrapperStyle={styles.gridRow}
+          numColumns={gridColumns}
+          columnWrapperStyle={gridColumns > 1 ? styles.gridRow : undefined}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           windowSize={5}

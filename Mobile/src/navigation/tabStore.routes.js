@@ -6,11 +6,13 @@ import MensagensStack from './mensagensStack.routes';
 import ProfileScreen from '../screens/user/ProfileScreen';
 import CustomTabBar from '../components/CustomTabBar';
 import { contarNaoLidas } from '../services/chatService';
+import { useLayoutProfile } from '../hooks/useLayoutProfile';
 
 const Tab = createBottomTabNavigator();
 
 export default function StoreTabs() {
   const [badge, setBadge] = useState(0);
+  const { isDesktopWeb, sidebarWidth } = useLayoutProfile();
 
   useEffect(() => {
     let ativo = true;
@@ -33,7 +35,22 @@ export default function StoreTabs() {
   return (
     <Tab.Navigator
       tabBar={(props) => <CustomTabBar {...props} badgeCount={badge} />}
-      screenOptions={{ headerShown: false }}
+      screenOptions={{
+        headerShown: false,
+        sceneContainerStyle: isDesktopWeb ? { paddingLeft: sidebarWidth } : undefined,
+        tabBarStyle: isDesktopWeb
+          ? {
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: sidebarWidth,
+              height: '100%',
+              borderTopWidth: 0,
+              elevation: 0,
+            }
+          : undefined,
+      }}
     >
       <Tab.Screen name="Produtos" component={ProductsScreen} />
       <Tab.Screen name="Loja" component={StoreScreen} />

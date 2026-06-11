@@ -25,11 +25,11 @@ export function formatApiError(error) {
 
   if (data?.message) return data.message;
 
-  if (status === 401) return 'Email ou senha incorretos.';
+  if (status === 401) return 'E-mail ou senha incorretos. Verifique os dados ou cadastre-se.';
   if (status === 400) return data?.message || 'Dados inválidos. Verifique os campos.';
   if (status === 403) return 'Acesso negado.';
   if (status === 404) return data?.message || 'Recurso não encontrado.';
-  if (status === 409) return data?.message || 'Este e-mail já está cadastrado.';
+  if (status === 409) return data?.message || 'Este e-mail já tem conta. Faça login ou use outro e-mail.';
   if (status === 429) return data?.message || 'Muitas tentativas. Aguarde um minuto.';
   if (status === 503) return data?.message || 'Serviço temporariamente indisponível. Tente novamente em instantes.';
   if (status === 500) return data?.message || data?.detail || 'Erro interno no servidor. Tente novamente.';

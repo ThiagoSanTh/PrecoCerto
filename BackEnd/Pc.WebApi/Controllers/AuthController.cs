@@ -179,9 +179,10 @@ namespace Pc.WebApi.Controllers
             DataCriacao = c.DataCriacao
         };
 
-        private static LojistaRespostaDto MapLojista(Usuario u, Guid? lojaId) => new()
+        private LojistaRespostaDto MapLojista(Usuario u, Guid? lojaId) => new()
         {
             Id = u.Id,
+            CodigoPublico = _idCodificador.Codificar(u.Id),
             NomeUsuario = u.NomeUsuario,
             Email = u.Email,
             Telefone = u.Telefone,

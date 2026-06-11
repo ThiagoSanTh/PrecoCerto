@@ -1,6 +1,7 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import { useLayoutProfile } from '../hooks/useLayoutProfile';
 
 const ICONS = {
   Buscar: 'search',
@@ -15,9 +16,25 @@ const ICONS = {
 
 export default function CustomTabBar({ state, descriptors, navigation, badgeCount = 0 }) {
   const { colors } = useTheme();
+  const { isDesktopWeb, sidebarWidth } = useLayoutProfile();
+  const variant = isDesktopWeb ? 'sidebar' : 'bottom';
 
   return (
-    <View style={[styles.bar, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+    <View
+      style={[
+        variant === 'sidebar' ? styles.sidebar : styles.bar,
+        variant === 'sidebar'
+          ? {
+              width: sidebarWidth,
+              backgroundColor: colors.surface,
+              borderRightColor: colors.border,
+            }
+          : {
+              backgroundColor: colors.surface,
+              borderTopColor: colors.border,
+            },
+      ]}
+    >
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];
         const label = options.tabBarLabel ?? options.title ?? route.name;
@@ -34,7 +51,7 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
               const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
               if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
             }}
-            style={styles.item}
+            style={variant === 'sidebar' ? styles.sidebarItem : styles.item}
           >
             <View>
               <Ionicons
@@ -50,8 +67,9 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
             </View>
             <Text
               style={{
-                fontSize: 11,
-                marginTop: 2,
+                fontSize: variant === 'sidebar' ? 13 : 11,
+                marginTop: variant === 'sidebar' ? 0 : 2,
+                marginLeft: variant === 'sidebar' ? 10 : 0,
                 color: focused ? colors.primary : colors.textMuted,
                 fontWeight: focused ? '700' : '500',
               }}
@@ -77,10 +95,26 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: -2 },
   },
+  sidebar: {
+    flexDirection: 'column',
+    borderRightWidth: 1,
+    paddingTop: 16,
+    paddingBottom: 16,
+    paddingHorizontal: 8,
+    height: '100%',
+  },
   item: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  sidebarItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    marginBottom: 4,
   },
   badge: {
     position: 'absolute',
