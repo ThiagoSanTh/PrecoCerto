@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { View } from 'react-native';
 import { useLayoutProfile } from '../hooks/useLayoutProfile';
-import CustomTabBar from './CustomTabBar';
+import CustomTabBar from '../components/CustomTabBar';
 
 const TabBarPropsContext = createContext(null);
 
