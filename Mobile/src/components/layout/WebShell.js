@@ -3,27 +3,29 @@ import { Platform } from 'react-native';
 import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import { useTheme } from '../../context/ThemeContext';
 
+/**
+ * Wrapper responsivo apenas para telas de auth no web.
+ * Telas do app (mapa, tabs) usam largura total — wrapper quebra flex/altura.
+ */
 export default function WebShell({ children, variant = 'default' }) {
-  const { isWeb, isPhoneWeb, isDesktopWeb, contentMaxWidth, authCardMaxWidth } = useLayoutProfile();
+  const { isWeb, isPhoneWeb, isDesktopWeb, authCardMaxWidth } = useLayoutProfile();
   const { colors } = useTheme();
 
-  if (!isWeb) {
+  if (!isWeb || variant !== 'auth') {
     return children;
   }
-
-  const isAuth = variant === 'auth';
 
   return (
     <View style={[styles.root, { backgroundColor: isDesktopWeb ? '#E2E8F0' : colors.background }]}>
       <View
         style={[
-          styles.inner,
+          styles.authInner,
           {
-            maxWidth: isAuth ? authCardMaxWidth : contentMaxWidth,
-            backgroundColor: isAuth && isDesktopWeb ? colors.surface : 'transparent',
+            maxWidth: authCardMaxWidth,
+            backgroundColor: isDesktopWeb ? colors.surface : 'transparent',
             borderColor: colors.border,
           },
-          isAuth && isDesktopWeb && styles.authCard,
+          isDesktopWeb && styles.authCard,
           isPhoneWeb && styles.phonePadding,
         ]}
       >
@@ -39,7 +41,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
   },
-  inner: {
+  authInner: {
     flex: 1,
     width: '100%',
   },

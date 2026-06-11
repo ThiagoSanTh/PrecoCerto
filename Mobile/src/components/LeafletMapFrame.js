@@ -12,8 +12,9 @@ const LeafletMapFrame = forwardRef(function LeafletMapFrame(
   ref
 ) {
   const iframeRef = useRef(null);
-<<<<<<< HEAD
   const webViewRef = useRef(null);
+  const { height: windowHeight } = useWindowDimensions();
+  const webMapHeight = Math.max(320, Math.floor(windowHeight * 0.55));
 
   useImperativeHandle(ref, () => ({
     enviarMensagem(obj) {
@@ -27,10 +28,6 @@ const LeafletMapFrame = forwardRef(function LeafletMapFrame(
       }
     },
   }));
-=======
-  const { height: windowHeight } = useWindowDimensions();
-  const webMapHeight = Math.max(320, Math.floor(windowHeight * 0.55));
->>>>>>> fd252bd9 (fix: resolve conflitos de stash e corrige layout do mapa no web)
 
   useEffect(() => {
     if (Platform.OS !== 'web') return undefined;

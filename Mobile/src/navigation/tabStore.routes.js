@@ -37,7 +37,9 @@ export default function StoreTabs() {
       tabBar={(props) => <CustomTabBar {...props} badgeCount={badge} />}
       screenOptions={{
         headerShown: false,
-        sceneContainerStyle: isDesktopWeb ? { paddingLeft: sidebarWidth } : undefined,
+        sceneStyle: isDesktopWeb
+          ? { flex: 1, marginLeft: sidebarWidth }
+          : { flex: 1 },
         tabBarStyle: isDesktopWeb
           ? {
               position: 'absolute',

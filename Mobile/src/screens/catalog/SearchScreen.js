@@ -188,13 +188,8 @@ export default function SearchScreen() {
   }, [produtos, termoAtivo]);
 
   function abrirProduto(productId, produto) {
-<<<<<<< HEAD
     if (clienteId && termoAtivo) {
       registrarPesquisa(clienteId, termoAtivo, {
-=======
-    if (clienteId && termoBusca.trim()) {
-      registrarPesquisa(clienteId, termoBusca.trim(), {
->>>>>>> fd252bd9 (fix: resolve conflitos de stash e corrige layout do mapa no web)
         produtoId: productId,
         lojaId: produto?.lojaId ?? null,
       }).catch(() => {});
@@ -249,23 +244,15 @@ export default function SearchScreen() {
 
       {loading ? (
         <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 24 }} />
-<<<<<<< HEAD
       ) : modoVisualizacao === MODO_MAPA ? (
-        <LojasMapView
-          lojas={lojas}
-          lojaIdsDestaque={lojaIdsDestaque}
-          produtosPorLoja={produtosPorLoja}
-          onProductPress={abrirProdutoDoMapa}
-        />
-=======
-      ) : modoVisualizacao === MODO_MAPA && resultadosBusca?.length > 0 ? (
         <View style={styles.mapArea}>
-          <SearchMapView
-            produtos={resultadosBusca}
-            onProductPress={abrirProduto}
+          <LojasMapView
+            lojas={lojas}
+            lojaIdsDestaque={lojaIdsDestaque}
+            produtosPorLoja={produtosPorLoja}
+            onProductPress={abrirProdutoDoMapa}
           />
         </View>
->>>>>>> fd252bd9 (fix: resolve conflitos de stash e corrige layout do mapa no web)
       ) : (
         <FlatList
           key={`grid-${gridColumns}`}
@@ -308,44 +295,12 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 12,
   },
-<<<<<<< HEAD
   searchInputWrap: { flex: 1 },
   searchButton: { marginBottom: 10, paddingHorizontal: 16, paddingVertical: 12 },
   buscandoIndicator: { marginVertical: 4 },
+  mapArea: { flex: 1, minHeight: 320 },
   gridList: { flex: 1, marginHorizontal: -16 },
   gridContent: { paddingHorizontal: 8, paddingTop: 8, paddingBottom: 16 },
   gridRow: { gap: 8 },
   emptyText: { textAlign: 'center', marginTop: 24 },
-=======
-  searchInputWrap: {
-    flex: 1,
-  },
-  searchButton: {
-    marginBottom: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  mapArea: {
-    flex: 1,
-    minHeight: 320,
-  },
-  gridList: {
-    flex: 1,
-    backgroundColor: '#EBEBEB',
-    marginHorizontal: -16,
-  },
-  gridContent: {
-    paddingHorizontal: 8,
-    paddingTop: 8,
-    paddingBottom: 16,
-  },
-  gridRow: {
-    gap: 8,
-  },
-  emptyText: {
-    textAlign: 'center',
-    marginTop: 24,
-    color: '#64748B',
-  },
->>>>>>> fd252bd9 (fix: resolve conflitos de stash e corrige layout do mapa no web)
 });
