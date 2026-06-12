@@ -1,4 +1,4 @@
-import { View, Text, Alert } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { FormScreen, PrimaryButton, SecondaryButton, formStyles } from '../../components/form';
@@ -18,7 +18,6 @@ export default function ProfileScreen({ navigation }) {
       title={emModoLoja ? 'Conta lojista' : 'Meu perfil'}
       subtitle="Gerencie sua conta"
       scrollable
-      footer={<SecondaryButton label="Sair" onPress={handleLogout} />}
     >
       <View
         style={{
@@ -48,44 +47,64 @@ export default function ProfileScreen({ navigation }) {
         <Text style={{ color: tema.textMuted, marginTop: 4 }}>{perfil?.email}</Text>
       </View>
 
-      {!emModoLoja ? (
-        <Text style={formStyles.sectionHint}>
-          Sua localização é atualizada automaticamente pelo GPS quando você busca produtos.
+      <View style={styles.actionsColumn}>
+        {!emModoLoja ? (
+          <Text style={[formStyles.sectionHint, styles.hintCentered]}>
+            Sua localização é atualizada automaticamente pelo GPS quando você busca produtos.
+          </Text>
+        ) : null}
+
+        <PrimaryButton label="Editar dados pessoais" onPress={() => navigation.navigate('EditProfile')} />
+        <SecondaryButton label="Alterar e-mail" onPress={() => navigation.navigate('EditEmail')} />
+        <SecondaryButton label="Alterar senha" onPress={() => navigation.navigate('ChangePassword')} />
+
+        {!temModoLoja ? (
+          <PrimaryButton
+            label="Criar loja"
+            onPress={() => navigation.navigate('CreateStore')}
+            style={{ marginTop: 8 }}
+          />
+        ) : null}
+
+        {temModoLoja && !emModoLoja ? (
+          <PrimaryButton
+            label="Modo loja"
+            onPress={() => setAppMode('store')}
+            style={{ marginTop: 8 }}
+          />
+        ) : null}
+
+        {temModoLoja && emModoLoja ? (
+          <PrimaryButton
+            label="Modo cliente"
+            onPress={() => setAppMode('user')}
+            style={{ marginTop: 8 }}
+          />
+        ) : null}
+
+        <Text style={[formStyles.summaryTitle, styles.aparenciaTitle, { color: tema.text }]}>
+          Aparência
         </Text>
-      ) : null}
+        <SecondaryButton label={isDark ? 'Usar tema claro' : 'Usar tema escuro'} onPress={alternarTema} />
 
-      <PrimaryButton label="Editar dados pessoais" onPress={() => navigation.navigate('EditProfile')} />
-      <SecondaryButton label="Alterar e-mail" onPress={() => navigation.navigate('EditEmail')} />
-      <SecondaryButton label="Alterar senha" onPress={() => navigation.navigate('ChangePassword')} />
-
-      {!temModoLoja ? (
-        <PrimaryButton
-          label="Criar loja"
-          onPress={() => navigation.navigate('CreateStore')}
-          style={{ marginTop: 8 }}
-        />
-      ) : null}
-
-      {temModoLoja && !emModoLoja ? (
-        <PrimaryButton
-          label="Modo loja"
-          onPress={() => setAppMode('store')}
-          style={{ marginTop: 8 }}
-        />
-      ) : null}
-
-      {temModoLoja && emModoLoja ? (
-        <PrimaryButton
-          label="Modo cliente"
-          onPress={() => setAppMode('user')}
-          style={{ marginTop: 8 }}
-        />
-      ) : null}
-
-      <Text style={[formStyles.summaryTitle, { marginTop: 16, marginBottom: 4, color: tema.text }]}>
-        Aparência
-      </Text>
-      <SecondaryButton label={isDark ? 'Usar tema claro' : 'Usar tema escuro'} onPress={alternarTema} />
+        <SecondaryButton label="Sair" onPress={handleLogout} style={{ marginTop: 16 }} />
+      </View>
     </FormScreen>
   );
 }
+
+const styles = StyleSheet.create({
+  actionsColumn: {
+    width: '100%',
+    maxWidth: 420,
+    alignSelf: 'center',
+    alignItems: 'stretch',
+  },
+  hintCentered: {
+    textAlign: 'center',
+  },
+  aparenciaTitle: {
+    marginTop: 16,
+    marginBottom: 4,
+  },
+});

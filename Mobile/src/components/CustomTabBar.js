@@ -144,10 +144,10 @@ const styles = StyleSheet.create({
   sidebar: {
     flexDirection: 'column',
     borderRightWidth: 1,
-    paddingTop: 16,
+    paddingTop: 56,
     paddingHorizontal: 8,
     paddingBottom: 16,
-    gap: 4,
+    gap: 12,
   },
   item: {
     flex: 1,
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
   },
   itemSidebar: {
     flex: 0,
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 8,
     borderRadius: 10,
     width: '100%',

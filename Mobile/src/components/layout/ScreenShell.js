@@ -21,10 +21,14 @@ export default function ScreenShell({ children, variant = 'default', fullBleed =
   const shellVariant = fullBleed ? 'fullBleed' : variant;
   const isAuth = shellVariant === 'auth';
   const isFullBleed = shellVariant === 'fullBleed';
-  const showAuthCard = isAuth && isWeb && isDesktopWeb;
+  const showAuthCard = isAuth && isWeb;
   const useFullWidth = contentFullWidth || isFullBleed;
 
-  const columnWidth = useFullWidth ? '100%' : `${contentWidthPercent * 100}%`;
+  const columnWidth = showAuthCard
+    ? '100%'
+    : useFullWidth
+      ? '100%'
+      : `${contentWidthPercent * 100}%`;
   const columnMaxWidth = showAuthCard
     ? authCardMaxWidth
     : useFullWidth
@@ -35,7 +39,7 @@ export default function ScreenShell({ children, variant = 'default', fullBleed =
     <View
       style={[
         showAuthCard ? styles.authCard : styles.contentColumn,
-        useFullWidth && styles.contentFullWidth,
+        useFullWidth && !showAuthCard && styles.contentFullWidth,
         {
           width: columnWidth,
           maxWidth: columnMaxWidth,
@@ -53,7 +57,7 @@ export default function ScreenShell({ children, variant = 'default', fullBleed =
       <View
         style={[
           styles.authRoot,
-          isDesktopWeb && styles.authRootDesktop,
+          styles.authRootWeb,
           { backgroundColor: isDesktopWeb ? '#E2E8F0' : colors.background },
         ]}
       >
@@ -89,9 +93,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
   },
-  authRootDesktop: {
+  authRootWeb: {
     justifyContent: 'center',
     paddingVertical: 24,
+    paddingHorizontal: 16,
   },
   contentColumn: {
     flex: 1,
