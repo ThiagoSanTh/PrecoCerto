@@ -28,6 +28,7 @@ export default function FormScreen({
   fullBleed = false,
   hideHeader = false,
   noBodyPadding = false,
+  narrowContent = false,
   error,
   onErrorAction,
 }) {
@@ -37,12 +38,20 @@ export default function FormScreen({
   const shellVariant = webVariant === 'auth' ? 'auth' : 'default';
   const isAuthLayout = shellVariant === 'auth';
   const showHeader = !hideHeader;
+  const useNarrowLayout = narrowContent && contentFullWidth;
   const bodyPaddingStyle =
     noBodyPadding
       ? styles.noBodyPadding
       : contentFullWidth
         ? styles.fullWidthBodyPadding
         : null;
+
+  const innerContent = (
+    <>
+      <FormErrorBanner error={error} onAction={onErrorAction} />
+      {children}
+    </>
+  );
 
   const content = scrollable ? (
     <ScrollView
@@ -51,17 +60,24 @@ export default function FormScreen({
         s.scrollContent,
         bodyPaddingStyle,
         isAuthLayout && styles.authScrollContent,
+        useNarrowLayout && styles.narrowScrollContent,
       ]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
-      <FormErrorBanner error={error} onAction={onErrorAction} />
-      {children}
+      {useNarrowLayout ? (
+        <View style={styles.narrowColumn}>{innerContent}</View>
+      ) : (
+        innerContent
+      )}
     </ScrollView>
   ) : (
-    <View style={[s.body, bodyPaddingStyle]}>
-      <FormErrorBanner error={error} onAction={onErrorAction} />
-      {children}
+    <View style={[s.body, bodyPaddingStyle, useNarrowLayout && styles.narrowScrollContent]}>
+      {useNarrowLayout ? (
+        <View style={styles.narrowColumn}>{innerContent}</View>
+      ) : (
+        innerContent
+      )}
     </View>
   );
 
@@ -120,10 +136,11 @@ export default function FormScreen({
             <View
               style={[
                 s.footer,
+                useNarrowLayout && styles.narrowFooter,
                 { backgroundColor: colors.surface, borderTopColor: colors.border },
               ]}
             >
-              {footer}
+              {useNarrowLayout ? <View style={styles.narrowColumn}>{footer}</View> : footer}
             </View>
           ) : null}
         </KeyboardAvoidingView>
@@ -149,5 +166,17 @@ const styles = StyleSheet.create({
   },
   fullWidthHeader: {
     paddingHorizontal: 20,
+  },
+  narrowColumn: {
+    width: '100%',
+    maxWidth: 420,
+    alignSelf: 'center',
+    alignItems: 'stretch',
+  },
+  narrowScrollContent: {
+    alignItems: 'center',
+  },
+  narrowFooter: {
+    alignItems: 'center',
   },
 });

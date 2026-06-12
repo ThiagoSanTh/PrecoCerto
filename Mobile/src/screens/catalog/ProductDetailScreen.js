@@ -80,7 +80,7 @@ function preencherFormularioProduto(prod, ofertaLoja) {
 }
 
 export default function ProductDetailScreen({ route, navigation }) {
-  const { productId } = route.params;
+  const productId = route.params?.productId;
   const { session, isCliente } = useAuth();
   const lojaId = session?.perfil?.lojaId;
   const clienteId = isCliente ? session?.perfil?.id : null;
@@ -141,18 +141,35 @@ export default function ProductDetailScreen({ route, navigation }) {
   }
 
   async function carregar() {
+    if (!productId) {
+      setLoadError({
+        title: 'Produto',
+        message: 'ID do produto não informado.',
+      });
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setLoadError(null);
     try {
-      const prod = await buscarProdutoPorId(productId);
-      const ofertas = await listarOfertasPorProduto(productId);
+      let prod;
+      try {
+        prod = await buscarProdutoPorId(productId);
+      } catch (err) {
+        setLoadError(mapApiError(err, { title: 'Produto não encontrado' }));
+        return;
+      }
+
+      const ofertas = await listarOfertasPorProduto(productId).catch(() => []);
+      const ofertasLista = Array.isArray(ofertas) ? ofertas : [];
       const dono = lojaId && produtoPertenceALoja(prod, lojaId);
       const ofertaDaLoja =
         lojaId && dono
-          ? ofertas.find((o) => String(o.lojaId) === String(lojaId)) ?? null
+          ? ofertasLista.find((o) => String(o.lojaId) === String(lojaId)) ?? null
           : null;
       const ofertaPrincipal = selecionarOfertaPrincipal(
-        ofertas,
+        ofertasLista,
         dono ? lojaId : prod.lojaId
       );
 
@@ -187,7 +204,7 @@ export default function ProductDetailScreen({ route, navigation }) {
         setEhFavorito(false);
       }
     } catch (err) {
-      setLoadError(mapApiError(err, { resource: 'product' }));
+      setLoadError(mapApiError(err));
     } finally {
       setLoading(false);
     }

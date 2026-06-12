@@ -7,7 +7,7 @@ const TTL = 60_000;
 function normalizarFeedItem(item) {
   if (!item) return null;
   return {
-    id: item.id,
+    id: item.id ?? item.Id,
     nome: item.nome ?? item.Nome ?? '',
     imagemUrl: item.imagemUrl ?? item.ImagemUrl ?? null,
     lojaId: item.lojaId ?? item.LojaId ?? null,

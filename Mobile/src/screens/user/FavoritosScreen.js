@@ -52,6 +52,16 @@ export default function FavoritosScreen() {
     carregar(page + 1, true);
   }
 
+  function abrirProdutoFavorito(item) {
+    const id = item?.produto?.id ?? item?.produtoId ?? item?.ProdutoId;
+    if (!id) return;
+    navigation.navigate({
+      name: 'ProductDetail',
+      params: { productId: String(id) },
+      merge: true,
+    });
+  }
+
   return (
     <FormScreen title="Favoritos" subtitle="Produtos que você salvou">
       {loading ? (
@@ -64,10 +74,7 @@ export default function FavoritosScreen() {
             <FavoritoListCard
               produto={item.produto}
               oferta={item.oferta}
-              onPress={() =>
-                item.produto?.id &&
-                navigation.navigate('ProductDetail', { productId: item.produto.id })
-              }
+              onPress={() => abrirProdutoFavorito(item)}
             />
           )}
           contentContainerStyle={styles.list}

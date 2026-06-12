@@ -84,8 +84,12 @@ export function mapApiError(error, context = {}) {
     return { title: 'Senha incorreta', message: ERROR_MESSAGES.WRONG_PASSWORD, code };
   }
 
-  if (code === 'PRODUCT_NOT_FOUND' || context.resource === 'product') {
-    return { title: 'Produto não encontrado', message: ERROR_MESSAGES.PRODUCT_NOT_FOUND, code: 'PRODUCT_NOT_FOUND' };
+  if (code === 'PRODUCT_NOT_FOUND') {
+    return {
+      title: context.title || 'Produto não encontrado',
+      message: ERROR_MESSAGES.PRODUCT_NOT_FOUND,
+      code: 'PRODUCT_NOT_FOUND',
+    };
   }
 
   const raw = extractRawMessage(error);

@@ -206,13 +206,20 @@ export default function SearchScreen() {
   }, [produtos, termoAtivo]);
 
   function abrirProduto(productId, produto) {
+    const id = productId ?? produto?.id ?? produto?.Id;
+    if (!id) return;
+
     if (clienteId && termoAtivo) {
       registrarPesquisa(clienteId, termoAtivo, {
-        produtoId: productId,
+        produtoId: id,
         lojaId: produto?.lojaId ?? null,
       }).catch(() => {});
     }
-    navigation.navigate('ProductDetail', { productId });
+    navigation.navigate({
+      name: 'ProductDetail',
+      params: { productId: String(id) },
+      merge: true,
+    });
   }
 
   function abrirProdutoDoMapa(productId) {

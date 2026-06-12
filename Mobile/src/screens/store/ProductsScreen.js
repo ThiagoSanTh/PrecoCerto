@@ -71,7 +71,13 @@ export default function ProductsScreen({ navigation }) {
   );
 
   function abrirProduto(productId) {
-    navigation.navigate('ProductDetail', { productId });
+    const id = productId?.id ?? productId?.Id ?? productId;
+    if (!id) return;
+    navigation.navigate({
+      name: 'ProductDetail',
+      params: { productId: String(id) },
+      merge: true,
+    });
   }
 
   function renderItem({ item }) {

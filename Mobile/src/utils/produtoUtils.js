@@ -12,6 +12,7 @@ export function normalizarProdutoApi(produto) {
 
   return {
     ...produto,
+    id: produto.id ?? produto.Id,
     lojaId: produto.lojaId ?? produto.LojaId ?? null,
     nome: produto.nome ?? produto.Nome ?? produto.nomeProduto ?? produto.NomeProduto,
     nomeProduto:

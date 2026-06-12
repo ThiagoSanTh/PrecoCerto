@@ -102,6 +102,7 @@ export default function CreateProductScreen({ navigation }) {
       title="Novo produto"
       subtitle="Produto vinculado à sua loja"
       onBack={() => navigation.goBack()}
+      narrowContent
       footer={<PrimaryButton label="Salvar produto" onPress={handleCreateProduct} loading={loading} />}
     >
       <View style={styles.fotoSection}>

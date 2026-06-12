@@ -57,7 +57,10 @@ export async function listarProdutosParaFeed(lojaId) {
 }
 
 export async function buscarProdutoPorId(id) {
-  const { data } = await api.get(`/Produtos/${id}`);
+  if (!id) {
+    throw new Error('ID do produto inválido');
+  }
+  const { data } = await api.get(`/Produtos/${encodeURIComponent(String(id))}`);
   return normalizarProdutoApi(data);
 }
 

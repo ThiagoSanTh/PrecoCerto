@@ -64,6 +64,7 @@ export default function CreateOfertaScreen({ navigation }) {
       title="Nova oferta"
       subtitle="Vincule um produto à sua loja"
       onBack={() => navigation.goBack()}
+      narrowContent
       footer={<PrimaryButton label="Salvar oferta" onPress={handleSalvar} loading={loading} />}
     >
       <Text style={formStyles.sectionHint}>Toque em um produto para selecionar:</Text>
