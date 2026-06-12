@@ -14,13 +14,22 @@ const ICONS = {
   Conta: 'person',
 };
 
-function TabItem({ route, index, focused, options, navigation, colors, badgeCount = 0, horizontal }) {
+function TabItem({
+  route,
+  focused,
+  options,
+  navigation,
+  colors,
+  badgeCount = 0,
+  variant = 'bottom',
+}) {
   const label = options.tabBarLabel ?? options.title ?? route.name;
   const base = ICONS[route.name] || 'ellipse';
   const iconName = focused ? base : `${base}-outline`;
   const showBadge = route.name === 'Mensagens' && badgeCount > 0;
-  const iconSize = horizontal ? 20 : 26;
-  const labelSize = horizontal ? 14 : 13;
+  const isSidebar = variant === 'sidebar';
+  const iconSize = isSidebar ? 22 : 26;
+  const labelSize = isSidebar ? 13 : 13;
 
   return (
     <Pressable
@@ -29,7 +38,11 @@ function TabItem({ route, index, focused, options, navigation, colors, badgeCoun
         const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
         if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
       }}
-      style={[styles.item, horizontal && styles.itemHorizontal, focused && horizontal && styles.itemHorizontalFocused]}
+      style={[
+        styles.item,
+        isSidebar && styles.itemSidebar,
+        focused && isSidebar && { backgroundColor: 'rgba(45, 212, 191, 0.12)' },
+      ]}
     >
       <View>
         <Ionicons
@@ -46,10 +59,10 @@ function TabItem({ route, index, focused, options, navigation, colors, badgeCoun
       <Text
         style={{
           fontSize: labelSize,
-          marginTop: horizontal ? 0 : 2,
-          marginLeft: horizontal ? 6 : 0,
+          marginTop: isSidebar ? 4 : 2,
           color: focused ? colors.primary : colors.textMuted,
           fontWeight: focused ? '700' : '500',
+          textAlign: isSidebar ? 'center' : undefined,
         }}
       >
         {label}
@@ -60,11 +73,20 @@ function TabItem({ route, index, focused, options, navigation, colors, badgeCoun
 
 export default function CustomTabBar({ state, descriptors, navigation, badgeCount = 0 }) {
   const { colors } = useTheme();
-  const { useTopNav } = useLayoutProfile();
+  const { useSidebarNav, sidebarWidth } = useLayoutProfile();
 
-  if (useTopNav) {
+  if (useSidebarNav) {
     return (
-      <View style={[styles.topBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+      <View
+        style={[
+          styles.sidebar,
+          {
+            width: sidebarWidth,
+            backgroundColor: colors.surface,
+            borderRightColor: colors.border,
+          },
+        ]}
+      >
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
           const focused = state.index === index;
@@ -72,13 +94,12 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
             <TabItem
               key={route.key}
               route={route}
-              index={index}
               focused={focused}
               options={options}
               navigation={navigation}
               colors={colors}
               badgeCount={badgeCount}
-              horizontal
+              variant="sidebar"
             />
           );
         })}
@@ -95,13 +116,12 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
           <TabItem
             key={route.key}
             route={route}
-            index={index}
             focused={focused}
             options={options}
             navigation={navigation}
             colors={colors}
             badgeCount={badgeCount}
-            horizontal={false}
+            variant="bottom"
           />
         );
       })}
@@ -121,30 +141,25 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: -2 },
   },
-  topBar: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    flexWrap: 'wrap',
+  sidebar: {
+    flexDirection: 'column',
+    borderRightWidth: 1,
+    paddingTop: 16,
+    paddingHorizontal: 8,
+    paddingBottom: 16,
     gap: 4,
-    justifyContent: 'center',
   },
   item: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  itemHorizontal: {
+  itemSidebar: {
     flex: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  itemHorizontalFocused: {
-    backgroundColor: 'rgba(45, 212, 191, 0.12)',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    width: '100%',
   },
   badge: {
     position: 'absolute',

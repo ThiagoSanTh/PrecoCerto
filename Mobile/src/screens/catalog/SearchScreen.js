@@ -11,6 +11,11 @@ import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import { mapApiError } from '../../utils/apiErrorUtils';
 import LojasMapView from '../../components/LojasMapView';
 import ProductGridCard from '../../components/feed/ProductGridCard';
+import MapSearchOverlay, {
+  MODO_LISTA,
+  MODO_MAPA,
+  MAP_SEARCH_OVERLAY_HEIGHT,
+} from '../../components/feed/MapSearchOverlay';
 import {
   FormScreen,
   FormField,
@@ -21,8 +26,6 @@ import {
 import { nomeProduto } from '../../utils/produtoUtils';
 import { formatarPrecoBrl } from '../../utils/mapaUtils';
 
-const MODO_LISTA = 'lista';
-const MODO_MAPA = 'mapa';
 const DEBOUNCE_BUSCA_MS = 400;
 const PAGE_SIZE = 20;
 const MAX_PRODUTOS_POR_PIN = 4;
@@ -60,7 +63,7 @@ export default function SearchScreen() {
   const [feedError, setFeedError] = useState(null);
   const { session, isCliente, sincronizarGpsCliente } = useAuth();
   const { colors } = useTheme();
-  const { gridColumns } = useLayoutProfile();
+  const { gridColumns, useSidebarNav } = useLayoutProfile();
 
   const clienteId = session?.perfil?.id;
   const buscaIdRef = useRef(0);
@@ -215,87 +218,137 @@ export default function SearchScreen() {
     );
   }
 
-  return (
-    <FormScreen
-      title="Buscar produtos"
-      subtitle="Encontre as melhores ofertas"
-      scrollable={false}
-      fullBleed
-      error={feedError}
-    >
-      <View style={styles.searchRow}>
-        <View style={styles.searchInputWrap}>
-          <FormField
-            label=""
-            value={termoBusca}
-            onChangeText={setTermoBusca}
-            placeholder="Buscar produtos..."
-            onSubmitEditing={handleSearch}
-            returnKeyType="search"
-            compact
-          />
+  function renderClassicLayout() {
+    return (
+      <>
+        <View style={styles.searchRow}>
+          <View style={styles.searchInputWrap}>
+            <FormField
+              label=""
+              value={termoBusca}
+              onChangeText={setTermoBusca}
+              placeholder="Buscar produtos..."
+              onSubmitEditing={handleSearch}
+              returnKeyType="search"
+              compact
+            />
+          </View>
+          <PrimaryButton label="Buscar" onPress={handleSearch} style={styles.searchButton} />
         </View>
-        <PrimaryButton label="Buscar" onPress={handleSearch} style={styles.searchButton} />
+
+        <FormTabs
+          options={[
+            { value: MODO_MAPA, label: 'Mapa' },
+            { value: MODO_LISTA, label: 'Lista' },
+          ]}
+          value={modoVisualizacao}
+          onChange={setModoVisualizacao}
+        />
+
+        {buscando ? (
+          <ActivityIndicator size="small" color={colors.primary} style={styles.buscandoIndicator} />
+        ) : null}
+
+        {renderContent(false)}
+      </>
+    );
+  }
+
+  function renderSidebarLayout() {
+    return (
+      <View style={styles.mapShell}>
+        {renderContent(true)}
+        <MapSearchOverlay
+          termoBusca={termoBusca}
+          onChangeText={setTermoBusca}
+          onSubmit={handleSearch}
+          modoVisualizacao={modoVisualizacao}
+          onModoChange={setModoVisualizacao}
+          buscando={buscando}
+        />
       </View>
+    );
+  }
 
-      <FormTabs
-        options={[
-          { value: MODO_MAPA, label: 'Mapa' },
-          { value: MODO_LISTA, label: 'Lista' },
-        ]}
-        value={modoVisualizacao}
-        onChange={setModoVisualizacao}
-      />
+  function renderContent(edgeToEdge) {
+    if (loading) {
+      return (
+        <ActivityIndicator
+          size="large"
+          color={colors.primary}
+          style={edgeToEdge ? styles.loadingOverlay : { marginTop: 24 }}
+        />
+      );
+    }
 
-      {buscando ? (
-        <ActivityIndicator size="small" color={colors.primary} style={styles.buscandoIndicator} />
-      ) : null}
-
-      {loading ? (
-        <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 24 }} />
-      ) : modoVisualizacao === MODO_MAPA ? (
+    if (modoVisualizacao === MODO_MAPA) {
+      return (
         <LojasMapView
           lojas={lojas}
           lojaIdsDestaque={lojaIdsDestaque}
           produtosPorLoja={produtosPorLoja}
           onProductPress={abrirProdutoDoMapa}
+          edgeToEdge={edgeToEdge}
         />
-      ) : (
-        <FlatList
-          style={[styles.gridList, { backgroundColor: colors.listBackground }]}
-          contentContainerStyle={styles.gridContent}
-          data={produtos}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={renderItem}
-          numColumns={gridColumns}
-          key={`grid-${gridColumns}`}
-          columnWrapperStyle={gridColumns > 1 ? styles.gridRow : undefined}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          windowSize={5}
-          maxToRenderPerBatch={10}
-          removeClippedSubviews
-          onEndReached={carregarMais}
-          onEndReachedThreshold={0.4}
-          ListFooterComponent={
-            carregandoMais ? (
-              <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 12 }} />
-            ) : null
-          }
-          ListEmptyComponent={
-            <ListCardText style={[styles.emptyText, { color: colors.textMuted }]}>
-              {termoAtivo
-                ? 'Nenhum produto encontrado para essa busca.'
-                : 'Nenhum produto cadastrado ainda.'}
-            </ListCardText>
-          }
-        />
-      )}
+      );
+    }
+
+    return (
+      <FlatList
+        style={[styles.gridList, { backgroundColor: colors.listBackground }]}
+        contentContainerStyle={[
+          styles.gridContent,
+          edgeToEdge && { paddingTop: MAP_SEARCH_OVERLAY_HEIGHT + 16 },
+        ]}
+        data={produtos}
+        keyExtractor={(item) => String(item.id)}
+        renderItem={renderItem}
+        numColumns={gridColumns}
+        key={`grid-${gridColumns}`}
+        columnWrapperStyle={gridColumns > 1 ? styles.gridRow : undefined}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        windowSize={5}
+        maxToRenderPerBatch={10}
+        removeClippedSubviews
+        onEndReached={carregarMais}
+        onEndReachedThreshold={0.4}
+        ListFooterComponent={
+          carregandoMais ? (
+            <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 12 }} />
+          ) : null
+        }
+        ListEmptyComponent={
+          <ListCardText style={[styles.emptyText, { color: colors.textMuted }]}>
+            {termoAtivo
+              ? 'Nenhum produto encontrado para essa busca.'
+              : 'Nenhum produto cadastrado ainda.'}
+          </ListCardText>
+        }
+      />
+    );
+  }
+
+  return (
+    <FormScreen
+      title="Buscar produtos"
+      subtitle="Encontre as melhores ofertas"
+      scrollable={false}
+      fullBleed={useSidebarNav}
+      hideHeader={useSidebarNav}
+      noBodyPadding={useSidebarNav}
+      error={feedError}
+    >
+      {useSidebarNav ? renderSidebarLayout() : renderClassicLayout()}
     </FormScreen>
   );
 }
 
 const styles = StyleSheet.create({
+  mapShell: {
+    flex: 1,
+    position: 'relative',
+  },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -305,6 +358,11 @@ const styles = StyleSheet.create({
   searchInputWrap: { flex: 1 },
   searchButton: { marginBottom: 10, paddingHorizontal: 16, paddingVertical: 12 },
   buscandoIndicator: { marginVertical: 4 },
+  loadingOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   gridList: { flex: 1 },
   gridContent: { paddingHorizontal: 8, paddingTop: 8, paddingBottom: 16 },
   gridRow: { gap: 8 },

@@ -17,25 +17,25 @@ function CaptureTabBarProps({ props, onCapture }) {
 }
 
 export default function TabShell({ children }) {
-  const { useTopNav } = useLayoutProfile();
+  const { useSidebarNav } = useLayoutProfile();
   const [tabBarProps, setTabBarProps] = useState(null);
   const capture = useCallback((props) => setTabBarProps(props), []);
 
   const renderTabBar = useCallback(
     (props) => {
-      if (useTopNav) {
+      if (useSidebarNav) {
         return <CaptureTabBarProps props={props} onCapture={capture} />;
       }
       return <CustomTabBar {...props} />;
     },
-    [useTopNav, capture]
+    [useSidebarNav, capture]
   );
 
   return (
     <TabBarPropsContext.Provider value={setTabBarProps}>
-      <View style={{ flex: 1 }}>
-        {useTopNav && tabBarProps ? <CustomTabBar {...tabBarProps} /> : null}
-        {children(renderTabBar)}
+      <View style={{ flex: 1, flexDirection: useSidebarNav ? 'row' : 'column' }}>
+        {useSidebarNav && tabBarProps ? <CustomTabBar {...tabBarProps} /> : null}
+        <View style={{ flex: 1 }}>{children(renderTabBar)}</View>
       </View>
     </TabBarPropsContext.Provider>
   );

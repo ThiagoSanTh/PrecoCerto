@@ -34,7 +34,8 @@ export function useLayoutProfile() {
   const typographyScale = TYPOGRAPHY_SCALE[layoutProfile] ?? 1.0;
   const contentWidthPercent = CONTENT_WIDTH_PERCENT;
   const contentWidth = Math.round(width * CONTENT_WIDTH_PERCENT);
-  const useTopNav = isDesktopWeb || isTabletWeb;
+  const useSidebarNav = isDesktopWeb || isTabletWeb;
+  const contentFullWidth = useSidebarNav;
 
   return {
     width,
@@ -52,6 +53,7 @@ export function useLayoutProfile() {
     authCardMaxWidth: 440,
     sidebarWidth: 220,
     gridColumns: width >= DESKTOP_MIN ? 4 : width >= PHONE_MAX ? 3 : 2,
-    useTopNav,
+    useSidebarNav,
+    contentFullWidth,
   };
 }

@@ -20,12 +20,14 @@ import { styles as appStyles } from '../theme';
  * - lojaIdsDestaque: null (todas) ou array de ids de loja a destacar
  * - produtosPorLoja: { [lojaId]: [{ id, nome, preco }] } para o popup do pin
  * - onProductPress: (productId) => void
+ * - edgeToEdge: mapa sem bordas arredondadas, avisos como overlay
  */
 export default function LojasMapView({
   lojas,
   lojaIdsDestaque = null,
   produtosPorLoja = {},
   onProductPress,
+  edgeToEdge = false,
 }) {
   const [localizacaoCliente, setLocalizacaoCliente] = useState(null);
   const [erroGps, setErroGps] = useState(null);
@@ -68,6 +70,13 @@ export default function LojasMapView({
   );
 
   const semCoordenadas = (lojas || []).length - lojasNoMapa.length;
+  const avisoTexto =
+    [
+      semCoordenadas > 0 ? `${semCoordenadas} loja(s) sem localização no mapa.` : null,
+      erroGps || null,
+    ]
+      .filter(Boolean)
+      .join(' ') || null;
 
   const mapHtml = useMemo(() => {
     const dados = prepararDadosMapaLojas(localizacaoCliente, lojasNoMapa);
@@ -89,12 +98,10 @@ export default function LojasMapView({
     });
   }, [lojaIdsDestaque, produtosPorLoja]);
 
-  // Reenvia os destaques sempre que a busca muda (digitação com debounce).
   useEffect(() => {
     enviarDestaques();
   }, [enviarDestaques]);
 
-  // O HTML foi recriado (mapKey mudou): aguarda novo "ready".
   useEffect(() => {
     mapaProntoRef.current = false;
   }, [mapKey]);
@@ -114,18 +121,23 @@ export default function LojasMapView({
   }
 
   return (
-    <View style={styles.container}>
-      {semCoordenadas > 0 ? (
+    <View style={[styles.container, edgeToEdge && styles.containerEdgeToEdge]}>
+      {edgeToEdge && avisoTexto ? (
+        <View style={styles.bannerOverlay} pointerEvents="none">
+          <Text style={styles.bannerText}>{avisoTexto}</Text>
+        </View>
+      ) : null}
+      {!edgeToEdge && semCoordenadas > 0 ? (
         <Text style={appStyles.hint}>
           {semCoordenadas} loja(s) sem localização no mapa.
         </Text>
       ) : null}
-      {erroGps ? <Text style={appStyles.hint}>{erroGps}</Text> : null}
+      {!edgeToEdge && erroGps ? <Text style={appStyles.hint}>{erroGps}</Text> : null}
       <LeafletMapFrame
         ref={frameRef}
         key={mapKey}
         mapKey={mapKey}
-        style={styles.map}
+        style={[styles.map, edgeToEdge && styles.mapEdgeToEdge]}
         html={mapHtml}
         onMessage={handleMessage}
       />
@@ -138,10 +150,32 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 320,
   },
+  containerEdgeToEdge: {
+    minHeight: 0,
+  },
   map: {
     flex: 1,
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#e2e8f0',
+  },
+  mapEdgeToEdge: {
+    borderRadius: 0,
+  },
+  bannerOverlay: {
+    position: 'absolute',
+    bottom: 12,
+    left: 12,
+    right: 12,
+    zIndex: 5,
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  bannerText: {
+    color: '#fff',
+    fontSize: 12,
+    textAlign: 'center',
   },
 });

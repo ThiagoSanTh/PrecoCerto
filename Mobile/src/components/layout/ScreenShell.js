@@ -3,25 +3,39 @@ import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import { useTheme } from '../../context/ThemeContext';
 
 /**
- * Wrapper centralizado (80% da largura) para todas as telas.
+ * Wrapper centralizado (80% da largura) para telas mobile/narrow web.
+ * Com sidebar web: largura total da área de conteúdo.
  * variant: default | auth | fullBleed
  */
 export default function ScreenShell({ children, variant = 'default', fullBleed = false }) {
-  const { isWeb, isDesktopWeb, contentWidthPercent, contentMaxWidth, authCardMaxWidth } =
-    useLayoutProfile();
+  const {
+    isWeb,
+    isDesktopWeb,
+    contentWidthPercent,
+    contentMaxWidth,
+    authCardMaxWidth,
+    contentFullWidth,
+  } = useLayoutProfile();
   const { colors } = useTheme();
 
   const shellVariant = fullBleed ? 'fullBleed' : variant;
   const isAuth = shellVariant === 'auth';
+  const isFullBleed = shellVariant === 'fullBleed';
   const showAuthCard = isAuth && isWeb && isDesktopWeb;
+  const useFullWidth = contentFullWidth || isFullBleed;
 
-  const columnWidth = `${contentWidthPercent * 100}%`;
-  const columnMaxWidth = isAuth && showAuthCard ? authCardMaxWidth : contentMaxWidth;
+  const columnWidth = useFullWidth ? '100%' : `${contentWidthPercent * 100}%`;
+  const columnMaxWidth = showAuthCard
+    ? authCardMaxWidth
+    : useFullWidth
+      ? undefined
+      : contentMaxWidth;
 
   const inner = (
     <View
       style={[
         showAuthCard ? styles.authCard : styles.contentColumn,
+        useFullWidth && styles.contentFullWidth,
         {
           width: columnWidth,
           maxWidth: columnMaxWidth,
@@ -49,7 +63,13 @@ export default function ScreenShell({ children, variant = 'default', fullBleed =
   }
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
+    <View
+      style={[
+        styles.root,
+        useFullWidth && styles.rootFullWidth,
+        { backgroundColor: colors.background },
+      ]}
+    >
       {inner}
     </View>
   );
@@ -60,6 +80,9 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     width: '100%',
+  },
+  rootFullWidth: {
+    alignItems: 'stretch',
   },
   authRoot: {
     flex: 1,
@@ -74,6 +97,10 @@ const styles = StyleSheet.create({
     flex: 1,
     alignSelf: 'center',
     overflow: 'hidden',
+  },
+  contentFullWidth: {
+    alignSelf: 'stretch',
+    width: '100%',
   },
   authCard: {
     alignSelf: 'center',
