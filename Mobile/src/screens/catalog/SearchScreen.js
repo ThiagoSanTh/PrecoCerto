@@ -29,6 +29,8 @@ import { formatarPrecoBrl } from '../../utils/mapaUtils';
 const DEBOUNCE_BUSCA_MS = 400;
 const PAGE_SIZE = 20;
 const MAX_PRODUTOS_POR_PIN = 4;
+const GRID_PADDING_H = 8;
+const GRID_GAP = 8;
 
 function feedItemParaCard(item) {
   return {
@@ -63,7 +65,17 @@ export default function SearchScreen() {
   const [feedError, setFeedError] = useState(null);
   const { session, isCliente, sincronizarGpsCliente } = useAuth();
   const { colors } = useTheme();
-  const { gridColumns, useSidebarNav } = useLayoutProfile();
+  const { gridColumns, useSidebarNav, width, sidebarWidth } = useLayoutProfile();
+
+  const isSingleProduct = produtos.length === 1;
+  const listColumns = isSingleProduct ? 1 : gridColumns;
+
+  const singleCardWidth = useMemo(() => {
+    const listAreaWidth = useSidebarNav ? width - sidebarWidth : width;
+    return Math.floor(
+      (listAreaWidth - GRID_PADDING_H * 2 - GRID_GAP * (gridColumns - 1)) / gridColumns
+    );
+  }, [width, sidebarWidth, useSidebarNav, gridColumns]);
 
   const clienteId = session?.perfil?.id;
   const buscaIdRef = useRef(0);
@@ -209,13 +221,20 @@ export default function SearchScreen() {
   }
 
   function renderItem({ item }) {
-    return (
+    const card = (
       <ProductGridCard
         produto={feedItemParaCard(item)}
         oferta={feedItemParaOferta(item)}
         onPress={() => abrirProduto(item.id, item)}
+        fillCell={!isSingleProduct}
       />
     );
+
+    if (isSingleProduct) {
+      return <View style={{ width: singleCardWidth }}>{card}</View>;
+    }
+
+    return card;
   }
 
   function renderClassicLayout() {
@@ -299,13 +318,14 @@ export default function SearchScreen() {
         contentContainerStyle={[
           styles.gridContent,
           edgeToEdge && { paddingTop: MAP_SEARCH_OVERLAY_HEIGHT + 16 },
+          isSingleProduct && styles.gridContentSingle,
         ]}
         data={produtos}
         keyExtractor={(item) => String(item.id)}
         renderItem={renderItem}
-        numColumns={gridColumns}
-        key={`grid-${gridColumns}`}
-        columnWrapperStyle={gridColumns > 1 ? styles.gridRow : undefined}
+        numColumns={listColumns}
+        key={`grid-${listColumns}-${isSingleProduct ? 'single' : 'multi'}`}
+        columnWrapperStyle={listColumns > 1 ? styles.gridRow : undefined}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         windowSize={5}
@@ -364,7 +384,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   gridList: { flex: 1 },
-  gridContent: { paddingHorizontal: 8, paddingTop: 8, paddingBottom: 16 },
-  gridRow: { gap: 8 },
+  gridContent: { paddingHorizontal: GRID_PADDING_H, paddingTop: 8, paddingBottom: 16 },
+  gridContentSingle: { alignItems: 'center' },
+  gridRow: { gap: GRID_GAP },
   emptyText: { textAlign: 'center', marginTop: 24 },
 });

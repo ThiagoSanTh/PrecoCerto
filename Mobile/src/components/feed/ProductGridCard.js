@@ -5,14 +5,14 @@ import { formatarPrecoMl } from '../../utils/precoUtils';
 import { formatarPrecoBrl } from '../../utils/mapaUtils';
 import { nomeProduto } from '../../utils/produtoUtils';
 
-export default function ProductGridCard({ produto, oferta, onPress }) {
+export default function ProductGridCard({ produto, oferta, onPress, fillCell = true }) {
   const { colors } = useTheme();
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
         card: {
-          flex: 1,
+          ...(fillCell ? { flex: 1 } : { width: '100%' }),
           backgroundColor: colors.surface,
           borderRadius: 8,
           overflow: 'hidden',
@@ -98,7 +98,7 @@ export default function ProductGridCard({ produto, oferta, onPress }) {
           marginTop: 4,
         },
       }),
-    [colors]
+    [colors, fillCell]
   );
 
   const precoAtual = oferta?.preco ?? produto.preco;

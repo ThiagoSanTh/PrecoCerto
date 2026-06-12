@@ -28,22 +28,11 @@ function TabItem({
   const iconName = focused ? base : `${base}-outline`;
   const showBadge = route.name === 'Mensagens' && badgeCount > 0;
   const isSidebar = variant === 'sidebar';
-  const iconSize = isSidebar ? 22 : 26;
-  const labelSize = isSidebar ? 13 : 13;
+  const iconSize = isSidebar ? 26 : 26;
+  const labelSize = isSidebar ? 15 : 13;
 
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={() => {
-        const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-        if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
-      }}
-      style={[
-        styles.item,
-        isSidebar && styles.itemSidebar,
-        focused && isSidebar && { backgroundColor: 'rgba(45, 212, 191, 0.12)' },
-      ]}
-    >
+  const content = (
+    <>
       <View>
         <Ionicons
           name={iconName}
@@ -59,7 +48,7 @@ function TabItem({
       <Text
         style={{
           fontSize: labelSize,
-          marginTop: isSidebar ? 4 : 2,
+          marginTop: isSidebar ? 6 : 2,
           color: focused ? colors.primary : colors.textMuted,
           fontWeight: focused ? '700' : '500',
           textAlign: isSidebar ? 'center' : undefined,
@@ -67,6 +56,23 @@ function TabItem({
       >
         {label}
       </Text>
+    </>
+  );
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => {
+        const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+        if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+      }}
+      style={[
+        styles.item,
+        isSidebar && styles.itemSidebar,
+        focused && isSidebar && { backgroundColor: 'rgba(45, 212, 191, 0.12)' },
+      ]}
+    >
+      {isSidebar ? <View style={styles.sidebarContent}>{content}</View> : content}
     </Pressable>
   );
 }
@@ -147,7 +153,7 @@ const styles = StyleSheet.create({
     paddingTop: 56,
     paddingHorizontal: 8,
     paddingBottom: 16,
-    gap: 12,
+    gap: 20,
   },
   item: {
     flex: 1,
@@ -156,10 +162,17 @@ const styles = StyleSheet.create({
   },
   itemSidebar: {
     flex: 0,
-    paddingVertical: 14,
-    paddingHorizontal: 8,
+    paddingVertical: 18,
+    paddingHorizontal: 12,
     borderRadius: 10,
     width: '100%',
+    minHeight: 72,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sidebarContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   badge: {
     position: 'absolute',
