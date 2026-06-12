@@ -324,7 +324,7 @@ export function sanitizarLojasParaHtml(marcadores) {
 /**
  * Mapa do feed: pins por LOJA, com busca seletiva em tempo real (issue #36).
  * O app envia mensagens de destaque sem recriar o HTML:
- *   { type: 'destaques', payload: { lojaIds: null | [ids], produtosPorLoja: { id: [{ id, nome, preco }] } } }
+ *   { type: 'destaques', payload: { lojaIds: null | [ids], produtosPorLoja: { id: [{ id, nome, preco }] }, imagemPinPorLoja: { id: url } } }
  * lojaIds = null restaura todos os pins; com lista, pins fora dela somem e os
  * presentes ganham destaque + popup com os produtos encontrados.
  */
@@ -361,6 +361,18 @@ export function buildLojasMapHtml(dadosMapa) {
       background: #0D9488;
       border: 3px solid #F59E0B;
       box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.35), 0 2px 10px rgba(0,0,0,0.35);
+    }
+    .pin-loja-feed.pin-loja-feed-img {
+      background: #fff;
+      padding: 0;
+      overflow: hidden;
+    }
+    .pin-loja-feed.pin-loja-feed-img img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
     }
     .pin-cliente {
       width: 16px;
@@ -427,23 +439,32 @@ export function buildLojasMapHtml(dadosMapa) {
     }).addTo(map);
 
     // Estado de destaque corrente (atualizado pelo app enquanto o usuário digita).
-    var destaques = { lojaIds: null, produtosPorLoja: {} };
+    var destaques = { lojaIds: null, produtosPorLoja: {}, imagemPinPorLoja: {} };
     var markers = {};
 
-    function pinHtml(m, comDestaque) {
+    function pinHtml(m, comDestaque, imagemUrl) {
       var classe = 'pin-loja-feed' + (comDestaque ? ' destaque' : '');
+      if (imagemUrl) {
+        var src = encodeURI(imagemUrl);
+        return '<div class="' + classe + ' pin-loja-feed-img"><img src="' + src + '" alt="" /></div>';
+      }
       return '<div class="' + classe + '">' + m.inicial + '</div>';
     }
 
-    function criarIcon(m, comDestaque) {
+    function criarIcon(m, comDestaque, imagemUrl) {
       var size = comDestaque ? 52 : 40;
       return L.divIcon({
-        html: pinHtml(m, comDestaque),
+        html: pinHtml(m, comDestaque, imagemUrl),
         className: '',
         iconSize: [size, size],
         iconAnchor: [size / 2, size],
         popupAnchor: [0, -size]
       });
+    }
+
+    function imagemPinParaLoja(lojaId, comDestaque) {
+      if (!comDestaque || !destaques.imagemPinPorLoja) return null;
+      return destaques.imagemPinPorLoja[lojaId] || null;
     }
 
     function popupHtml(m) {
@@ -479,7 +500,7 @@ export function buildLojasMapHtml(dadosMapa) {
     var clusterGroup = usarCluster ? L.markerClusterGroup({ maxClusterRadius: 50 }) : null;
 
     DATA.marcadores.forEach(function(m) {
-      var marker = L.marker([m.lat, m.lng], { icon: criarIcon(m, false) })
+      var marker = L.marker([m.lat, m.lng], { icon: criarIcon(m, false, null) })
         .bindPopup(popupHtml(m));
       marker.on('popupopen', ligarBotoesPopup);
       if (usarCluster) {
@@ -497,7 +518,8 @@ export function buildLojasMapHtml(dadosMapa) {
     function aplicarDestaques(payload) {
       destaques = {
         lojaIds: payload && payload.lojaIds ? payload.lojaIds : null,
-        produtosPorLoja: (payload && payload.produtosPorLoja) || {}
+        produtosPorLoja: (payload && payload.produtosPorLoja) || {},
+        imagemPinPorLoja: (payload && payload.imagemPinPorLoja) || {}
       };
 
       var ids = destaques.lojaIds === null ? null : {};
@@ -509,6 +531,7 @@ export function buildLojasMapHtml(dadosMapa) {
         var entry = markers[id];
         var deveMostrar = ids === null || ids[id] === true;
         var deveDestacar = ids !== null && ids[id] === true;
+        var imagemUrl = imagemPinParaLoja(id, deveDestacar);
 
         if (deveMostrar && !entry.visivel) {
           entry.marker.addTo(map);
@@ -519,12 +542,9 @@ export function buildLojasMapHtml(dadosMapa) {
           entry.visivel = false;
         }
 
-        if (entry.visivel && entry.destaque !== deveDestacar) {
-          entry.marker.setIcon(criarIcon(entry.dados, deveDestacar));
-          entry.destaque = deveDestacar;
-        }
-
         if (entry.visivel) {
+          entry.marker.setIcon(criarIcon(entry.dados, deveDestacar, imagemUrl));
+          entry.destaque = deveDestacar;
           entry.marker.setPopupContent(popupHtml(entry.dados));
         }
       });

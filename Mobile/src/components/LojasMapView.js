@@ -19,6 +19,7 @@ import { styles as appStyles } from '../theme';
  * - lojas: lista de lojas da API (LojaRespostaDto)
  * - lojaIdsDestaque: null (todas) ou array de ids de loja a destacar
  * - produtosPorLoja: { [lojaId]: [{ id, nome, preco }] } para o popup do pin
+ * - imagemPinPorLoja: { [lojaId]: imagemUrl } foto no pin durante a busca
  * - onProductPress: (productId) => void
  * - edgeToEdge: mapa sem bordas arredondadas, avisos como overlay
  */
@@ -26,6 +27,7 @@ export default function LojasMapView({
   lojas,
   lojaIdsDestaque = null,
   produtosPorLoja = {},
+  imagemPinPorLoja = {},
   onProductPress,
   edgeToEdge = false,
 }) {
@@ -94,9 +96,9 @@ export default function LojasMapView({
     if (!mapaProntoRef.current) return;
     frameRef.current?.enviarMensagem({
       type: 'destaques',
-      payload: { lojaIds: lojaIdsDestaque, produtosPorLoja },
+      payload: { lojaIds: lojaIdsDestaque, produtosPorLoja, imagemPinPorLoja },
     });
-  }, [lojaIdsDestaque, produtosPorLoja]);
+  }, [lojaIdsDestaque, produtosPorLoja, imagemPinPorLoja]);
 
   useEffect(() => {
     enviarDestaques();

@@ -23,8 +23,7 @@ import {
   ListCardText,
   FormTabs,
 } from '../../components/form';
-import { nomeProduto } from '../../utils/produtoUtils';
-import { formatarPrecoBrl } from '../../utils/mapaUtils';
+import { montarMapaBuscaPorLoja } from '../../utils/mapaPinUtils';
 
 const DEBOUNCE_BUSCA_MS = 400;
 const PAGE_SIZE = 20;
@@ -187,23 +186,10 @@ export default function SearchScreen() {
     return [...ids].map(String);
   }, [produtos, termoAtivo]);
 
-  const produtosPorLoja = useMemo(() => {
-    if (!termoAtivo) return {};
-    const grupos = {};
-    produtos.forEach((p) => {
-      const lojaId = p.lojaId;
-      if (!lojaId) return;
-      const chave = String(lojaId);
-      if (!grupos[chave]) grupos[chave] = [];
-      if (grupos[chave].length >= MAX_PRODUTOS_POR_PIN) return;
-      grupos[chave].push({
-        id: p.id,
-        nome: nomeProduto(p),
-        preco: formatarPrecoBrl(p.preco),
-      });
-    });
-    return grupos;
-  }, [produtos, termoAtivo]);
+  const { produtosPorLoja, imagemPinPorLoja } = useMemo(
+    () => montarMapaBuscaPorLoja(produtos, termoAtivo, MAX_PRODUTOS_POR_PIN),
+    [produtos, termoAtivo]
+  );
 
   function abrirProduto(productId, produto) {
     const id = productId ?? produto?.id ?? produto?.Id;
@@ -313,6 +299,7 @@ export default function SearchScreen() {
           lojas={lojas}
           lojaIdsDestaque={lojaIdsDestaque}
           produtosPorLoja={produtosPorLoja}
+          imagemPinPorLoja={imagemPinPorLoja}
           onProductPress={abrirProdutoDoMapa}
           edgeToEdge={edgeToEdge}
         />
