@@ -7,22 +7,60 @@ import {
   StyleSheet,
   useWindowDimensions,
 } from 'react-native';
+import { useLayoutProfile } from '../../hooks/useLayoutProfile';
+
+const WEB_HORIZONTAL_PADDING = 40;
+const WEB_MAX_GALLERY_WIDTH = 480;
+const WEB_MAX_GALLERY_HEIGHT = 360;
+
+function useGalleryDimensions() {
+  const { width: screenWidth } = useWindowDimensions();
+  const { isWeb, width, sidebarWidth, contentFullWidth } = useLayoutProfile();
+
+  if (!isWeb) {
+    const altura = screenWidth * 0.85;
+    return {
+      galleryWidth: screenWidth,
+      galleryHeight: altura,
+      resizeMode: 'cover',
+      containerStyle: null,
+    };
+  }
+
+  const contentAreaWidth =
+    width - (contentFullWidth ? sidebarWidth : 0) - WEB_HORIZONTAL_PADDING;
+  const galleryWidth = Math.min(Math.max(contentAreaWidth, 0), WEB_MAX_GALLERY_WIDTH);
+  const galleryHeight = Math.min(galleryWidth * 0.75, WEB_MAX_GALLERY_HEIGHT);
+
+  return {
+    galleryWidth,
+    galleryHeight,
+    resizeMode: 'contain',
+    containerStyle: styles.webContainer,
+  };
+}
 
 export default function ProductImageGallery({ imagens = [] }) {
-  const { width: screenWidth } = useWindowDimensions();
+  const { galleryWidth, galleryHeight, resizeMode, containerStyle } = useGalleryDimensions();
   const [pagina, setPagina] = useState(0);
   const urls = imagens.filter(Boolean);
-  const altura = screenWidth * 0.85;
 
   function onScroll(e) {
     const x = e.nativeEvent.contentOffset.x;
-    const index = Math.round(x / screenWidth);
+    const index = Math.round(x / galleryWidth);
     setPagina(index);
   }
 
+  const frameStyle = { width: galleryWidth, height: galleryHeight };
+  const imageStyle = {
+    width: galleryWidth,
+    height: galleryHeight,
+    backgroundColor: '#F1F5F9',
+  };
+
   if (urls.length === 0) {
     return (
-      <View style={[styles.placeholder, { width: screenWidth, height: altura }]}>
+      <View style={[styles.placeholder, frameStyle, containerStyle]}>
         <Text style={styles.placeholderText}>Sem foto</Text>
       </View>
     );
@@ -30,18 +68,18 @@ export default function ProductImageGallery({ imagens = [] }) {
 
   if (urls.length === 1) {
     return (
-      <View style={{ width: screenWidth, height: altura }}>
+      <View style={[frameStyle, containerStyle]}>
         <Image
           source={{ uri: urls[0] }}
-          style={{ width: screenWidth, height: altura, backgroundColor: '#F1F5F9' }}
-          resizeMode="cover"
+          style={imageStyle}
+          resizeMode={resizeMode}
         />
       </View>
     );
   }
 
   return (
-    <View style={{ width: screenWidth, height: altura }}>
+    <View style={[frameStyle, containerStyle]}>
       <ScrollView
         horizontal
         pagingEnabled
@@ -55,8 +93,8 @@ export default function ProductImageGallery({ imagens = [] }) {
           <Image
             key={`${url}-${index}`}
             source={{ uri: url }}
-            style={{ width: screenWidth, height: altura, backgroundColor: '#F1F5F9' }}
-            resizeMode="cover"
+            style={imageStyle}
+            resizeMode={resizeMode}
           />
         ))}
       </ScrollView>
@@ -73,6 +111,11 @@ export default function ProductImageGallery({ imagens = [] }) {
 }
 
 const styles = StyleSheet.create({
+  webContainer: {
+    alignSelf: 'center',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
   placeholder: {
     backgroundColor: '#F1F5F9',
     alignItems: 'center',

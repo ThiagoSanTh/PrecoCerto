@@ -52,6 +52,7 @@ import {
 } from '../../components/form';
 import { labelCategoria } from '../../utils/categoriasProduto';
 import { mapApiError } from '../../utils/apiErrorUtils';
+import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import { colors } from '../../theme';
 
 function preencherFormularioProduto(prod, ofertaLoja) {
@@ -81,6 +82,7 @@ function preencherFormularioProduto(prod, ofertaLoja) {
 
 export default function ProductDetailScreen({ route, navigation }) {
   const productId = route.params?.productId;
+  const { isWeb } = useLayoutProfile();
   const { session, isCliente } = useAuth();
   const lojaId = session?.perfil?.lojaId;
   const clienteId = isCliente ? session?.perfil?.id : null;
@@ -500,7 +502,7 @@ export default function ProductDetailScreen({ route, navigation }) {
       scrollable
       footer={footer}
     >
-      <View style={{ marginTop: -12 }}>
+      <View style={isWeb ? styles.galleryWrapWeb : styles.galleryWrap}>
         <ProductImageGallery imagens={imagemExibida ? [imagemExibida] : []} />
       </View>
 
@@ -544,39 +546,31 @@ export default function ProductDetailScreen({ route, navigation }) {
           />
         </View>
       ) : (
-        <View style={{ marginTop: 16 }}>
+        <View style={styles.infoBlock}>
           {produto.marca ? (
-            <Text style={{ fontSize: 13, color: '#64748B', marginBottom: 4 }}>
-              {produto.marca}
-            </Text>
+            <Text style={[styles.marca, isWeb && styles.marcaWeb]}>{produto.marca}</Text>
           ) : null}
 
-          <Text style={{ fontSize: 22, fontWeight: '600', color: '#0F172A', lineHeight: 28 }}>
-            {nomeProduto(produto)}
-          </Text>
+          <Text style={[styles.nome, isWeb && styles.nomeWeb]}>{nomeProduto(produto)}</Text>
 
           {produto.descricao ? (
-            <Text style={{ fontSize: 15, color: '#475569', marginTop: 12, lineHeight: 22 }}>
+            <Text style={[styles.descricao, isWeb && styles.descricaoWeb]}>
               {produto.descricao}
             </Text>
           ) : null}
 
-          <Text style={{ fontSize: 13, color: '#64748B', marginTop: 12 }}>
+          <Text style={[styles.meta, isWeb && styles.metaWeb]}>
             Categoria: {produto.categoriaNome || labelCategoria(produto.categoria)}
           </Text>
         </View>
       )}
 
       {lojaNome ? (
-        <Text style={{ fontSize: 14, color: '#64748B', marginTop: 12 }}>
-          Vendido por {lojaNome}
-        </Text>
+        <Text style={[styles.loja, isWeb && styles.lojaWeb]}>Vendido por {lojaNome}</Text>
       ) : null}
 
       {endereco ? (
-        <Text style={{ fontSize: 13, color: '#94A3B8', marginTop: 4 }}>
-          {endereco}
-        </Text>
+        <Text style={[styles.endereco, isWeb && styles.enderecoWeb]}>{endereco}</Text>
       ) : null}
 
       <View style={{ marginTop: 20 }}>
@@ -594,6 +588,67 @@ export default function ProductDetailScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
+  galleryWrap: {
+    marginTop: -12,
+  },
+  galleryWrapWeb: {
+    marginTop: 0,
+  },
+  infoBlock: {
+    marginTop: 16,
+  },
+  marca: {
+    fontSize: 13,
+    color: '#64748B',
+    marginBottom: 4,
+  },
+  marcaWeb: {
+    fontSize: 15,
+  },
+  nome: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: '#0F172A',
+    lineHeight: 28,
+  },
+  nomeWeb: {
+    fontSize: 28,
+    lineHeight: 34,
+  },
+  descricao: {
+    fontSize: 15,
+    color: '#475569',
+    marginTop: 12,
+    lineHeight: 22,
+  },
+  descricaoWeb: {
+    fontSize: 18,
+    lineHeight: 26,
+  },
+  meta: {
+    fontSize: 13,
+    color: '#64748B',
+    marginTop: 12,
+  },
+  metaWeb: {
+    fontSize: 15,
+  },
+  loja: {
+    fontSize: 14,
+    color: '#64748B',
+    marginTop: 12,
+  },
+  lojaWeb: {
+    fontSize: 16,
+  },
+  endereco: {
+    fontSize: 13,
+    color: '#94A3B8',
+    marginTop: 4,
+  },
+  enderecoWeb: {
+    fontSize: 15,
+  },
   fotoActions: {
     marginTop: 8,
     marginBottom: 4,

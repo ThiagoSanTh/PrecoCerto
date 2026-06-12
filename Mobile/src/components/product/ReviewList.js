@@ -1,5 +1,7 @@
+import { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import StarRating from './StarRating';
+import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 
 function formatarData(data) {
   if (!data) return '';
@@ -8,40 +10,7 @@ function formatarData(data) {
   return d.toLocaleDateString('pt-BR');
 }
 
-export default function ReviewList({ media, avaliacoes = [] }) {
-  const lista = avaliacoes.slice(0, 5);
-
-  return (
-    <View style={styles.container}>
-      <Text style={styles.titulo}>Avaliações da loja</Text>
-
-      {media?.quantidade > 0 ? (
-        <View style={styles.resumo}>
-          <StarRating nota={media.media} size={18} showValue />
-          <Text style={styles.quantidade}>
-            ({media.quantidade} {media.quantidade === 1 ? 'avaliação' : 'avaliações'})
-          </Text>
-        </View>
-      ) : (
-        <Text style={styles.vazio}>Esta loja ainda não possui avaliações.</Text>
-      )}
-
-      {lista.map((av) => (
-        <View key={av.id} style={styles.card}>
-          <View style={styles.cardHeader}>
-            <StarRating nota={av.nota} size={14} />
-            <Text style={styles.data}>{formatarData(av.dataAvaliacao)}</Text>
-          </View>
-          {av.comentario ? (
-            <Text style={styles.comentario}>{av.comentario}</Text>
-          ) : null}
-        </View>
-      ))}
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     marginTop: 8,
   },
@@ -90,3 +59,73 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 });
+
+const webStyles = StyleSheet.create({
+  titulo: {
+    fontSize: 20,
+  },
+  quantidade: {
+    fontSize: 15,
+  },
+  vazio: {
+    fontSize: 16,
+  },
+  data: {
+    fontSize: 14,
+  },
+  comentario: {
+    fontSize: 16,
+    lineHeight: 24,
+  },
+});
+
+export default function ReviewList({ media, avaliacoes = [] }) {
+  const { isWeb } = useLayoutProfile();
+  const lista = avaliacoes.slice(0, 5);
+  const starSizeResumo = isWeb ? 20 : 18;
+  const starSizeCard = isWeb ? 16 : 14;
+
+  const styles = useMemo(
+    () => ({
+      container: baseStyles.container,
+      titulo: [baseStyles.titulo, isWeb && webStyles.titulo],
+      resumo: baseStyles.resumo,
+      quantidade: [baseStyles.quantidade, isWeb && webStyles.quantidade],
+      vazio: [baseStyles.vazio, isWeb && webStyles.vazio],
+      card: baseStyles.card,
+      cardHeader: baseStyles.cardHeader,
+      data: [baseStyles.data, isWeb && webStyles.data],
+      comentario: [baseStyles.comentario, isWeb && webStyles.comentario],
+    }),
+    [isWeb]
+  );
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.titulo}>Avaliações da loja</Text>
+
+      {media?.quantidade > 0 ? (
+        <View style={styles.resumo}>
+          <StarRating nota={media.media} size={starSizeResumo} showValue />
+          <Text style={styles.quantidade}>
+            ({media.quantidade} {media.quantidade === 1 ? 'avaliação' : 'avaliações'})
+          </Text>
+        </View>
+      ) : (
+        <Text style={styles.vazio}>Esta loja ainda não possui avaliações.</Text>
+      )}
+
+      {lista.map((av) => (
+        <View key={av.id} style={styles.card}>
+          <View style={styles.cardHeader}>
+            <StarRating nota={av.nota} size={starSizeCard} />
+            <Text style={styles.data}>{formatarData(av.dataAvaliacao)}</Text>
+          </View>
+          {av.comentario ? (
+            <Text style={styles.comentario}>{av.comentario}</Text>
+          ) : null}
+        </View>
+      ))}
+    </View>
+  );
+}
