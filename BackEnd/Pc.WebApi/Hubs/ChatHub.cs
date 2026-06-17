@@ -12,11 +12,32 @@ namespace Pc.WebApi.Hubs
     {
         private readonly IConversaServico _conversaServico;
         private readonly IIdCodificador _idCodificador;
+        private readonly ChatNotificacaoHelper _notificacao;
 
-        public ChatHub(IConversaServico conversaServico, IIdCodificador idCodificador)
+        public ChatHub(
+            IConversaServico conversaServico,
+            IIdCodificador idCodificador,
+            ChatNotificacaoHelper notificacao)
         {
             _conversaServico = conversaServico;
             _idCodificador = idCodificador;
+            _notificacao = notificacao;
+        }
+
+        public async Task ConectarUsuario()
+        {
+            var userId = Context.User?.GetUserId();
+            if (!userId.HasValue)
+                throw new HubException("Usuário inválido.");
+
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"usuario:{userId.Value}");
+
+            var lojaId = Context.User?.GetLojaId();
+            if (lojaId.HasValue)
+                await Groups.AddToGroupAsync(Context.ConnectionId, $"loja:{lojaId.Value}");
+
+            if (Context.User?.IsCliente() == true)
+                await Groups.AddToGroupAsync(Context.ConnectionId, $"cliente:{userId.Value}");
         }
 
         public async Task EnviarMensagem(string conversaCodigo, string texto)
@@ -28,6 +49,10 @@ namespace Pc.WebApi.Hubs
             var papel = ObterPapel(Context.User!);
             var mensagem = await _conversaServico.EnviarMensagemAsync(
                 conversaId, userId.Value, papel, texto);
+
+            var conversa = await _conversaServico.ObterPorIdAsync(conversaId);
+            if (conversa != null)
+                await _notificacao.NotificarNovaMensagemAsync(conversa, papel, mensagem.EnviadaEm);
 
             var dto = new MensagemRespostaDto
             {

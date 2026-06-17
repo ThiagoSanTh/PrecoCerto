@@ -4,6 +4,7 @@ using Pc.Dominio.Enums;
 using Pc.Servico.Interfaces;
 using Pc.WebApi.DTOs.Interacoes;
 using Pc.WebApi.Extensions;
+using Pc.WebApi.Hubs;
 
 namespace Pc.WebApi.Controllers
 {
@@ -14,11 +15,16 @@ namespace Pc.WebApi.Controllers
     {
         private readonly IConversaServico _conversaServico;
         private readonly IIdCodificador _idCodificador;
+        private readonly ChatNotificacaoHelper _notificacao;
 
-        public ConversasController(IConversaServico conversaServico, IIdCodificador idCodificador)
+        public ConversasController(
+            IConversaServico conversaServico,
+            IIdCodificador idCodificador,
+            ChatNotificacaoHelper notificacao)
         {
             _conversaServico = conversaServico;
             _idCodificador = idCodificador;
+            _notificacao = notificacao;
         }
 
         [HttpGet]
@@ -59,6 +65,18 @@ namespace Pc.WebApi.Controllers
             var total = await _conversaServico.ContarNaoLidasAsync(
                 userId.Value, ObterPapel(), User.GetLojaId());
             return Ok(new { total });
+        }
+
+        [HttpGet("tem-novas")]
+        public async Task<IActionResult> TemNovas([FromQuery] DateTime? desde)
+        {
+            var userId = User.GetUserId();
+            if (!userId.HasValue)
+                return Unauthorized();
+
+            var temNovas = await _conversaServico.TemNaoLidasAsync(
+                userId.Value, ObterPapel(), User.GetLojaId(), desde);
+            return Ok(new { temNovas });
         }
 
         [HttpPost("abrir")]
@@ -132,6 +150,11 @@ namespace Pc.WebApi.Controllers
             {
                 var mensagem = await _conversaServico.EnviarMensagemAsync(
                     conversaId, userId.Value, ObterPapel(), dto.Texto);
+
+                var conversa = await _conversaServico.ObterPorIdAsync(conversaId);
+                if (conversa != null)
+                    await _notificacao.NotificarNovaMensagemAsync(
+                        conversa, ObterPapel(), mensagem.EnviadaEm);
 
                 return Ok(new MensagemRespostaDto
                 {

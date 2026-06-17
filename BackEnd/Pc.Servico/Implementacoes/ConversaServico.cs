@@ -109,6 +109,13 @@ namespace Pc.Servico.Implementacoes
             return _repo.ContarNaoLidasAsync(usuarioId, ehLojista, lojaId);
         }
 
+        public Task<bool> TemNaoLidasAsync(
+            Guid usuarioId, PapelUsuario papel, Guid? lojaId, DateTime? desde = null)
+        {
+            var ehLojista = papel is PapelUsuario.Lojista or PapelUsuario.Vendedor;
+            return _repo.TemNaoLidasAsync(usuarioId, ehLojista, lojaId, desde);
+        }
+
         public async Task<bool> UsuarioPodeAcessarAsync(
             Guid conversaId, Guid usuarioId, PapelUsuario papel, Guid? lojaId)
         {

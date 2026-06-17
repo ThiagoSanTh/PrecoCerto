@@ -4,12 +4,14 @@ import { useFocusEffect } from '@react-navigation/native';
 import { listarConversas, listarConversasComStale } from '../../services/chatService';
 import { FormScreen } from '../../components/form';
 import { useTheme } from '../../context/ThemeContext';
+import { useChatBadge } from '../../context/ChatBadgeContext';
 
 export default function ConversasScreen({ navigation }) {
   const [conversas, setConversas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { colors } = useTheme();
+  const { atualizarFromConversas } = useChatBadge();
 
   const carregar = useCallback(async (force = false) => {
     try {
@@ -17,10 +19,14 @@ export default function ConversasScreen({ navigation }) {
         ? { data: await listarConversas({ force: true }) }
         : await listarConversasComStale();
       setConversas(result.data || []);
-    } catch {
-      Alert.alert('Erro', 'Não foi possível carregar as conversas.');
+      atualizarFromConversas(result.data || []);
+    } catch (error) {
+      const status = error?.response?.status;
+      if (status !== 429) {
+        Alert.alert('Erro', 'Não foi possível carregar as conversas.');
+      }
     }
-  }, []);
+  }, [atualizarFromConversas]);
 
   useFocusEffect(
     useCallback(() => {

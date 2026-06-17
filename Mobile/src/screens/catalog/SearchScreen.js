@@ -78,6 +78,7 @@ export default function SearchScreen() {
 
   const clienteId = session?.perfil?.id;
   const buscaIdRef = useRef(0);
+  const feedErroLogadoRef = useRef(false);
   const termoAtivo = termoBusca.trim();
 
   const carregarLojasMapa = useCallback(async () => {
@@ -118,8 +119,12 @@ export default function SearchScreen() {
           append ? [...prev, ...resultado.items] : resultado.items
         );
         setFeedError(null);
+        feedErroLogadoRef.current = false;
       } catch (error) {
-        console.error('carregar feed:', error.message);
+        if (!feedErroLogadoRef.current) {
+          console.error('carregar feed:', error.message);
+          feedErroLogadoRef.current = true;
+        }
         if (pagina === 1 && !append) {
           setFeedError(mapApiError(error));
         }

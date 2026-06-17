@@ -21,8 +21,10 @@ export default function ScreenShell({ children, variant = 'default', fullBleed =
   const shellVariant = fullBleed ? 'fullBleed' : variant;
   const isAuth = shellVariant === 'auth';
   const isFullBleed = shellVariant === 'fullBleed';
-  const showAuthCard = isAuth && isWeb;
+  const showAuthCard = isAuth;
   const useFullWidth = contentFullWidth || isFullBleed;
+  const authBackgroundColor =
+    !isWeb || isDesktopWeb ? '#E2E8F0' : colors.background;
 
   const columnWidth = showAuthCard
     ? '100%'
@@ -52,13 +54,13 @@ export default function ScreenShell({ children, variant = 'default', fullBleed =
     </View>
   );
 
-  if (isAuth && isWeb) {
+  if (isAuth) {
     return (
       <View
         style={[
           styles.authRoot,
-          styles.authRootWeb,
-          { backgroundColor: isDesktopWeb ? '#E2E8F0' : colors.background },
+          styles.authRootCentered,
+          { backgroundColor: authBackgroundColor },
         ]}
       >
         {inner}
@@ -93,7 +95,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
   },
-  authRootWeb: {
+  authRootCentered: {
     justifyContent: 'center',
     paddingVertical: 24,
     paddingHorizontal: 16,
@@ -108,6 +110,8 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   authCard: {
+    flex: 1,
+    width: '100%',
     alignSelf: 'center',
     overflow: 'hidden',
     borderRadius: 16,
@@ -117,6 +121,12 @@ const styles = StyleSheet.create({
       ? {
           boxShadow: '0 8px 32px rgba(15, 23, 42, 0.12)',
         }
-      : {}),
+      : {
+          shadowColor: '#0F172A',
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.12,
+          shadowRadius: 16,
+          elevation: 8,
+        }),
   },
 });

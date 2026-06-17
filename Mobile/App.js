@@ -3,6 +3,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Routes from './src/navigation';
 import { AuthProvider } from './src/context/AuthContext';
 import { ThemeProvider } from './src/context/ThemeContext';
+import { ChatBadgeProvider } from './src/context/ChatBadgeContext';
 
 export default function App() {
   return (
@@ -10,7 +11,9 @@ export default function App() {
       <View style={styles.root}>
         <ThemeProvider>
           <AuthProvider>
-            <Routes />
+            <ChatBadgeProvider>
+              <Routes />
+            </ChatBadgeProvider>
           </AuthProvider>
         </ThemeProvider>
       </View>

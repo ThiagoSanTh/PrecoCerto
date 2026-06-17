@@ -10,16 +10,27 @@ export function useTabBarPropsSetter() {
 }
 
 function CaptureTabBarProps({ props, onCapture }) {
+  const tabIndex = props.state.index;
+  const badgeCount = props.badgeCount ?? 0;
+
   useEffect(() => {
     onCapture(props);
-  }, [props, props.state.index, onCapture]);
+  }, [tabIndex, badgeCount, onCapture]);
+
   return null;
 }
 
 export default function TabShell({ children }) {
   const { useSidebarNav } = useLayoutProfile();
   const [tabBarProps, setTabBarProps] = useState(null);
-  const capture = useCallback((props) => setTabBarProps(props), []);
+  const capture = useCallback((props) => {
+    setTabBarProps((prev) => {
+      const sameIndex = prev?.state?.index === props.state?.index;
+      const sameBadge = (prev?.badgeCount ?? 0) === (props.badgeCount ?? 0);
+      if (sameIndex && sameBadge) return prev;
+      return props;
+    });
+  }, []);
 
   const renderTabBar = useCallback(
     (props) => {

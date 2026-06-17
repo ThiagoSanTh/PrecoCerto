@@ -83,7 +83,10 @@ export default function FormScreen({
 
   return (
     <SafeAreaView
-      style={[s.safe, { backgroundColor: colors.background }]}
+      style={[
+        s.safe,
+        { backgroundColor: isAuthLayout ? 'transparent' : colors.background },
+      ]}
       edges={['top', 'bottom', 'left', 'right']}
     >
       <ScreenShell variant={shellVariant} fullBleed={fullBleed}>
@@ -151,6 +154,7 @@ export default function FormScreen({
 
 const styles = StyleSheet.create({
   authBody: {
+    flex: 1,
     width: '100%',
   },
   authScrollContent: {

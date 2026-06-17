@@ -14,6 +14,7 @@ namespace Pc.Servico.Interfaces
         Task<Mensagem> EnviarMensagemAsync(Guid conversaId, Guid remetenteId, PapelUsuario remetentePapel, string texto);
         Task MarcarComoLidasAsync(Guid conversaId, Guid leitorId);
         Task<int> ContarNaoLidasAsync(Guid usuarioId, PapelUsuario papel, Guid? lojaId);
+        Task<bool> TemNaoLidasAsync(Guid usuarioId, PapelUsuario papel, Guid? lojaId, DateTime? desde = null);
         Task<Dictionary<Guid, int>> ContarNaoLidasPorConversasAsync(Guid usuarioId, PapelUsuario papel, Guid? lojaId);
         Task<bool> UsuarioPodeAcessarAsync(Guid conversaId, Guid usuarioId, PapelUsuario papel, Guid? lojaId);
     }

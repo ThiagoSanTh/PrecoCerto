@@ -1,41 +1,22 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { useEffect, useState } from 'react';
 import BuscarStack from './buscarStack.routes';
 import FavoritosScreen from '../screens/user/FavoritosScreen';
 import HistoricoScreen from '../screens/user/HistoricoScreen';
 import MensagensStack from './mensagensStack.routes';
 import ProfileScreen from '../screens/user/ProfileScreen';
 import TabShell from './TabShell';
-import { contarNaoLidas } from '../services/chatService';
+import { useChatBadge } from '../context/ChatBadgeContext';
 
 const Tab = createBottomTabNavigator();
 
 export default function UserTabs() {
-  const [badge, setBadge] = useState(0);
-
-  useEffect(() => {
-    let ativo = true;
-    async function carregar() {
-      try {
-        const total = await contarNaoLidas();
-        if (ativo) setBadge(total);
-      } catch {
-        if (ativo) setBadge(0);
-      }
-    }
-    carregar();
-    const interval = setInterval(carregar, 15000);
-    return () => {
-      ativo = false;
-      clearInterval(interval);
-    };
-  }, []);
+  const { badgeCount } = useChatBadge();
 
   return (
     <TabShell>
       {(renderTabBar) => (
         <Tab.Navigator
-          tabBar={(props) => renderTabBar({ ...props, badgeCount: badge })}
+          tabBar={(props) => renderTabBar({ ...props, badgeCount })}
           screenOptions={{ headerShown: false }}
         >
           <Tab.Screen name="Buscar" component={BuscarStack} options={{ tabBarLabel: 'Buscar' }} />

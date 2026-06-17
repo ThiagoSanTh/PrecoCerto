@@ -15,5 +15,6 @@ namespace Pc.Repositorio.Interfaces
         Task<Mensagem> AdicionarMensagemAsync(Mensagem mensagem);
         Task MarcarMensagensComoLidasAsync(Guid conversaId, Guid leitorId);
         Task<int> ContarNaoLidasAsync(Guid usuarioId, bool ehLojista, Guid? lojaId);
+        Task<bool> TemNaoLidasAsync(Guid usuarioId, bool ehLojista, Guid? lojaId, DateTime? desde = null);
     }
 }

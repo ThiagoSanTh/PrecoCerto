@@ -13,6 +13,7 @@ using Pc.Repositorio.Interfaces;
 using Pc.Servico.Implementacoes;
 using Pc.Servico.Interfaces;
 using Pc.WebApi.Configuration;
+using Pc.WebApi.Hubs;
 using Pc.WebApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -76,6 +77,7 @@ builder.Services.AddCors(options =>
         policy
             .AllowAnyHeader()
             .AllowAnyMethod()
+            .AllowCredentials()
             .SetPreflightMaxAge(TimeSpan.FromMinutes(10))
             .SetIsOriginAllowed(origin =>
             {
@@ -257,6 +259,7 @@ builder.Services.AddScoped<IHistoricoPesquisaServico, HistoricoPesquisaServico>(
 builder.Services.AddScoped<IAvaliacaoServico, AvaliacaoServico>();
 builder.Services.AddScoped<IPreferenciaClienteServico, PreferenciaClienteServico>();
 builder.Services.AddScoped<IConversaServico, ConversaServico>();
+builder.Services.AddScoped<ChatNotificacaoHelper>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(

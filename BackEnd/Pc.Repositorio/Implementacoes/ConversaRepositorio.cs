@@ -159,5 +159,31 @@ namespace Pc.Repositorio.Implementacoes
                     && !m.Lida)
                 .CountAsync();
         }
+
+        public async Task<bool> TemNaoLidasAsync(
+            Guid usuarioId, bool ehLojista, Guid? lojaId, DateTime? desde = null)
+        {
+            IQueryable<Mensagem> query = _context.Mensagens
+                .AsNoTracking()
+                .Include(m => m.Conversa)
+                .Where(m => m.Conversa != null
+                    && m.Conversa.Ativo
+                    && m.RemetenteId != usuarioId
+                    && !m.Lida);
+
+            if (desde.HasValue)
+                query = query.Where(m => m.EnviadaEm > desde.Value);
+
+            if (ehLojista && lojaId.HasValue)
+            {
+                return await query
+                    .Where(m => m.Conversa!.LojaId == lojaId.Value)
+                    .AnyAsync();
+            }
+
+            return await query
+                .Where(m => m.Conversa!.ClienteId == usuarioId)
+                .AnyAsync();
+        }
     }
 }
