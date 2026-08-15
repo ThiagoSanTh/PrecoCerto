@@ -32,10 +32,15 @@ if (builder.Environment.IsDevelopment())
 }
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-if (string.IsNullOrWhiteSpace(connectionString) && !builder.Environment.IsDevelopment())
+if (string.IsNullOrWhiteSpace(connectionString))
 {
     throw new InvalidOperationException(
-        "Configure ConnectionStrings__DefaultConnection nas variáveis de ambiente (Railway/Render).");
+        builder.Environment.IsDevelopment()
+            ? "ConnectionStrings:DefaultConnection vazia. Em BackEnd/Pc.WebApi rode: " +
+              "dotnet user-secrets set \"ConnectionStrings:DefaultConnection\" " +
+              "\"Host=db.SEU_PROJECT.supabase.co;Port=5432;Database=postgres;Username=postgres;Password=SUA_SENHA;SSL Mode=Require\" " +
+              "e também: dotnet user-secrets set \"Jwt:Secret\" \"chave-com-pelo-menos-32-caracteres\""
+            : "Configure ConnectionStrings__DefaultConnection nas variáveis de ambiente (Railway/Render).");
 }
 
 builder.Services.AddControllers()
@@ -263,7 +268,7 @@ builder.Services.AddScoped<ChatNotificacaoHelper>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
+        connectionString,
         npgsql => npgsql.EnableRetryOnFailure(maxRetryCount: 3)));
 
 var app = builder.Build();

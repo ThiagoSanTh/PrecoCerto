@@ -16,8 +16,12 @@ const ChatBadgeContext = createContext(null);
 
 export function ChatBadgeProvider({ children }) {
   const { session } = useAuth();
+  const sessionId = session?.perfil?.id ?? null;
   const [badgeCount, setBadgeCount] = useState(0);
   const [hubConectado, setHubConectado] = useState(false);
+
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
 
   const flagsRef = useRef({
     mensagensTabAtiva: false,
@@ -52,49 +56,46 @@ export function ChatBadgeProvider({ children }) {
     return f.appForeground && !f.mensagensTabAtiva && !f.chatAtivo;
   }, []);
 
-  const syncFallback = useCallback(
-    async ({ force = false } = {}) => {
-      if (!session) return;
+  const syncFallback = useCallback(async ({ force = false } = {}) => {
+    if (!sessionRef.current) return;
 
-      const agora = Date.now();
-      if (!force && agora - ultimoSyncEmRef.current < SYNC_THROTTLE_MS) return;
-      if (syncEmAndamentoRef.current) return;
+    const agora = Date.now();
+    if (!force && agora - ultimoSyncEmRef.current < SYNC_THROTTLE_MS) return;
+    if (syncEmAndamentoRef.current) return;
 
-      syncEmAndamentoRef.current = true;
-      try {
-        const total = await verificarBadgeFallback();
-        setBadgeCount(total);
-        ultimoSyncEmRef.current = Date.now();
-      } catch {
-        // mantém valor atual
-      } finally {
-        syncEmAndamentoRef.current = false;
-      }
-    },
-    [session]
-  );
+    syncEmAndamentoRef.current = true;
+    try {
+      const total = await verificarBadgeFallback();
+      setBadgeCount(total);
+      ultimoSyncEmRef.current = Date.now();
+    } catch {
+      // mantém valor atual
+    } finally {
+      syncEmAndamentoRef.current = false;
+    }
+  }, []);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => {
       flagsRef.current.appForeground = next === 'active';
-      if (next === 'active' && session) {
+      if (next === 'active' && sessionRef.current) {
         syncFallback();
       }
     });
     return () => sub.remove();
-  }, [session, syncFallback]);
+  }, [syncFallback]);
 
   useEffect(() => {
-    if (!session) {
+    if (!sessionId) {
       setBadgeCount(0);
       setHubConectado(false);
       return;
     }
     syncFallback({ force: true });
-  }, [session, syncFallback]);
+  }, [sessionId, syncFallback]);
 
   useEffect(() => {
-    if (!session) return undefined;
+    if (!sessionId) return undefined;
 
     let ativo = true;
     const tick = () => {
@@ -107,10 +108,10 @@ export function ChatBadgeProvider({ children }) {
       ativo = false;
       clearInterval(interval);
     };
-  }, [session, hubConectado, podePoll, syncFallback]);
+  }, [sessionId, hubConectado, podePoll, syncFallback]);
 
   useEffect(() => {
-    if (!session) {
+    if (!sessionId) {
       hubAtivoRef.current = false;
       encerrarHub();
       setHubConectado(false);
@@ -162,12 +163,13 @@ export function ChatBadgeProvider({ children }) {
       encerrarHub();
       setHubConectado(false);
     };
-  }, [session, syncFallback]);
+  }, [sessionId, syncFallback]);
 
   return (
     <ChatBadgeContext.Provider
       value={{
         badgeCount,
+        hubConectado,
         setMensagensTabAtiva,
         setChatAtivo,
         atualizarFromConversas,

@@ -153,18 +153,9 @@ namespace Pc.WebApi.Controllers
 
                 var conversa = await _conversaServico.ObterPorIdAsync(conversaId);
                 if (conversa != null)
-                    await _notificacao.NotificarNovaMensagemAsync(
-                        conversa, ObterPapel(), mensagem.EnviadaEm);
+                    await _notificacao.NotificarMensagemEnviadaAsync(conversa, mensagem);
 
-                return Ok(new MensagemRespostaDto
-                {
-                    CodigoPublico = _idCodificador.Codificar(mensagem.Id),
-                    CodigoRemetente = _idCodificador.Codificar(mensagem.RemetenteId),
-                    RemetentePapel = (int)mensagem.RemetentePapel,
-                    Texto = mensagem.Texto,
-                    EnviadaEm = mensagem.EnviadaEm,
-                    Lida = mensagem.Lida
-                });
+                return Ok(_notificacao.ParaDto(mensagem));
             }
             catch (UnauthorizedAccessException)
             {

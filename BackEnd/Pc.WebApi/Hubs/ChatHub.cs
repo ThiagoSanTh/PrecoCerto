@@ -40,7 +40,7 @@ namespace Pc.WebApi.Hubs
                 await Groups.AddToGroupAsync(Context.ConnectionId, $"cliente:{userId.Value}");
         }
 
-        public async Task EnviarMensagem(string conversaCodigo, string texto)
+        public async Task<MensagemRespostaDto> EnviarMensagem(string conversaCodigo, string texto)
         {
             var userId = Context.User?.GetUserId();
             if (!userId.HasValue || !_idCodificador.TentarDecodificar(conversaCodigo, out var conversaId))
@@ -52,19 +52,9 @@ namespace Pc.WebApi.Hubs
 
             var conversa = await _conversaServico.ObterPorIdAsync(conversaId);
             if (conversa != null)
-                await _notificacao.NotificarNovaMensagemAsync(conversa, papel, mensagem.EnviadaEm);
+                await _notificacao.NotificarMensagemEnviadaAsync(conversa, mensagem);
 
-            var dto = new MensagemRespostaDto
-            {
-                CodigoPublico = _idCodificador.Codificar(mensagem.Id),
-                CodigoRemetente = _idCodificador.Codificar(mensagem.RemetenteId),
-                RemetentePapel = (int)mensagem.RemetentePapel,
-                Texto = mensagem.Texto,
-                EnviadaEm = mensagem.EnviadaEm,
-                Lida = mensagem.Lida
-            };
-
-            await Clients.Group(conversaCodigo).SendAsync("ReceberMensagem", dto);
+            return _notificacao.ParaDto(mensagem);
         }
 
         public async Task EntrarConversa(string conversaCodigo)

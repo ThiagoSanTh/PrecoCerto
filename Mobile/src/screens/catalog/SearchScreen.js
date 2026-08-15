@@ -80,6 +80,9 @@ export default function SearchScreen() {
   const buscaIdRef = useRef(0);
   const feedErroLogadoRef = useRef(false);
   const termoAtivo = termoBusca.trim();
+  const termoAtivoRef = useRef(termoAtivo);
+  termoAtivoRef.current = termoAtivo;
+  const primeiraBuscaRef = useRef(true);
 
   const carregarLojasMapa = useCallback(async () => {
     try {
@@ -138,10 +141,10 @@ export default function SearchScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      carregarFeed(termoAtivo, 1, false, true);
+      carregarFeed(termoAtivoRef.current, 1, false, true);
       carregarLojasMapa();
       if (isCliente) sincronizarGpsCliente();
-    }, [termoAtivo, isCliente, carregarFeed, carregarLojasMapa, sincronizarGpsCliente])
+    }, [isCliente, carregarFeed, carregarLojasMapa, sincronizarGpsCliente])
   );
 
   const executarBusca = useCallback(
@@ -158,10 +161,15 @@ export default function SearchScreen() {
     if (!termoAtivo) {
       buscaIdRef.current += 1;
       setBuscando(false);
+      if (primeiraBuscaRef.current) {
+        primeiraBuscaRef.current = false;
+        return undefined;
+      }
       carregarFeed('', 1, false, true);
       return undefined;
     }
 
+    primeiraBuscaRef.current = false;
     const timer = setTimeout(() => executarBusca(termoAtivo), DEBOUNCE_BUSCA_MS);
     return () => clearTimeout(timer);
   }, [termoAtivo, executarBusca, carregarFeed]);

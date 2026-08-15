@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { atualizarLocalizacao } from '../services/clienteService';
 import { obterLocalizacaoAtual } from '../services/locationService';
@@ -8,6 +8,7 @@ const AuthContext = createContext(null);
 
 const SESSION_KEY = '@session';
 const MODE_KEY = '@userMode';
+const GPS_THROTTLE_MS = 5 * 60 * 1000;
 
 export function podeUsarModoLoja(session) {
   if (!session) return false;
@@ -98,28 +99,40 @@ export function AuthProvider({ children }) {
     await salvarSessao(novaSessao, modo === null ? undefined : modo);
   }
 
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
+  const ultimoGpsSyncEmRef = useRef(0);
+
   async function logout() {
     await clearToken();
     await AsyncStorage.multiRemove([SESSION_KEY, MODE_KEY]);
     setSession(null);
     setAppModeState('user');
+    ultimoGpsSyncEmRef.current = 0;
   }
 
-  async function sincronizarGpsCliente(clienteIdOverride = null) {
-    const id = clienteIdOverride ?? session?.perfil?.id;
-    if (!id || (session?.tipo !== 'cliente' && !clienteIdOverride)) return null;
+  const sincronizarGpsCliente = useCallback(async (clienteIdOverride = null, { force = false } = {}) => {
+    const sess = sessionRef.current;
+    const id = clienteIdOverride ?? sess?.perfil?.id;
+    if (!id || (sess?.tipo !== 'cliente' && !clienteIdOverride)) return null;
+
+    const agora = Date.now();
+    if (!force && ultimoGpsSyncEmRef.current && agora - ultimoGpsSyncEmRef.current < GPS_THROTTLE_MS) {
+      return null;
+    }
 
     try {
       const { latitude, longitude } = await obterLocalizacaoAtual();
       await atualizarLocalizacao(id, latitude, longitude);
+      ultimoGpsSyncEmRef.current = Date.now();
 
-      if (session?.tipo === 'cliente') {
+      if (sess?.tipo === 'cliente') {
         const perfilAtualizado = {
-          ...session.perfil,
+          ...sess.perfil,
           latitudeAtual: latitude,
           longitudeAtual: longitude,
         };
-        const novaSessao = { ...session, perfil: perfilAtualizado };
+        const novaSessao = { ...sess, perfil: perfilAtualizado };
         await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(novaSessao));
         setSession(novaSessao);
       }
@@ -129,7 +142,7 @@ export function AuthProvider({ children }) {
       console.warn('GPS:', error.message);
       return null;
     }
-  }
+  }, []);
 
   const temModoLoja = podeUsarModoLoja(session);
   const emModoLoja = appMode === 'store' && temModoLoja;

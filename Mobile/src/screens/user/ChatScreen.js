@@ -1,5 +1,5 @@
 import { View, Text, FlatList, TextInput, Pressable, Alert, KeyboardAvoidingView, Platform } from 'react-native';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   listarMensagens,
   enviarMensagem,
@@ -31,13 +31,36 @@ function isMinhaMensagem(item, session) {
 export default function ChatScreen({ route, navigation }) {
   const { conversaCodigo, titulo } = route.params;
   const { session } = useAuth();
-  const { setChatAtivo, syncBadge } = useChatBadge();
+  const { setChatAtivo, syncBadge, hubConectado } = useChatBadge();
   const { colors } = useTheme();
   const [mensagens, setMensagens] = useState([]);
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
   const ultimaDataRef = useRef(null);
   const pollRef = useRef(null);
+
+  const aplicarMensagem = useCallback((msg) => {
+    if (!msg?.codigoPublico) return;
+    setMensagens((prev) => {
+      if (prev.some((m) => m.codigoPublico === msg.codigoPublico)) return prev;
+      return [...prev, msg].sort((a, b) => new Date(a.enviadaEm) - new Date(b.enviadaEm));
+    });
+    if (msg.enviadaEm) ultimaDataRef.current = msg.enviadaEm;
+  }, []);
+
+  function pararPoll() {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }
+
+  function iniciarPoll() {
+    if (pollRef.current) return;
+    pollRef.current = setInterval(() => {
+      carregarMensagens().catch(() => {});
+    }, CHAT_POLL_INTERVAL_MS);
+  }
 
   async function carregarMensagens() {
     const apos = ultimaDataRef.current;
@@ -65,7 +88,7 @@ export default function ChatScreen({ route, navigation }) {
   useEffect(() => {
     let ativo = true;
 
-    async function iniciar() {
+    async function carregarInicial() {
       try {
         await carregarMensagens();
       } catch (error) {
@@ -73,29 +96,35 @@ export default function ChatScreen({ route, navigation }) {
           Alert.alert('Erro', 'Não foi possível carregar as mensagens.');
         }
       }
+    }
 
-      const hubOk = await entrarConversaHub(conversaCodigo, (msg) => {
-        setMensagens((prev) => {
-          if (prev.some((m) => m.codigoPublico === msg.codigoPublico)) return prev;
-          return [...prev, msg].sort((a, b) => new Date(a.enviadaEm) - new Date(b.enviadaEm));
-        });
-        ultimaDataRef.current = msg.enviadaEm;
-      });
+    carregarInicial();
+    return () => {
+      ativo = false;
+    };
+  }, [conversaCodigo]);
 
-      if (!hubOk && !hubEstaConectado() && ativo) {
-        pollRef.current = setInterval(() => {
-          carregarMensagens().catch(() => {});
-        }, CHAT_POLL_INTERVAL_MS);
+  useEffect(() => {
+    let ativo = true;
+
+    async function syncHub() {
+      const hubOk = await entrarConversaHub(conversaCodigo, aplicarMensagem);
+      if (!ativo) return;
+
+      if (hubOk && hubEstaConectado()) {
+        pararPoll();
+      } else {
+        iniciarPoll();
       }
     }
 
-    iniciar();
+    syncHub();
     return () => {
       ativo = false;
-      if (pollRef.current) clearInterval(pollRef.current);
+      pararPoll();
       sairConversaHub();
     };
-  }, [conversaCodigo]);
+  }, [conversaCodigo, hubConectado, aplicarMensagem]);
 
   async function handleEnviar() {
     if (!texto.trim()) return;
@@ -103,11 +132,7 @@ export default function ChatScreen({ route, navigation }) {
     try {
       const msg = await enviarMensagem(conversaCodigo, texto.trim());
       setTexto('');
-      setMensagens((prev) => {
-        if (prev.some((m) => m.codigoPublico === msg.codigoPublico)) return prev;
-        return [...prev, msg];
-      });
-      ultimaDataRef.current = msg.enviadaEm;
+      aplicarMensagem(msg);
     } catch (error) {
       if (!isErroSilencioso(error)) {
         Alert.alert('Erro', 'Não foi possível enviar a mensagem.');

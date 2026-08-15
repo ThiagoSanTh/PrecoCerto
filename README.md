@@ -40,23 +40,43 @@ Comparador de preços local que conecta consumidores a lojas da região. O usuá
 ## Como rodar (resumo)
 
 ```bash
-# Backend
+# Backend — http://localhost:5132/swagger  e  /api/health
 cd BackEnd/Pc.WebApi
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=...;..."
 dotnet user-secrets set "Jwt:Secret" "chave-com-pelo-menos-32-caracteres"
 dotnet run
-# → http://localhost:5132/swagger
 
-# Mobile
+# Mobile (web: http://localhost:8081)
 cd Mobile
 npm install
-# EXPO_PUBLIC_API_URL=http://localhost:5132
 npm start
+# no terminal do Expo: tecla w
 ```
 
-Segredos, connection strings e deploy: [`BackEnd/docs/SECRETS.md`](BackEnd/docs/SECRETS.md)
+Browser em `localhost:8081` chama `http://localhost:5132/api` sozinho. Celular (Expo Go): `EXPO_PUBLIC_API_URL=http://IP-DO-PC:5132/api` em `Mobile/.env`, depois reinicie o Metro.
 
-Estrutura detalhada do código: [`.cursor/PROJETO.md`](.cursor/PROJETO.md)
+## Deploy
+
+**Railway (API)** — Root Directory = `BackEnd`. Dockerfile + `entrypoint.sh` escutam `$PORT`. Variáveis:
+
+- `ConnectionStrings__DefaultConnection` (pooler Supabase, IPv4)
+- `Jwt__Secret` (≥ 32 caracteres)
+- `Jwt__Issuer` = `PrecoCerto`
+- `Jwt__Audience` = `PrecoCertoApp`
+- `ASPNETCORE_ENVIRONMENT` = `Production`
+- `Cors__AllowedOrigins__0` = URL do Vercel (`https://seu-app.vercel.app`)
+
+`*.vercel.app` já entra na política CORS. Chat (SignalR) usa WebSocket em `/hubs/chat`.
+
+**Vercel (web)** — Root Directory = `Mobile`. Build = `npm run build:web`, Output = `dist`. Variáveis **no build** (redeploy após mudar):
+
+- `EXPO_PUBLIC_API_URL` = `https://SEU-SERVICO.up.railway.app/api` (https + `/api`)
+- `EXPO_PUBLIC_SUPABASE_URL`
+- `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+
+Sem `https://` o browser trata o host como path (`vercel.app/railway.app/...`) e o login vira 405.
+
+Segredos e connection strings: [`BackEnd/docs/SECRETS.md`](BackEnd/docs/SECRETS.md). Mapa do código: [`.cursor/PROJETO.md`](.cursor/PROJETO.md).
 
 ## Autores
 

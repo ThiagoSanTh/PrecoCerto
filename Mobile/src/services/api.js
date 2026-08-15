@@ -2,7 +2,8 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import { getToken, clearToken } from './tokenStorage';
 
-const LOCALHOST_PC = 'http://localhost:5132/api';
+const LOCAL_API_PORT = 5132;
+const LOCALHOST_PC = `http://localhost:${LOCAL_API_PORT}/api`;
 
 /**
  * Garante URL absoluta com https:// e sufixo /api.
@@ -37,6 +38,16 @@ function normalizeApiBaseUrl(url) {
 }
 
 function resolveBaseUrl() {
+  // Web local: ignora IP velho no .env. localhost:8081 fala com localhost:5132.
+  // Aberto via LAN (http://192.168.x.x:8081) usa o mesmo host na porta da API.
+  if (__DEV__ && Platform.OS === 'web' && typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return LOCALHOST_PC;
+    }
+    return `http://${host}:${LOCAL_API_PORT}/api`;
+  }
+
   const fromEnv = normalizeApiBaseUrl(process.env.EXPO_PUBLIC_API_URL);
   if (fromEnv) return fromEnv;
 

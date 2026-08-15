@@ -4,6 +4,10 @@ import { obterCache, salvarCache, invalidarCache } from './feedCache';
 const NS = 'lojasMapa';
 const TTL = 60_000;
 
+function arredondarCoord(n) {
+  return Math.round(Number(n) * 1000) / 1000;
+}
+
 function normalizarPaginado(data) {
   if (Array.isArray(data)) {
     return { items: data, page: 1, pageSize: data.length, total: data.length, hasNext: false };
@@ -23,7 +27,11 @@ export async function listarLojas({ page = 1, pageSize = 100 } = {}) {
 }
 
 export async function listarLojasMapa(latitude, longitude, raioKm = 15) {
-  const cacheKey = { latitude, longitude, raioKm };
+  const cacheKey = {
+    latitude: arredondarCoord(latitude),
+    longitude: arredondarCoord(longitude),
+    raioKm,
+  };
   const cached = obterCache(NS, cacheKey, TTL);
   if (cached) return cached;
 

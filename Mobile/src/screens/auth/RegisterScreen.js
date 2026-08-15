@@ -104,7 +104,7 @@ export default function RegisterScreen({ navigation }) {
 
     if (perfil?.id) {
 
-      sincronizarGpsCliente(perfil.id).catch(() => {});
+      sincronizarGpsCliente(perfil.id, { force: true }).catch(() => {});
 
     }
 

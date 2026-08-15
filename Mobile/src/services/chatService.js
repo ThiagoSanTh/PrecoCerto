@@ -38,7 +38,9 @@ function revalidarConversasEmBackground() {
 async function criarHubConnection(signalR, token) {
   const connection = new signalR.HubConnectionBuilder()
     .withUrl(`${hubBaseUrl()}/hubs/chat`, {
-      accessTokenFactory: () => token,
+      accessTokenFactory: async () => (await getToken()) || token,
+      transport: signalR.HttpTransportType.WebSockets,
+      skipNegotiation: true,
     })
     .withAutomaticReconnect()
     .configureLogging(signalR.LogLevel.Warning)
@@ -236,6 +238,15 @@ export async function listarMensagens(conversaCodigo, { apos, antes, pageSize = 
 }
 
 export async function enviarMensagem(conversaCodigo, texto) {
+  if (hubConnection?.state === 'Connected') {
+    try {
+      const dto = await hubConnection.invoke('EnviarMensagem', conversaCodigo, texto);
+      if (dto) return dto;
+    } catch {
+      // HTTP abaixo
+    }
+  }
+
   const { data } = await api.post(`/Conversas/${conversaCodigo}/mensagens`, { texto });
   return data;
 }
