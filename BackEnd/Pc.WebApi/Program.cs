@@ -132,8 +132,16 @@ if (string.IsNullOrWhiteSpace(jwtSettings.Secret) || jwtSettings.Secret.Length <
         jwtSettings.Secret = "DEV-ONLY-PrecoCerto-Jwt-Secret-32chars!";
     else
         jwtSettings.Secret = "RAILWAY-PLACEHOLDER-JWT-SECRET-32CHARS";
-    Console.Error.WriteLine("WARN Jwt:Secret ausente ou curto. Defina Jwt__Secret no Railway. Login fica inválido até lá.");
+    Console.Error.WriteLine("WARN Jwt:Secret ausente ou curto. Defina Jwt__Secret no Railway.");
 }
+
+builder.Services.PostConfigure<JwtSettings>(o =>
+{
+    o.Secret = jwtSettings.Secret;
+    o.Issuer = string.IsNullOrWhiteSpace(jwtSettings.Issuer) ? "PrecoCerto" : jwtSettings.Issuer;
+    o.Audience = string.IsNullOrWhiteSpace(jwtSettings.Audience) ? "PrecoCertoApp" : jwtSettings.Audience;
+    o.ExpirationHours = jwtSettings.ExpirationHours > 0 ? jwtSettings.ExpirationHours : 24;
+});
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>

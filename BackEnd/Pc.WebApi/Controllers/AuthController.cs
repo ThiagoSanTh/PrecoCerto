@@ -1,3 +1,4 @@
+using System.Data.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -58,6 +59,23 @@ namespace Pc.WebApi.Controllers
             }
             catch (Exception ex)
             {
+                if (EhFalhaDeBanco(ex))
+                {
+                    return StatusCode(503, new
+                    {
+                        message = "Não foi possível conectar ao banco. No Railway, defina ConnectionStrings__DefaultConnection com o pooler IPv4 (Host=aws-1-sa-east-1.pooler.supabase.com)."
+                    });
+                }
+
+                if (ex.Message.Contains("IDX107", StringComparison.OrdinalIgnoreCase)
+                    || ex.Message.Contains("signing key", StringComparison.OrdinalIgnoreCase))
+                {
+                    return StatusCode(500, new
+                    {
+                        message = "Jwt:Secret inválido. Defina Jwt__Secret com pelo menos 32 caracteres no Railway."
+                    });
+                }
+
                 return StatusCode(500, new { message = "Erro ao processar login.", detail = ex.Message });
             }
         }
@@ -227,5 +245,19 @@ namespace Pc.WebApi.Controllers
             Ativo = a.Ativo,
             DataCriacao = a.DataCriacao
         };
+
+        private static bool EhFalhaDeBanco(Exception ex)
+        {
+            for (var atual = ex; atual != null; atual = atual.InnerException)
+            {
+                if (atual is DbException) return true;
+                if (atual.GetType().Name.Contains("RetryLimitExceeded", StringComparison.Ordinal))
+                    return true;
+                if (atual.Message.Contains("Npgsql", StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+
+            return false;
+        }
     }
 }

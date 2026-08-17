@@ -27,6 +27,14 @@ function normalizeApiBaseUrl(url) {
 
   try {
     const parsed = new URL(normalized);
+    if (parsed.hostname.includes('railway.internal')) {
+      console.error(
+        '[API] EXPO_PUBLIC_API_URL usa *.railway.internal — isso é rede privada. ' +
+          'No Railway: Settings → Networking → Public Domain (algo como xxx.up.railway.app). ' +
+          'Na Vercel: EXPO_PUBLIC_API_URL=https://xxx.up.railway.app/api e Redeploy.'
+      );
+      return null;
+    }
     let path = parsed.pathname.replace(/\/+$/, '') || '';
     if (!path.endsWith('/api')) {
       path = `${path}/api`.replace(/\/+/g, '/');

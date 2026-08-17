@@ -21,8 +21,13 @@ function extractRawMessage(error) {
   const { data } = error.response || {};
 
   if (typeof data === 'string' && data.trim()) return data.trim();
-  if (data?.message) return String(data.message);
-  if (data?.detail) return String(data.detail);
+  const message = data?.message ? String(data.message) : '';
+  const detail = data?.detail ? String(data.detail) : '';
+  if (message && detail && /erro ao processar login/i.test(message)) {
+    return `${message} ${detail}`;
+  }
+  if (message) return message;
+  if (detail) return detail;
   if (data?.title && data.title !== 'One or more validation errors occurred.') {
     return String(data.title);
   }
@@ -102,11 +107,11 @@ export function mapApiError(error, context = {}) {
   if (status === 503) {
     return {
       title: 'Indisponível',
-      message: 'Serviço temporariamente indisponível. Tente novamente em instantes.',
+      message: raw || 'Serviço temporariamente indisponível. Tente novamente em instantes.',
     };
   }
   if (status === 500) {
-    return { title: 'Erro', message: 'Erro interno no servidor. Tente novamente.' };
+    return { title: 'Erro', message: raw || 'Erro interno no servidor. Tente novamente.' };
   }
   if (status === 400) return { title: 'Dados inválidos', message: 'Verifique os campos informados.' };
 
