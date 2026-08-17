@@ -30,6 +30,11 @@ if (builder.Environment.IsDevelopment())
 {
     builder.WebHost.UseUrls("http://0.0.0.0:5132");
 }
+else
+{
+    var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 if (string.IsNullOrWhiteSpace(connectionString))
@@ -187,6 +192,11 @@ builder.Services.AddRateLimiter(options =>
     {
         var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         var path = context.Request.Path.Value ?? string.Empty;
+        if (path.Equals("/health", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("/api/health", StringComparison.OrdinalIgnoreCase))
+        {
+            return RateLimitPartition.GetNoLimiter("health");
+        }
         if (path.Contains("/Auth/login", StringComparison.OrdinalIgnoreCase)
             || path.Contains("/Clientes/login", StringComparison.OrdinalIgnoreCase))
         {
@@ -311,6 +321,7 @@ else
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapControllers();
 app.MapHub<Pc.WebApi.Hubs.ChatHub>("/hubs/chat");
 

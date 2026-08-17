@@ -6,7 +6,7 @@ using Pc.Infraestrutura;
 namespace Pc.WebApi.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/health")]
     [AllowAnonymous]
     public class HealthController : ControllerBase
     {
@@ -17,12 +17,18 @@ namespace Pc.WebApi.Controllers
             _db = db;
         }
 
+        /// <summary>Liveness para Railway/Render. Sem banco — senão o deploy cai se o DNS do Postgres falhar.</summary>
         [HttpGet]
-        public async Task<IActionResult> Get(CancellationToken cancellationToken)
+        public IActionResult Get() => Ok(new { status = "ok" });
+
+        [HttpGet("ready")]
+        public async Task<IActionResult> Ready(CancellationToken cancellationToken)
         {
             try
             {
-                await _db.Database.CanConnectAsync(cancellationToken);
+                var ok = await _db.Database.CanConnectAsync(cancellationToken);
+                if (!ok)
+                    return StatusCode(503, new { status = "error", database = "unreachable" });
                 return Ok(new { status = "ok", database = "connected" });
             }
             catch (Exception ex)
