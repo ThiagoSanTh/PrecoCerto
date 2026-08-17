@@ -1,0 +1,19 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "provider": "dotnet",
+  "steps": {
+    "install": {
+      "commands": [
+        "dotnet restore BackEnd/Pc.WebApi/Pc.WebApi.csproj"
+      ]
+    },
+    "build": {
+      "commands": [
+        "dotnet publish BackEnd/Pc.WebApi/Pc.WebApi.csproj -c Release -o out"
+      ]
+    }
+  },
+  "deploy": {
+    "startCommand": "ASPNETCORE_URLS=http://0.0.0.0:${PORT:-8080} ./out/Pc.WebApi"
+  }
+}

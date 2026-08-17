@@ -1,0 +1,10 @@
+.git
+.cursor
+Mobile
+**/bin
+**/obj
+**/node_modules
+**/.expo
+**/logs
+**/*.user
+BackEnd/scripts
