@@ -1,8 +1,10 @@
-# Build context: BackEnd
-**/bin/
-**/obj/
-**/.vs/
+.git
+.cursor
+Mobile
+**/bin
+**/obj
+**/node_modules
+**/.expo
+**/logs
 **/*.user
-**/appsettings.json
-**/appsettings.Development.json
-**/appsettings.*.local.json
+BackEnd/scripts

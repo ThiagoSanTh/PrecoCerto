@@ -57,7 +57,15 @@ Browser em `localhost:8081` chama `http://localhost:5132/api` sozinho. Celular (
 
 ## Deploy
 
-**Railway (API)** — Root Directory = `BackEnd`. Dockerfile + `entrypoint.sh` escutam `$PORT`. Variáveis:
+**Railway (API)** — monorepo. Pasta do código é `BackEnd` (E maiúsculo), **não** `Backend`.
+
+No serviço Railway:
+
+1. **Root Directory** = `/` (vazio). Não use `/Backend` — Linux diferencia maiúscula; o Railpack aí lê a raiz e quebra (`could not determine how to build`).
+2. Commit na raiz: `Dockerfile` + `railway.toml` (builder Docker, health `/api/health`).
+3. Se quiser Root Directory na subpasta, o valor exato é `/BackEnd` e o Config File Path é `/railway.toml` (o arquivo de config **não** segue o Root Directory).
+
+Variáveis:
 
 - `ConnectionStrings__DefaultConnection` (pooler Supabase, IPv4)
 - `Jwt__Secret` (≥ 32 caracteres)
