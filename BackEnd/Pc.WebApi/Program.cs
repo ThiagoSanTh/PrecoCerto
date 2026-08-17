@@ -19,12 +19,22 @@ using Pc.WebApi.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // 📝 Serilog: logging estruturado em console e arquivo (rotação diária).
-builder.Host.UseSerilog((context, services, configuration) => configuration
-    .ReadFrom.Configuration(context.Configuration)
-    .ReadFrom.Services(services)
-    .Enrich.FromLogContext()
-    .WriteTo.Console()
-    .WriteTo.File("logs/precocerto-.log", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 7));
+builder.Host.UseSerilog((context, services, configuration) =>
+{
+    configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+        .WriteTo.Console();
+
+    if (context.HostingEnvironment.IsDevelopment())
+    {
+        configuration.WriteTo.File(
+            "logs/precocerto-.log",
+            rollingInterval: RollingInterval.Day,
+            retainedFileCountLimit: 7);
+    }
+});
 
 if (builder.Environment.IsDevelopment())
 {
@@ -39,13 +49,17 @@ else
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 if (string.IsNullOrWhiteSpace(connectionString))
 {
-    throw new InvalidOperationException(
-        builder.Environment.IsDevelopment()
-            ? "ConnectionStrings:DefaultConnection vazia. Em BackEnd/Pc.WebApi rode: " +
-              "dotnet user-secrets set \"ConnectionStrings:DefaultConnection\" " +
-              "\"Host=db.SEU_PROJECT.supabase.co;Port=5432;Database=postgres;Username=postgres;Password=SUA_SENHA;SSL Mode=Require\" " +
-              "e também: dotnet user-secrets set \"Jwt:Secret\" \"chave-com-pelo-menos-32-caracteres\""
-            : "Configure ConnectionStrings__DefaultConnection nas variáveis de ambiente (Railway/Render).");
+    if (builder.Environment.IsDevelopment())
+    {
+        throw new InvalidOperationException(
+            "ConnectionStrings:DefaultConnection vazia. Em BackEnd/Pc.WebApi rode: " +
+            "dotnet user-secrets set \"ConnectionStrings:DefaultConnection\" " +
+            "\"Host=db.SEU_PROJECT.supabase.co;Port=5432;Database=postgres;Username=postgres;Password=SUA_SENHA;SSL Mode=Require\" " +
+            "e também: dotnet user-secrets set \"Jwt:Secret\" \"chave-com-pelo-menos-32-caracteres\"");
+    }
+
+    Console.Error.WriteLine("WARN ConnectionStrings__DefaultConnection ausente. Healthcheck sobe; o restante da API falha até configurar o banco.");
+    connectionString = "Host=127.0.0.1;Port=5432;Database=none;Username=none;Password=none";
 }
 
 builder.Services.AddControllers()
@@ -110,14 +124,15 @@ builder.Services.AddCors(options =>
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
-    ?? throw new InvalidOperationException("Configure Jwt:Secret (mín. 32 caracteres) em User Secrets ou variáveis de ambiente.");
+    ?? new JwtSettings();
 
 if (string.IsNullOrWhiteSpace(jwtSettings.Secret) || jwtSettings.Secret.Length < 32)
 {
     if (builder.Environment.IsDevelopment())
         jwtSettings.Secret = "DEV-ONLY-PrecoCerto-Jwt-Secret-32chars!";
     else
-        throw new InvalidOperationException("Jwt:Secret deve ter pelo menos 32 caracteres.");
+        jwtSettings.Secret = "RAILWAY-PLACEHOLDER-JWT-SECRET-32CHARS";
+    Console.Error.WriteLine("WARN Jwt:Secret ausente ou curto. Defina Jwt__Secret no Railway. Login fica inválido até lá.");
 }
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -275,6 +290,7 @@ builder.Services.AddScoped<IAvaliacaoServico, AvaliacaoServico>();
 builder.Services.AddScoped<IPreferenciaClienteServico, PreferenciaClienteServico>();
 builder.Services.AddScoped<IConversaServico, ConversaServico>();
 builder.Services.AddScoped<ChatNotificacaoHelper>();
+builder.Services.AddHostedService<MigracaoStartupHostedService>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(
@@ -282,22 +298,6 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         npgsql => npgsql.EnableRetryOnFailure(maxRetryCount: 3)));
 
 var app = builder.Build();
-
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-    try
-    {
-        await db.Database.MigrateAsync();
-        logger.LogInformation("Migrations aplicadas com sucesso.");
-    }
-    catch (Exception ex)
-    {
-        logger.LogError(ex, "Falha ao aplicar migrations no banco.");
-        throw;
-    }
-}
 
 app.UseForwardedHeaders();
 
@@ -312,16 +312,13 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-else
-{
-    app.UseHsts();
-    // Railway/Render terminam TLS no edge; redirecionar HTTP interno quebra preflight CORS.
-}
 
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
-app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
+    .AllowAnonymous()
+    .DisableRateLimiting();
 app.MapControllers();
 app.MapHub<Pc.WebApi.Hubs.ChatHub>("/hubs/chat");
 

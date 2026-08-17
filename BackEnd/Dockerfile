@@ -26,7 +26,4 @@ RUN chmod +x /app/entrypoint.sh \
 
 EXPOSE 8080
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD wget -qO- "http://localhost:${PORT:-8080}/api/health" || exit 1
-
 ENTRYPOINT ["/app/entrypoint.sh"]
