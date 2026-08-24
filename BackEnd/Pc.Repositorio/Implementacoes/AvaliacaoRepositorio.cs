@@ -32,51 +32,45 @@ namespace Pc.Repositorio.Implementacoes
         public async Task<List<Avaliacao>> ObterPorLojaAsync(Guid lojaId)
         {
             return await _context.Avaliacoes
+                .AsNoTracking()
                 .Where(a => a.LojaId == lojaId)
                 .Include(a => a.Cliente)
                 .OrderByDescending(a => a.DataAvaliacao)
                 .ToListAsync();
         }
 
-        /// <summary>
-        /// Calcula a nota média de uma loja
-        /// Retorna 0 se nenhuma avaliação existir
-        /// </summary>
         public async Task<double> ObterMediaAvaliacaoAsync(Guid lojaId)
         {
-            var avaliacoes = await _context.Avaliacoes
-                .Where(a => a.LojaId == lojaId)
-                .ToListAsync();
-
-            if (avaliacoes.Count == 0)
-                return 0;
-
-            return avaliacoes.Average(a => a.Nota);
+            var (media, _) = await ObterResumoPorLojaAsync(lojaId);
+            return media;
         }
 
-        /// <summary>
-        /// Obtém todas as avaliações realizadas por um cliente
-        /// Inclui informações das lojas avaliadas
-        /// Útil para histórico de avaliações do cliente
-        /// </summary>
+        public async Task<(double Media, int Quantidade)> ObterResumoPorLojaAsync(Guid lojaId)
+        {
+            var resumo = await _context.Avaliacoes
+                .AsNoTracking()
+                .Where(a => a.LojaId == lojaId)
+                .GroupBy(a => a.LojaId)
+                .Select(g => new { Media = g.Average(a => (double)a.Nota), Quantidade = g.Count() })
+                .FirstOrDefaultAsync();
+
+            return resumo is null ? (0, 0) : (resumo.Media, resumo.Quantidade);
+        }
+
         public async Task<List<Avaliacao>> ObterPorClienteAsync(Guid clienteId)
         {
             return await _context.Avaliacoes
+                .AsNoTracking()
                 .Where(a => a.ClienteId == clienteId)
                 .Include(a => a.Loja)
                 .OrderByDescending(a => a.DataAvaliacao)
                 .ToListAsync();
         }
 
-        /// <summary>
-        /// Verifica se um cliente já avaliou uma loja (evita duplicatas)
-        /// Retorna a avaliação existente se encontrada
-        /// </summary>
         public async Task<Avaliacao?> VerificarAvaliacaoExistenteAsync(Guid clienteId, Guid lojaId)
         {
             return await _context.Avaliacoes
-                .Include(a => a.Cliente)
-                .Include(a => a.Loja)
+                .AsNoTracking()
                 .FirstOrDefaultAsync(a => a.ClienteId == clienteId && a.LojaId == lojaId);
         }
     }

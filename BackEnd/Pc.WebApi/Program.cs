@@ -13,6 +13,7 @@ using Pc.Repositorio.Interfaces;
 using Pc.Servico.Implementacoes;
 using Pc.Servico.Interfaces;
 using Pc.WebApi.Configuration;
+using Pc.WebApi.Diagnostics;
 using Pc.WebApi.Hubs;
 using Pc.WebApi.Services;
 
@@ -300,10 +301,21 @@ builder.Services.AddScoped<IConversaServico, ConversaServico>();
 builder.Services.AddScoped<ChatNotificacaoHelper>();
 builder.Services.AddHostedService<MigracaoStartupHostedService>();
 
-builder.Services.AddDbContext<AppDbContext>(options =>
+if (BenchmarkMode.Enabled)
+{
+    builder.Services.AddSingleton<EfQueryInterceptor>();
+    builder.Services.AddHostedService<ProcessSamplerHostedService>();
+    Console.Error.WriteLine("WARN PRECOCERTO_BENCHMARK=1: métricas ativas e rate limiter desligado.");
+}
+
+builder.Services.AddDbContext<AppDbContext>((sp, options) =>
+{
     options.UseNpgsql(
         connectionString,
-        npgsql => npgsql.EnableRetryOnFailure(maxRetryCount: 3)));
+        npgsql => npgsql.EnableRetryOnFailure(maxRetryCount: 3));
+    if (BenchmarkMode.Enabled)
+        options.AddInterceptors(sp.GetRequiredService<EfQueryInterceptor>());
+});
 
 var app = builder.Build();
 
@@ -313,6 +325,8 @@ app.UseForwardedHeaders();
 app.UseCors("AppPolicy");
 
 app.UseResponseCompression();
+if (BenchmarkMode.Enabled)
+    app.UseMiddleware<BenchmarkMiddleware>();
 app.UseSerilogRequestLogging();
 
 if (app.Environment.IsDevelopment())
@@ -321,7 +335,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseRateLimiter();
+if (!BenchmarkMode.Enabled)
+    app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }))

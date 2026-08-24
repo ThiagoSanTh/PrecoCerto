@@ -139,8 +139,7 @@ namespace Pc.WebApi.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> ObterMediaAvaliacao(Guid lojaId)
         {
-            var media = await _avaliacaoServico.ObterMediaAvaliacaoAsync(lojaId);
-            var quantidade = await _avaliacaoServico.ObterQuantidadeAvaliacoesAsync(lojaId);
+            var (media, quantidade) = await _avaliacaoServico.ObterResumoAvaliacaoAsync(lojaId);
 
             return Ok(new { media, quantidade });
         }

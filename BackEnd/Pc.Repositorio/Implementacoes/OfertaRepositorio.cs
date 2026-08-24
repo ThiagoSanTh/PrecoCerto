@@ -28,7 +28,7 @@ namespace Pc.Repositorio.Implementacoes
                 .Include(o => o.Produto)
                 .Include(o => o.Loja);
 
-            var total = await query.CountAsync();
+            var total = await _context.Ofertas.AsNoTracking().CountAsync();
             var items = await query
                 .OrderByDescending(o => o.DataAtualizacaoPreco)
                 .Skip(paginacao.Skip)
@@ -68,15 +68,14 @@ namespace Pc.Repositorio.Implementacoes
             if (ids.Count == 0)
                 return new Dictionary<Guid, Oferta>();
 
-            var ofertas = await _context.Ofertas
+            var melhores = await _context.Ofertas
                 .AsNoTracking()
-                .Include(o => o.Loja)
                 .Where(o => ids.Contains(o.ProdutoId) && o.Disponivel)
+                .GroupBy(o => o.ProdutoId)
+                .Select(g => g.OrderBy(o => o.Preco).First())
                 .ToListAsync();
 
-            return ofertas
-                .GroupBy(o => o.ProdutoId)
-                .ToDictionary(g => g.Key, g => g.OrderBy(o => o.Preco).First());
+            return melhores.ToDictionary(o => o.ProdutoId);
         }
     }
 }

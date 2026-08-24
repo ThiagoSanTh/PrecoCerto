@@ -1,0 +1,1 @@
+{"name":"feed_count","plan":"Aggregate  (cost=1.01..1.02 rows=1 width=8) (actual time=0.019..0.019 rows=1 loops=1)\n  Buffers: shared hit=1\n  ->  Seq Scan on \"Produtos\" p  (cost=0.00..1.01 rows=1 width=0) (actual time=0.012..0.014 rows=7 loops=1)\n        Buffers: shared hit=1\nPlanning Time: 0.088 ms\nExecution Time: 0.046 ms"}

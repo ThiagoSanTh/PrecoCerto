@@ -94,6 +94,14 @@ namespace Pc.Servico.Implementacoes
             return await _avaliacaoRepositorio.ObterMediaAvaliacaoAsync(lojaId);
         }
 
+        public async Task<(double Media, int Quantidade)> ObterResumoAvaliacaoAsync(Guid lojaId)
+        {
+            if (lojaId == Guid.Empty)
+                throw new Exception("LojaId é obrigatório.");
+
+            return await _avaliacaoRepositorio.ObterResumoPorLojaAsync(lojaId);
+        }
+
         /// <summary>
         /// Atualiza uma avaliação existente
         /// Valida nova nota e dados
@@ -130,8 +138,8 @@ namespace Pc.Servico.Implementacoes
             if (lojaId == Guid.Empty)
                 throw new Exception("LojaId é obrigatório.");
 
-            var avaliacoes = await _avaliacaoRepositorio.ObterPorLojaAsync(lojaId);
-            return avaliacoes.Count;
+            var (media, quantidade) = await _avaliacaoRepositorio.ObterResumoPorLojaAsync(lojaId);
+            return quantidade;
         }
     }
 }

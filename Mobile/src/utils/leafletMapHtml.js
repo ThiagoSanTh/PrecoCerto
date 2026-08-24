@@ -550,11 +550,30 @@ export function buildLojasMapHtml(dadosMapa) {
       });
     }
 
+    var clienteMarker = null;
+    function aplicarCliente(c) {
+      if (!c || c.lat == null || c.lng == null) return;
+      if (clienteMarker) {
+        clienteMarker.setLatLng([c.lat, c.lng]);
+        return;
+      }
+      var clienteIcon = L.divIcon({
+        html: '<div class="pin-cliente"></div>',
+        className: '',
+        iconSize: [16, 16],
+        iconAnchor: [8, 8]
+      });
+      clienteMarker = L.marker([c.lat, c.lng], { icon: clienteIcon })
+        .addTo(map)
+        .bindPopup('Você está aqui');
+    }
+
     // Canal app -> mapa (injectJavaScript no nativo, postMessage no web).
     window.__onAppMessage = function(json) {
       try {
         var data = typeof json === 'string' ? JSON.parse(json) : json;
         if (data && data.type === 'destaques') aplicarDestaques(data.payload);
+        if (data && data.type === 'cliente') aplicarCliente(data.payload);
       } catch (e) { /* ignore */ }
     };
 
@@ -563,15 +582,7 @@ export function buildLojasMapHtml(dadosMapa) {
     });
 
     if (DATA.cliente) {
-      const clienteIcon = L.divIcon({
-        html: '<div class="pin-cliente"></div>',
-        className: '',
-        iconSize: [16, 16],
-        iconAnchor: [8, 8]
-      });
-      L.marker([DATA.cliente.lat, DATA.cliente.lng], { icon: clienteIcon })
-        .addTo(map)
-        .bindPopup('Você está aqui');
+      aplicarCliente(DATA.cliente);
     }
 
     if (DATA.view.bounds) {

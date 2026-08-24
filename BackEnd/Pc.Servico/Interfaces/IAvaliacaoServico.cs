@@ -36,6 +36,11 @@ namespace Pc.Servico.Interfaces
         Task<double> ObterMediaAvaliacaoAsync(Guid lojaId);
 
         /// <summary>
+        /// Média e quantidade de avaliações da loja.
+        /// </summary>
+        Task<(double Media, int Quantidade)> ObterResumoAvaliacaoAsync(Guid lojaId);
+
+        /// <summary>
         /// Atualiza uma avaliação existente
         /// Valida que cliente tem permissão para atualizar
         /// </summary>

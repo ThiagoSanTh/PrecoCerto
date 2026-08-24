@@ -195,7 +195,7 @@ export default function CreateStoreScreen({ navigation }) {
   async function handleUsarGpsAtual() {
     setLoadingCoords(true);
     try {
-      const coords = await obterLocalizacaoAtual();
+      const coords = await obterLocalizacaoAtual({ allowCached: false });
       setLatitude(coords.latitude);
       setLongitude(coords.longitude);
     } catch (error) {

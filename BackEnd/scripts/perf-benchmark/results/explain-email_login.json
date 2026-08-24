@@ -1,0 +1,1 @@
+{"name":"email_login","plan":"Seq Scan on \"Usuarios\" u  (cost=0.00..1.10 rows=1 width=16) (actual time=0.047..0.047 rows=0 loops=1)\n  Filter: (\"Ativo\" AND (lower(\"Email\") = 'bench@example.com'::text))\n  Rows Removed by Filter: 9\n  Buffers: shared hit=1\nPlanning:\n  Buffers: shared hit=6\nPlanning Time: 0.147 ms\nExecution Time: 0.065 ms"}

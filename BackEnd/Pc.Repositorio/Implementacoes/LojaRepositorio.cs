@@ -29,9 +29,8 @@ namespace Pc.Repositorio.Implementacoes
 
         public async Task<PaginacaoResultado<Loja>> ListarPaginadoAsync(PaginacaoParametros paginacao)
         {
-            var query = QueryComEndereco();
-            var total = await query.CountAsync();
-            var items = await query
+            var total = await _context.Lojas.AsNoTracking().CountAsync();
+            var items = await QueryComEndereco()
                 .OrderBy(l => l.NomeFantasia)
                 .Skip(paginacao.Skip)
                 .Take(paginacao.PageSize)
@@ -57,11 +56,11 @@ namespace Pc.Repositorio.Implementacoes
         public async Task<PaginacaoResultado<Loja>> BuscarPorNomePaginadoAsync(string nome, PaginacaoParametros paginacao)
         {
             var pattern = $"%{nome.Trim()}%";
-            var query = QueryComEndereco()
+            var filtrado = _context.Lojas.AsNoTracking()
                 .Where(l => EF.Functions.ILike(l.NomeFantasia, pattern));
-
-            var total = await query.CountAsync();
-            var items = await query
+            var total = await filtrado.CountAsync();
+            var items = await QueryComEndereco()
+                .Where(l => EF.Functions.ILike(l.NomeFantasia, pattern))
                 .OrderBy(l => l.NomeFantasia)
                 .Skip(paginacao.Skip)
                 .Take(paginacao.PageSize)

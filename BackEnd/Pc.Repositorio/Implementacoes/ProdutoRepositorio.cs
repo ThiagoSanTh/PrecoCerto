@@ -71,9 +71,9 @@ namespace Pc.Repositorio.Implementacoes
             Guid? lojaId = null,
             CategoriaProduto? categoria = null)
         {
-            var query = AplicarFiltros(QueryComLoja(), lojaId, categoria);
-            var total = await query.CountAsync();
-            var items = await query
+            var filtrado = AplicarFiltros(_context.Produtos.AsNoTracking(), lojaId, categoria);
+            var total = await filtrado.CountAsync();
+            var items = await AplicarFiltros(QueryComLoja(), lojaId, categoria)
                 .OrderBy(p => p.NomeProduto)
                 .Skip(paginacao.Skip)
                 .Take(paginacao.PageSize)
@@ -116,15 +116,103 @@ namespace Pc.Repositorio.Implementacoes
                 };
             }
 
-            var query = AplicarFiltroTermo(AplicarFiltros(QueryComLoja(), lojaId, null), nome);
-            var total = await query.CountAsync();
-            var items = await query
+            var filtrado = AplicarFiltroTermo(AplicarFiltros(_context.Produtos.AsNoTracking(), lojaId, null), nome);
+            var total = await filtrado.CountAsync();
+            var items = await AplicarFiltroTermo(AplicarFiltros(QueryComLoja(), lojaId, null), nome)
                 .OrderBy(p => p.NomeProduto)
                 .Skip(paginacao.Skip)
                 .Take(paginacao.PageSize)
                 .ToListAsync();
 
             return new PaginacaoResultado<Produto>
+            {
+                Items = items,
+                Page = paginacao.Page,
+                PageSize = paginacao.PageSize,
+                Total = total
+            };
+        }
+
+        public async Task<PaginacaoResultado<FeedProdutoLinha>> ListarFeedPaginadoAsync(
+            PaginacaoParametros paginacao,
+            string? termo = null,
+            CategoriaProduto? categoria = null,
+            Guid? lojaId = null)
+        {
+            IQueryable<Produto> query;
+            if (!string.IsNullOrWhiteSpace(termo))
+            {
+                if (termo.Trim().Length < 2)
+                {
+                    return new PaginacaoResultado<FeedProdutoLinha>
+                    {
+                        Items = Array.Empty<FeedProdutoLinha>(),
+                        Page = paginacao.Page,
+                        PageSize = paginacao.PageSize,
+                        Total = 0
+                    };
+                }
+
+                query = AplicarFiltroTermo(
+                    AplicarFiltros(_context.Produtos.AsNoTracking(), lojaId, null),
+                    termo);
+            }
+            else
+            {
+                query = AplicarFiltros(_context.Produtos.AsNoTracking(), lojaId, categoria);
+            }
+
+            var total = await query.CountAsync();
+            var linhas = await query
+                .OrderBy(p => p.NomeProduto)
+                .Skip(paginacao.Skip)
+                .Take(paginacao.PageSize)
+                .Select(p => new
+                {
+                    p.Id,
+                    p.NomeProduto,
+                    p.ImagemUrl,
+                    p.LojaId,
+                    ProdutoLojaNome = p.Loja != null ? p.Loja.NomeFantasia : null,
+                    p.Preco,
+                    p.Categoria,
+                    Melhor = _context.Ofertas
+                        .Where(o => o.ProdutoId == p.Id && o.Disponivel)
+                        .OrderBy(o => o.Preco)
+                        .Select(o => new
+                        {
+                            o.Preco,
+                            o.PrecoAnterior,
+                            o.EmPromocao,
+                            LojaNome = o.Loja != null ? o.Loja.NomeFantasia : null
+                        })
+                        .FirstOrDefault()
+                })
+                .ToListAsync();
+
+            var items = linhas.Select(p =>
+            {
+                var precoOferta = p.Melhor?.Preco;
+                var precoExibicao = precoOferta.HasValue && precoOferta.Value < p.Preco
+                    ? precoOferta.Value
+                    : p.Preco;
+
+                return new FeedProdutoLinha
+                {
+                    ProdutoId = p.Id,
+                    Nome = p.NomeProduto,
+                    ImagemUrl = p.ImagemUrl,
+                    LojaId = p.LojaId,
+                    LojaNome = p.Melhor?.LojaNome ?? p.ProdutoLojaNome,
+                    PrecoBase = p.Preco,
+                    PrecoExibicao = precoExibicao,
+                    PrecoAnterior = p.Melhor?.PrecoAnterior,
+                    EmPromocao = p.Melhor?.EmPromocao ?? false,
+                    Categoria = p.Categoria
+                };
+            }).ToList();
+
+            return new PaginacaoResultado<FeedProdutoLinha>
             {
                 Items = items,
                 Page = paginacao.Page,

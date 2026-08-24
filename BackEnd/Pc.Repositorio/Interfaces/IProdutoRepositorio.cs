@@ -12,6 +12,11 @@ namespace Pc.Repositorio.Interfaces
         Task<List<Produto>> ListarPorLojaAsync(Guid? lojaId = null);
         Task<PaginacaoResultado<Produto>> ListarPorLojaPaginadoAsync(
             PaginacaoParametros paginacao, Guid? lojaId = null, CategoriaProduto? categoria = null);
+        Task<PaginacaoResultado<FeedProdutoLinha>> ListarFeedPaginadoAsync(
+            PaginacaoParametros paginacao,
+            string? termo = null,
+            CategoriaProduto? categoria = null,
+            Guid? lojaId = null);
         Task<bool> AtualizarCamposAsync(Produto produto);
         Task<bool> RemoverPorIdAsync(Guid id);
     }

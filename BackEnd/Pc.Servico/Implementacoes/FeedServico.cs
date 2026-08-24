@@ -9,12 +9,10 @@ namespace Pc.Servico.Implementacoes
     public class FeedServico : IFeedServico
     {
         private readonly IProdutoRepositorio _produtoRepositorio;
-        private readonly IOfertaRepositorio _ofertaRepositorio;
 
-        public FeedServico(IProdutoRepositorio produtoRepositorio, IOfertaRepositorio ofertaRepositorio)
+        public FeedServico(IProdutoRepositorio produtoRepositorio)
         {
             _produtoRepositorio = produtoRepositorio;
-            _ofertaRepositorio = ofertaRepositorio;
         }
 
         public async Task<PaginacaoResultado<FeedItem>> ListarAsync(
@@ -23,46 +21,24 @@ namespace Pc.Servico.Implementacoes
             CategoriaProduto? categoria = null,
             Guid? lojaId = null)
         {
-            PaginacaoResultado<Pc.Dominio.Entities.Catalogo.Produto> produtos;
-
-            if (!string.IsNullOrWhiteSpace(termo))
-            {
-                produtos = await _produtoRepositorio.BuscarPorNomePaginadoAsync(termo, paginacao, lojaId);
-            }
-            else
-            {
-                produtos = await _produtoRepositorio.ListarPorLojaPaginadoAsync(paginacao, lojaId, categoria);
-            }
-
-            var ids = produtos.Items.Select(p => p.Id).ToList();
-            var melhoresOfertas = await _ofertaRepositorio.ObterMelhorOfertaPorProdutosAsync(ids);
-
-            var items = produtos.Items.Select(p =>
-            {
-                melhoresOfertas.TryGetValue(p.Id, out var oferta);
-                var precoOferta = oferta?.Preco;
-                var precoExibicao = precoOferta.HasValue && precoOferta.Value < p.Preco
-                    ? precoOferta.Value
-                    : p.Preco;
-
-                return new FeedItem
-                {
-                    ProdutoId = p.Id,
-                    Nome = p.NomeProduto,
-                    ImagemUrl = p.ImagemUrl,
-                    LojaId = p.LojaId,
-                    LojaNome = oferta?.Loja?.NomeFantasia ?? p.Loja?.NomeFantasia,
-                    PrecoBase = p.Preco,
-                    PrecoExibicao = precoExibicao,
-                    PrecoAnterior = oferta?.PrecoAnterior,
-                    EmPromocao = oferta?.EmPromocao ?? false,
-                    Categoria = p.Categoria
-                };
-            }).ToList();
+            var produtos = await _produtoRepositorio.ListarFeedPaginadoAsync(
+                paginacao, termo, categoria, lojaId);
 
             return new PaginacaoResultado<FeedItem>
             {
-                Items = items,
+                Items = produtos.Items.Select(p => new FeedItem
+                {
+                    ProdutoId = p.ProdutoId,
+                    Nome = p.Nome,
+                    ImagemUrl = p.ImagemUrl,
+                    LojaId = p.LojaId,
+                    LojaNome = p.LojaNome,
+                    PrecoBase = p.PrecoBase,
+                    PrecoExibicao = p.PrecoExibicao,
+                    PrecoAnterior = p.PrecoAnterior,
+                    EmPromocao = p.EmPromocao,
+                    Categoria = p.Categoria
+                }).ToList(),
                 Page = produtos.Page,
                 PageSize = produtos.PageSize,
                 Total = produtos.Total

@@ -26,6 +26,28 @@ export async function listarLojas({ page = 1, pageSize = 100 } = {}) {
   return normalizarPaginado(data);
 }
 
+const NS_TODAS = 'lojasFeedMapa';
+
+/**
+ * Lojas com lat/lng para o mapa do feed, sem esperar GPS.
+ */
+export async function listarLojasParaFeedMapa() {
+  const cached = obterCache(NS_TODAS, 'todas', TTL);
+  if (cached) return cached;
+
+  const lista = [];
+  let page = 1;
+  let hasNext = true;
+  while (hasNext && page <= 20) {
+    const { items, hasNext: next } = await listarLojas({ page, pageSize: 100 });
+    lista.push(...items);
+    hasNext = Boolean(next);
+    page += 1;
+  }
+  salvarCache(NS_TODAS, 'todas', lista);
+  return lista;
+}
+
 export async function listarLojasMapa(latitude, longitude, raioKm = 15) {
   const cacheKey = {
     latitude: arredondarCoord(latitude),
@@ -45,6 +67,7 @@ export async function listarLojasMapa(latitude, longitude, raioKm = 15) {
 
 export function invalidarLojasCache() {
   invalidarCache(NS);
+  invalidarCache(NS_TODAS);
 }
 
 export async function obterLoja(id) {

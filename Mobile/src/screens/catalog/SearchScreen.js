@@ -2,7 +2,7 @@ import { FlatList, ActivityIndicator, View, StyleSheet } from 'react-native';
 import { useCallback, useState, useMemo, useEffect, useRef } from 'react';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { listarFeedComStale, listarFeed } from '../../services/feedService';
-import { listarLojasMapa } from '../../services/lojaService';
+import { listarLojasParaFeedMapa } from '../../services/lojaService';
 import { registrarPesquisa } from '../../services/historicoService';
 import { obterLocalizacaoAtual } from '../../services/locationService';
 import { useAuth } from '../../context/AuthContext';
@@ -55,6 +55,7 @@ export default function SearchScreen() {
   const [termoBusca, setTermoBusca] = useState('');
   const [produtos, setProdutos] = useState([]);
   const [lojas, setLojas] = useState([]);
+  const [localizacaoCliente, setLocalizacaoCliente] = useState(null);
   const [modoVisualizacao, setModoVisualizacao] = useState(MODO_MAPA);
   const [loading, setLoading] = useState(true);
   const [buscando, setBuscando] = useState(false);
@@ -86,11 +87,19 @@ export default function SearchScreen() {
 
   const carregarLojasMapa = useCallback(async () => {
     try {
-      const coords = await obterLocalizacaoAtual();
-      const lista = await listarLojasMapa(coords.latitude, coords.longitude, 15);
+      const lista = await listarLojasParaFeedMapa();
       setLojas(Array.isArray(lista) ? lista : []);
     } catch {
       setLojas([]);
+    }
+  }, []);
+
+  const carregarGps = useCallback(async () => {
+    try {
+      const coords = await obterLocalizacaoAtual();
+      setLocalizacaoCliente(coords);
+    } catch {
+      /* mapa mostra lojas mesmo sem GPS */
     }
   }, []);
 
@@ -143,8 +152,9 @@ export default function SearchScreen() {
     useCallback(() => {
       carregarFeed(termoAtivoRef.current, 1, false, true);
       carregarLojasMapa();
+      carregarGps();
       if (isCliente) sincronizarGpsCliente();
-    }, [isCliente, carregarFeed, carregarLojasMapa, sincronizarGpsCliente])
+    }, [isCliente, carregarFeed, carregarLojasMapa, carregarGps, sincronizarGpsCliente])
   );
 
   const executarBusca = useCallback(
@@ -296,25 +306,35 @@ export default function SearchScreen() {
   }
 
   function renderContent(edgeToEdge) {
+    if (modoVisualizacao === MODO_MAPA) {
+      return (
+        <View style={edgeToEdge ? styles.mapShell : styles.mapWithSpinner}>
+          <LojasMapView
+            lojas={lojas}
+            localizacaoCliente={localizacaoCliente}
+            lojaIdsDestaque={lojaIdsDestaque}
+            produtosPorLoja={produtosPorLoja}
+            imagemPinPorLoja={imagemPinPorLoja}
+            onProductPress={abrirProdutoDoMapa}
+            edgeToEdge={edgeToEdge}
+          />
+          {loading ? (
+            <ActivityIndicator
+              size="small"
+              color={colors.primary}
+              style={styles.mapFeedSpinner}
+            />
+          ) : null}
+        </View>
+      );
+    }
+
     if (loading) {
       return (
         <ActivityIndicator
           size="large"
           color={colors.primary}
           style={edgeToEdge ? styles.loadingOverlay : { marginTop: 24 }}
-        />
-      );
-    }
-
-    if (modoVisualizacao === MODO_MAPA) {
-      return (
-        <LojasMapView
-          lojas={lojas}
-          lojaIdsDestaque={lojaIdsDestaque}
-          produtosPorLoja={produtosPorLoja}
-          imagemPinPorLoja={imagemPinPorLoja}
-          onProductPress={abrirProdutoDoMapa}
-          edgeToEdge={edgeToEdge}
         />
       );
     }
@@ -375,6 +395,16 @@ const styles = StyleSheet.create({
   mapShell: {
     flex: 1,
     position: 'relative',
+  },
+  mapWithSpinner: {
+    flex: 1,
+    minHeight: 320,
+  },
+  mapFeedSpinner: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 6,
   },
   searchRow: {
     flexDirection: 'row',

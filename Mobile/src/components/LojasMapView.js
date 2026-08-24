@@ -11,39 +11,34 @@ import {
 import { styles as appStyles } from '../theme';
 
 /**
- * Mapa do feed com todas as lojas (issue #36).
+ * Mapa do feed com lojas.
  * Enquanto o usuário digita, `lojaIdsDestaque` destaca os pins das lojas que
  * têm o produto buscado e oculta as demais — sem recriar o HTML do mapa.
- *
- * Props:
- * - lojas: lista de lojas da API (LojaRespostaDto)
- * - lojaIdsDestaque: null (todas) ou array de ids de loja a destacar
- * - produtosPorLoja: { [lojaId]: [{ id, nome, preco }] } para o popup do pin
- * - imagemPinPorLoja: { [lojaId]: imagemUrl } foto no pin durante a busca
- * - onProductPress: (productId) => void
- * - edgeToEdge: mapa sem bordas arredondadas, avisos como overlay
  */
 export default function LojasMapView({
   lojas,
+  localizacaoCliente: localizacaoExterna,
   lojaIdsDestaque = null,
   produtosPorLoja = {},
   imagemPinPorLoja = {},
   onProductPress,
   edgeToEdge = false,
 }) {
-  const [localizacaoCliente, setLocalizacaoCliente] = useState(null);
+  const [localizacaoInterna, setLocalizacaoInterna] = useState(null);
   const [erroGps, setErroGps] = useState(null);
   const frameRef = useRef(null);
   const mapaProntoRef = useRef(false);
+  const gpsProprio = localizacaoExterna === undefined;
 
   useEffect(() => {
+    if (!gpsProprio) return undefined;
     let ativo = true;
 
     (async () => {
       try {
         const coords = await obterLocalizacaoAtual();
         if (ativo) {
-          setLocalizacaoCliente(coords);
+          setLocalizacaoInterna(coords);
           setErroGps(null);
         }
       } catch (e) {
@@ -56,7 +51,9 @@ export default function LojasMapView({
     return () => {
       ativo = false;
     };
-  }, []);
+  }, [gpsProprio]);
+
+  const localizacaoCliente = gpsProprio ? localizacaoInterna : localizacaoExterna;
 
   const lojasNoMapa = useMemo(
     () =>
@@ -81,16 +78,16 @@ export default function LojasMapView({
       .join(' ') || null;
 
   const mapHtml = useMemo(() => {
-    const dados = prepararDadosMapaLojas(localizacaoCliente, lojasNoMapa);
+    const dados = prepararDadosMapaLojas(null, lojasNoMapa);
     dados.marcadores = sanitizarLojasParaHtml(dados.marcadores);
     return buildLojasMapHtml(dados);
-  }, [localizacaoCliente, lojasNoMapa]);
+  }, [lojasNoMapa]);
 
   const mapKey = useMemo(() => {
     const count = lojasNoMapa.length;
     const hash = lojasNoMapa.slice(0, 5).map((l) => l.id).join('-');
-    return `${localizacaoCliente?.latitude ?? 'x'}-${localizacaoCliente?.longitude ?? 'y'}-n${count}-${hash}`;
-  }, [localizacaoCliente, lojasNoMapa]);
+    return `n${count}-${hash}`;
+  }, [lojasNoMapa]);
 
   const enviarDestaques = useCallback(() => {
     if (!mapaProntoRef.current) return;
@@ -100,9 +97,24 @@ export default function LojasMapView({
     });
   }, [lojaIdsDestaque, produtosPorLoja, imagemPinPorLoja]);
 
+  const enviarCliente = useCallback(() => {
+    if (!mapaProntoRef.current || !localizacaoCliente) return;
+    frameRef.current?.enviarMensagem({
+      type: 'cliente',
+      payload: {
+        lat: Number(localizacaoCliente.latitude),
+        lng: Number(localizacaoCliente.longitude),
+      },
+    });
+  }, [localizacaoCliente]);
+
   useEffect(() => {
     enviarDestaques();
   }, [enviarDestaques]);
+
+  useEffect(() => {
+    enviarCliente();
+  }, [enviarCliente]);
 
   useEffect(() => {
     mapaProntoRef.current = false;
@@ -114,6 +126,7 @@ export default function LojasMapView({
       if (data.type === 'ready') {
         mapaProntoRef.current = true;
         enviarDestaques();
+        enviarCliente();
       } else if (data.type === 'product' && data.productId && onProductPress) {
         onProductPress(data.productId);
       }

@@ -1,0 +1,1 @@
+{"name":"ofertas_best","plan":"Seq Scan on \"Ofertas\" o  (cost=0.00..14.30 rows=215 width=64) (actual time=0.013..0.015 rows=3 loops=1)\n  Filter: \"Disponivel\"\n  Buffers: shared hit=1\nPlanning Time: 0.093 ms\nExecution Time: 0.035 ms"}

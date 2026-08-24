@@ -1,0 +1,4 @@
+nproc=12
+model name	: AMD Ryzen 5 5600H with Radeon Graphics
+               total       usada       livre    compart.  buff/cache  disponível
+Mem.:           5769        4274         379         302        1706        1495

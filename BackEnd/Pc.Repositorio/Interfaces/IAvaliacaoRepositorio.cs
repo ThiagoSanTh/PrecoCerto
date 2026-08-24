@@ -41,5 +41,10 @@ namespace Pc.Repositorio.Interfaces
         /// <param name="lojaId">ID da loja</param>
         /// <returns>Avaliação se existir, null caso contrário</returns>
         Task<Avaliacao?> VerificarAvaliacaoExistenteAsync(Guid clienteId, Guid lojaId);
+
+        /// <summary>
+        /// Média e quantidade de avaliações da loja em uma única consulta.
+        /// </summary>
+        Task<(double Media, int Quantidade)> ObterResumoPorLojaAsync(Guid lojaId);
     }
 }
