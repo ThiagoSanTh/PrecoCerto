@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pc.Dominio.Enums;
 using Pc.Servico.Interfaces;
+using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Interacoes;
 using Pc.WebApi.Extensions;
 using Pc.WebApi.Hubs;
@@ -184,11 +185,7 @@ namespace Pc.WebApi.Controllers
             }
         }
 
-        private PapelUsuario ObterPapel()
-        {
-            if (User.IsLojista()) return PapelUsuario.Lojista;
-            if (User.IsVendedor()) return PapelUsuario.Vendedor;
-            return PapelUsuario.Cliente;
-        }
+        private PapelUsuario ObterPapel() =>
+            ContextoOperacional.ResolverPapel(User, ContextoOperacional.Ler(Request));
     }
 }

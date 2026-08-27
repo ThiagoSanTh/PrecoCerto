@@ -20,17 +20,19 @@ function isErroSilencioso(error) {
   return !status || status === 429 || status >= 500;
 }
 
-function isMinhaMensagem(item, session) {
+function isMinhaMensagem(item, session, emModoLoja) {
   const meuCodigo = session?.perfil?.codigoPublico;
   if (meuCodigo && item.codigoRemetente === meuCodigo) return true;
 
-  const meuPapel = PAPEL_POR_TIPO[session?.tipo];
+  const meuPapel = emModoLoja
+    ? PAPEL_POR_TIPO[session?.tipo]
+    : PAPEL_POR_TIPO.cliente;
   return meuPapel != null && item.remetentePapel === meuPapel;
 }
 
 export default function ChatScreen({ route, navigation }) {
   const { conversaCodigo, titulo } = route.params;
-  const { session } = useAuth();
+  const { session, emModoLoja } = useAuth();
   const { setChatAtivo, syncBadge, hubConectado } = useChatBadge();
   const { colors } = useTheme();
   const [mensagens, setMensagens] = useState([]);
@@ -149,7 +151,7 @@ export default function ChatScreen({ route, navigation }) {
         keyExtractor={(item) => item.codigoPublico}
         style={{ flex: 1, marginBottom: 8 }}
         renderItem={({ item }) => {
-          const minha = isMinhaMensagem(item, session);
+          const minha = isMinhaMensagem(item, session, emModoLoja);
           return (
             <View
               style={{

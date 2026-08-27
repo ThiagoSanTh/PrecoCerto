@@ -13,6 +13,8 @@ namespace Pc.WebApi.DTOs.Usuarios
         public Guid? LojaId { get; set; }
         public string NomeLoja { get; set; } = string.Empty;
         public string? Cargo { get; set; }
+        public decimal? LatitudeAtual { get; set; }
+        public decimal? LongitudeAtual { get; set; }
         public bool Ativo { get; set; }
         public DateTime DataCriacao { get; set; }
     }

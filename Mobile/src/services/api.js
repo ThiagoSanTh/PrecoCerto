@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
 import { getToken, clearToken } from './tokenStorage';
+import { getContextoOperacional } from '../utils/modoUsuario';
 
 const LOCAL_API_PORT = 5132;
 const LOCALHOST_PC = `http://localhost:${LOCAL_API_PORT}/api`;
@@ -91,6 +92,7 @@ api.interceptors.request.use(async (config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  config.headers['X-Contexto-Operacional'] = getContextoOperacional();
   return config;
 });
 

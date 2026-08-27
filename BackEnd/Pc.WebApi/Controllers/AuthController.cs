@@ -228,6 +228,8 @@ namespace Pc.WebApi.Controllers
             LojaId = lojaId,
             NomeLoja = u.LojaPropria?.NomeFantasia ?? string.Empty,
             Cargo = u.Cargo,
+            LatitudeAtual = u.LatitudeAtual,
+            LongitudeAtual = u.LongitudeAtual,
             Ativo = u.Ativo,
             DataCriacao = u.DataCriacao
         };

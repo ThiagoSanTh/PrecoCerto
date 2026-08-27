@@ -84,7 +84,7 @@ function preencherFormularioProduto(prod, ofertaLoja) {
 export default function ProductDetailScreen({ route, navigation }) {
   const productId = route.params?.productId;
   const { isWeb } = useLayoutProfile();
-  const { session, isCliente } = useAuth();
+  const { session, isCliente, emModoLoja } = useAuth();
   const lojaId = session?.perfil?.lojaId;
   const clienteId = isCliente ? session?.perfil?.id : null;
 
@@ -122,7 +122,7 @@ export default function ProductDetailScreen({ route, navigation }) {
   useFocusEffect(
     useCallback(() => {
       carregar();
-    }, [productId, lojaId, clienteId])
+    }, [productId, lojaId, clienteId, emModoLoja])
   );
 
   function aplicarFormulario(prod, ofertaDaLoja) {
@@ -166,7 +166,7 @@ export default function ProductDetailScreen({ route, navigation }) {
 
       const ofertas = await listarOfertasPorProduto(productId).catch(() => []);
       const ofertasLista = Array.isArray(ofertas) ? ofertas : [];
-      const dono = lojaId && produtoPertenceALoja(prod, lojaId);
+      const dono = emModoLoja && lojaId && produtoPertenceALoja(prod, lojaId);
       const ofertaDaLoja =
         lojaId && dono
           ? ofertasLista.find((o) => String(o.lojaId) === String(lojaId)) ?? null

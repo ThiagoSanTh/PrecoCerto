@@ -3,6 +3,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { atualizarLocalizacao } from '../services/clienteService';
 import { obterLocalizacaoAtual } from '../services/locationService';
 import { clearToken, getToken } from '../services/tokenStorage';
+import { invalidarCache } from '../services/feedCache';
+import {
+  MODO_CLIENTE,
+  MODO_LOJA,
+  podeUsarModoLoja,
+  modoPadraoParaSessao,
+  resolverModoSalvo,
+  emModoLoja as resolverEmModoLoja,
+  emModoCliente as resolverEmModoCliente,
+  sincronizarContextoOperacional,
+} from '../utils/modoUsuario';
 
 const AuthContext = createContext(null);
 
@@ -10,23 +21,18 @@ const SESSION_KEY = '@session';
 const MODE_KEY = '@userMode';
 const GPS_THROTTLE_MS = 5 * 60 * 1000;
 
-export function podeUsarModoLoja(session) {
-  if (!session) return false;
-  return (
-    session.tipo === 'lojista' ||
-    session.tipo === 'vendedor' ||
-    !!session.perfil?.lojaId
-  );
-}
+export { podeUsarModoLoja };
 
-function modoPadraoParaSessao(session) {
-  if (!session) return 'user';
-  return session.tipo === 'lojista' || session.tipo === 'vendedor' ? 'store' : 'user';
+function aplicarModo(modo, session) {
+  const modoFinal = modo === MODO_LOJA && podeUsarModoLoja(session) ? MODO_LOJA : MODO_CLIENTE;
+  sincronizarContextoOperacional(modoFinal, session);
+  invalidarCache('conversas');
+  return modoFinal;
 }
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
-  const [appMode, setAppModeState] = useState('user');
+  const [appMode, setAppModeState] = useState(MODO_CLIENTE);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -43,20 +49,14 @@ export function AuthProvider({ children }) {
         const parsed = JSON.parse(raw);
         setSession(parsed);
 
-        const modoValido =
-          savedMode === 'store' && podeUsarModoLoja(parsed)
-            ? 'store'
-            : savedMode === 'user'
-              ? 'user'
-              : modoPadraoParaSessao(parsed);
-
-        setAppModeState(modoValido);
+        const modoValido = resolverModoSalvo(savedMode, parsed);
+        setAppModeState(aplicarModo(modoValido, parsed));
         if (modoValido !== savedMode) {
           await AsyncStorage.setItem(MODE_KEY, modoValido);
         }
       } else if (!token) {
         await AsyncStorage.multiRemove([SESSION_KEY, MODE_KEY]);
-        setAppModeState('user');
+        setAppModeState(aplicarModo(MODO_CLIENTE, null));
       }
     } finally {
       setLoading(false);
@@ -64,7 +64,7 @@ export function AuthProvider({ children }) {
   }
 
   async function setAppMode(modo) {
-    const modoFinal = modo === 'store' && podeUsarModoLoja(session) ? 'store' : 'user';
+    const modoFinal = aplicarModo(modo, session);
     await AsyncStorage.setItem(MODE_KEY, modoFinal);
     setAppModeState(modoFinal);
   }
@@ -75,13 +75,15 @@ export function AuthProvider({ children }) {
 
     if (modo !== undefined) {
       const modoFinal =
-        modo === 'store' && podeUsarModoLoja(novaSessao)
-          ? 'store'
-          : modo === 'user'
-            ? 'user'
+        modo === MODO_LOJA && podeUsarModoLoja(novaSessao)
+          ? MODO_LOJA
+          : modo === MODO_CLIENTE
+            ? MODO_CLIENTE
             : modoPadraoParaSessao(novaSessao);
+      setAppModeState(aplicarModo(modoFinal, novaSessao));
       await AsyncStorage.setItem(MODE_KEY, modoFinal);
-      setAppModeState(modoFinal);
+    } else {
+      sincronizarContextoOperacional(appMode, novaSessao);
     }
   }
 
@@ -107,14 +109,14 @@ export function AuthProvider({ children }) {
     await clearToken();
     await AsyncStorage.multiRemove([SESSION_KEY, MODE_KEY]);
     setSession(null);
-    setAppModeState('user');
+    setAppModeState(aplicarModo(MODO_CLIENTE, null));
     ultimoGpsSyncEmRef.current = 0;
   }
 
   const sincronizarGpsCliente = useCallback(async (clienteIdOverride = null, { force = false } = {}) => {
     const sess = sessionRef.current;
     const id = clienteIdOverride ?? sess?.perfil?.id;
-    if (!id || (sess?.tipo !== 'cliente' && !clienteIdOverride)) return null;
+    if (!id) return null;
 
     const agora = Date.now();
     if (!force && ultimoGpsSyncEmRef.current && agora - ultimoGpsSyncEmRef.current < GPS_THROTTLE_MS) {
@@ -126,7 +128,7 @@ export function AuthProvider({ children }) {
       await atualizarLocalizacao(id, latitude, longitude);
       ultimoGpsSyncEmRef.current = Date.now();
 
-      if (sess?.tipo === 'cliente') {
+      if (sess?.perfil?.id) {
         const perfilAtualizado = {
           ...sess.perfil,
           latitudeAtual: latitude,
@@ -145,7 +147,8 @@ export function AuthProvider({ children }) {
   }, []);
 
   const temModoLoja = podeUsarModoLoja(session);
-  const emModoLoja = appMode === 'store' && temModoLoja;
+  const emModoLoja = resolverEmModoLoja(appMode, session);
+  const emModoCliente = resolverEmModoCliente(appMode, session);
 
   return (
     <AuthContext.Provider
@@ -154,13 +157,14 @@ export function AuthProvider({ children }) {
         loading,
         appMode,
         emModoLoja,
+        emModoCliente,
         temModoLoja,
         setAppMode,
         salvarSessao,
         atualizarPerfilSessao,
         logout,
         sincronizarGpsCliente,
-        isCliente: session?.tipo === 'cliente',
+        isCliente: emModoCliente,
         isLojista: session?.tipo === 'lojista',
         isVendedor: session?.tipo === 'vendedor',
       }}

@@ -1,6 +1,7 @@
 import api from './api';
 import { getToken } from './tokenStorage';
-import { obterCache, obterCacheStale, salvarCache } from './feedCache';
+import { obterCache, obterCacheStale, salvarCache, invalidarCache } from './feedCache';
+import { getContextoOperacional } from '../utils/modoUsuario';
 
 const CONVERSAS_TTL_MS = 30_000;
 const HUB_RETRY_BACKOFF_MS = 30_000;
@@ -35,9 +36,18 @@ function revalidarConversasEmBackground() {
     });
 }
 
+function conversasCacheParts() {
+  return { contexto: getContextoOperacional() };
+}
+
+export function invalidarCacheConversas() {
+  invalidarCache('conversas');
+}
+
 async function criarHubConnection(signalR, token) {
+  const contexto = encodeURIComponent(getContextoOperacional());
   const connection = new signalR.HubConnectionBuilder()
-    .withUrl(`${hubBaseUrl()}/hubs/chat`, {
+    .withUrl(`${hubBaseUrl()}/hubs/chat?contexto=${contexto}`, {
       accessTokenFactory: async () => (await getToken()) || token,
       transport: signalR.HttpTransportType.WebSockets,
       skipNegotiation: true,
@@ -177,18 +187,18 @@ export const CHAT_POLL_INTERVAL_MS = CHAT_POLL_FALLBACK_MS;
 
 export async function listarConversas({ force = false } = {}) {
   if (!force) {
-    const fresh = obterCache('conversas', {}, CONVERSAS_TTL_MS);
+    const fresh = obterCache('conversas', conversasCacheParts(), CONVERSAS_TTL_MS);
     if (fresh) return fresh;
   }
 
   const { data } = await api.get('/Conversas');
-  salvarCache('conversas', {}, data);
+  salvarCache('conversas', conversasCacheParts(), data);
   return data;
 }
 
 export async function listarConversasComStale() {
-  const stale = obterCacheStale('conversas', {});
-  const fresh = obterCache('conversas', {}, CONVERSAS_TTL_MS);
+  const stale = obterCacheStale('conversas', conversasCacheParts());
+  const fresh = obterCache('conversas', conversasCacheParts(), CONVERSAS_TTL_MS);
   if (fresh) return { data: fresh, fromCache: true, stale: false };
   if (stale) {
     revalidarConversasEmBackground();
@@ -208,10 +218,10 @@ export async function temNovasMensagens() {
 }
 
 export async function verificarBadgeFallback() {
-  const cached = obterCache('conversas', {}, CONVERSAS_TTL_MS);
+  const cached = obterCache('conversas', conversasCacheParts(), CONVERSAS_TTL_MS);
   if (cached) return calcularTotalNaoLidas(cached);
 
-  const stale = obterCacheStale('conversas', {});
+  const stale = obterCacheStale('conversas', conversasCacheParts());
   if (stale) {
     revalidarConversasEmBackground();
     return calcularTotalNaoLidas(stale);

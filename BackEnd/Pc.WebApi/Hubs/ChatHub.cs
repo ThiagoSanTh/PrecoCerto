@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Pc.Dominio.Enums;
 using Pc.Servico.Interfaces;
+using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Interacoes;
 using Pc.WebApi.Extensions;
 
@@ -32,12 +33,17 @@ namespace Pc.WebApi.Hubs
 
             await Groups.AddToGroupAsync(Context.ConnectionId, $"usuario:{userId.Value}");
 
-            var lojaId = Context.User?.GetLojaId();
-            if (lojaId.HasValue)
-                await Groups.AddToGroupAsync(Context.ConnectionId, $"loja:{lojaId.Value}");
-
-            if (Context.User?.IsCliente() == true)
+            var papel = ObterPapel(Context.User!);
+            if (papel is PapelUsuario.Lojista or PapelUsuario.Vendedor)
+            {
+                var lojaId = Context.User?.GetLojaId();
+                if (lojaId.HasValue)
+                    await Groups.AddToGroupAsync(Context.ConnectionId, $"loja:{lojaId.Value}");
+            }
+            else
+            {
                 await Groups.AddToGroupAsync(Context.ConnectionId, $"cliente:{userId.Value}");
+            }
         }
 
         public async Task<MensagemRespostaDto> EnviarMensagem(string conversaCodigo, string texto)
@@ -73,11 +79,10 @@ namespace Pc.WebApi.Hubs
             await _conversaServico.MarcarComoRecebidasAsync(conversaId, userId.Value);
         }
 
-        private static PapelUsuario ObterPapel(System.Security.Claims.ClaimsPrincipal user)
+        private PapelUsuario ObterPapel(System.Security.Claims.ClaimsPrincipal user)
         {
-            if (user.IsLojista()) return PapelUsuario.Lojista;
-            if (user.IsVendedor()) return PapelUsuario.Vendedor;
-            return PapelUsuario.Cliente;
+            var contexto = ContextoOperacional.Ler(Context.GetHttpContext()?.Request);
+            return ContextoOperacional.ResolverPapel(user, contexto);
         }
     }
 }

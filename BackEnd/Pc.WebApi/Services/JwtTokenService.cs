@@ -4,6 +4,7 @@ using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Pc.Dominio.Enums;
+using Pc.WebApi.Authorization;
 using Pc.WebApi.Configuration;
 
 namespace Pc.WebApi.Services
@@ -19,21 +20,14 @@ namespace Pc.WebApi.Services
 
         public string GenerateToken(Guid userId, TipoUsuario tipo, Guid? lojaId = null)
         {
-            var role = tipo switch
-            {
-                TipoUsuario.Cliente => "Cliente",
-                TipoUsuario.Lojista => "Lojista",
-                TipoUsuario.Vendedor => "Vendedor",
-                TipoUsuario.Admin => "Admin",
-                _ => "Cliente"
-            };
-
             var claims = new List<Claim>
             {
                 new(JwtRegisteredClaimNames.Sub, userId.ToString()),
                 new(ClaimTypes.NameIdentifier, userId.ToString()),
-                new(ClaimTypes.Role, role),
             };
+
+            foreach (var role in PapelClaims.RolesPara(tipo))
+                claims.Add(new Claim(ClaimTypes.Role, role));
 
             if (lojaId.HasValue && lojaId.Value != Guid.Empty)
                 claims.Add(new Claim("lojaId", lojaId.Value.ToString()));

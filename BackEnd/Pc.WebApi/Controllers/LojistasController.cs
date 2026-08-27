@@ -163,6 +163,8 @@ namespace Pc.WebApi.Controllers
             LojaId = u.Papel == PapelUsuario.Vendedor ? u.LojaVinculadaId : u.LojaPropria?.Id,
             NomeLoja = u.LojaPropria?.NomeFantasia ?? string.Empty,
             Cargo = u.Cargo,
+            LatitudeAtual = u.LatitudeAtual,
+            LongitudeAtual = u.LongitudeAtual,
             Ativo = u.Ativo,
             DataCriacao = u.DataCriacao
         };

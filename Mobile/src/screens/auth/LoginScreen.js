@@ -34,7 +34,7 @@ export default function LoginScreen({ navigation }) {
       await salvarSessao({ tipo, perfil }, modo);
       navigation.replace('Home');
 
-      if (tipo === 'cliente' && perfil?.id) {
+      if (perfil?.id) {
         sincronizarGpsCliente(perfil.id, { force: true }).catch(() => {});
       }
     } catch (err) {

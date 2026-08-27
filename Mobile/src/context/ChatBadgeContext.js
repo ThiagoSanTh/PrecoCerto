@@ -15,8 +15,9 @@ const SYNC_THROTTLE_MS = 5_000;
 const ChatBadgeContext = createContext(null);
 
 export function ChatBadgeProvider({ children }) {
-  const { session } = useAuth();
+  const { session, appMode } = useAuth();
   const sessionId = session?.perfil?.id ?? null;
+  const modoOperacional = `${sessionId ?? ''}:${appMode}`;
   const [badgeCount, setBadgeCount] = useState(0);
   const [hubConectado, setHubConectado] = useState(false);
 
@@ -92,7 +93,7 @@ export function ChatBadgeProvider({ children }) {
       return;
     }
     syncFallback({ force: true });
-  }, [sessionId, syncFallback]);
+  }, [modoOperacional, syncFallback]);
 
   useEffect(() => {
     if (!sessionId) return undefined;
@@ -108,7 +109,7 @@ export function ChatBadgeProvider({ children }) {
       ativo = false;
       clearInterval(interval);
     };
-  }, [sessionId, hubConectado, podePoll, syncFallback]);
+  }, [modoOperacional, hubConectado, podePoll, syncFallback]);
 
   useEffect(() => {
     if (!sessionId) {
@@ -163,7 +164,7 @@ export function ChatBadgeProvider({ children }) {
       encerrarHub();
       setHubConectado(false);
     };
-  }, [sessionId, syncFallback]);
+  }, [modoOperacional, syncFallback]);
 
   return (
     <ChatBadgeContext.Provider

@@ -7,7 +7,7 @@ import { formatApiError } from '../../utils/apiErrorUtils';
 import { FormScreen, FormField, PrimaryButton } from '../../components/form';
 
 export default function EditEmailScreen({ navigation }) {
-  const { session, salvarSessao } = useAuth();
+  const { session, atualizarPerfilSessao } = useAuth();
   const [senhaAtual, setSenhaAtual] = useState('');
   const [novoEmail, setNovoEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -29,7 +29,7 @@ export default function EditEmailScreen({ navigation }) {
         senhaAtual,
         novoEmail.trim().toLowerCase()
       );
-      await salvarSessao({ tipo: session.tipo, perfil: atualizado });
+      await atualizarPerfilSessao(atualizado);
       Alert.alert('Sucesso', 'E-mail alterado com sucesso.', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);

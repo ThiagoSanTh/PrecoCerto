@@ -6,7 +6,7 @@ import { isTelefoneValido } from '../../utils/validacaoUtils';
 import { FormScreen, FormField, PrimaryButton, formStyles } from '../../components/form';
 
 export default function EditProfileScreen({ navigation }) {
-  const { session, salvarSessao } = useAuth();
+  const { session, atualizarPerfilSessao } = useAuth();
   const [nomeUsuario, setNomeUsuario] = useState(session?.perfil?.nomeUsuario || '');
   const [telefone, setTelefone] = useState(session?.perfil?.telefone || '');
   const [loading, setLoading] = useState(false);
@@ -29,7 +29,7 @@ export default function EditProfileScreen({ navigation }) {
         telefone: telefone.trim() || null,
         senha: '',
       });
-      await salvarSessao({ tipo: session.tipo, perfil: atualizado });
+      await atualizarPerfilSessao(atualizado);
       Alert.alert('Sucesso', 'Perfil atualizado', [{ text: 'OK', onPress: () => navigation.goBack() }]);
     } catch (error) {
       Alert.alert('Erro', String(error.response?.data?.message || error.message));

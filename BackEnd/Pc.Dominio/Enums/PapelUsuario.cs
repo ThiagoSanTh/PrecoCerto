@@ -1,9 +1,9 @@
 namespace Pc.Dominio.Enums
 {
     /// <summary>
-    /// Papel de um usuário dentro do sistema.
-    /// O papel é derivado das ações do usuário:
-    /// - Cliente: usuário padrão (não possui loja).
+    /// Papel principal do usuário. Abrir loja adiciona capacidade de lojista;
+    /// não remove a capacidade de cliente.
+    /// - Cliente: usuário padrão.
     /// - Lojista: cliente que abriu uma loja com CNPJ válido.
     /// - Vendedor: cliente promovido por um lojista para gerenciar o estoque da loja.
     /// </summary>
