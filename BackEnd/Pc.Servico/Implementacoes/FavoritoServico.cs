@@ -37,6 +37,21 @@ namespace Pc.Servico.Implementacoes
             if (!favorito.ProdutoId.HasValue && !favorito.LojaId.HasValue)
                 throw new Exception("Pelo menos um de Produto ou Loja é obrigatório.");
 
+            if (favorito.ProdutoId.HasValue)
+            {
+                var existente = await _favoritoRepositorio.ObterFavoritoProdutoAsync(
+                    favorito.ClienteId, favorito.ProdutoId.Value);
+                if (existente != null)
+                    return existente;
+            }
+            else if (favorito.LojaId.HasValue)
+            {
+                var existente = await _favoritoRepositorio.ObterFavoritoLojaAsync(
+                    favorito.ClienteId, favorito.LojaId.Value);
+                if (existente != null)
+                    return existente;
+            }
+
             return await _favoritoRepositorio.AdicionarAsync(favorito);
         }
 

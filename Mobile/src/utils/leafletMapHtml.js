@@ -324,9 +324,9 @@ export function sanitizarLojasParaHtml(marcadores) {
 /**
  * Mapa do feed: pins por LOJA, com busca seletiva em tempo real (issue #36).
  * O app envia mensagens de destaque sem recriar o HTML:
- *   { type: 'destaques', payload: { lojaIds: null | [ids], produtosPorLoja: { id: [{ id, nome, preco }] }, imagemPinPorLoja: { id: url } } }
- * lojaIds = null restaura todos os pins; com lista, pins fora dela somem e os
- * presentes ganham destaque + popup com os produtos encontrados.
+ *   { type: 'destaques', payload: { lojaIds: null | [ids], produtosPorLoja, imagemPinPorLoja, buscaAtiva } }
+ * lojaIds = null: todos os pins iguais. Com lista, pins com resultado ganham
+ * destaque; pins sem resultado continuam visíveis com Card de catálogo.
  */
 export function buildLojasMapHtml(dadosMapa) {
   const payload = JSON.stringify(dadosMapa);
@@ -382,28 +382,38 @@ export function buildLojasMapHtml(dadosMapa) {
       border: 3px solid #fff;
       box-shadow: 0 0 0 2px #2563eb;
     }
-    .leaflet-popup-content { margin: 10px 12px; font-family: system-ui, sans-serif; font-size: 14px; line-height: 1.4; }
-    .popup-title { font-weight: 700; font-size: 15px; color: #0f172a; }
-    .popup-meta { color: #64748b; font-size: 12px; margin-top: 4px; }
-    .popup-produto {
-      display: flex;
-      justify-content: space-between;
-      gap: 8px;
-      margin-top: 6px;
-      font-size: 13px;
+    .leaflet-popup-content-wrapper {
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+      padding: 0;
     }
-    .popup-produto .preco { color: #14B8A6; font-weight: 600; white-space: nowrap; }
+    .leaflet-popup-content { margin: 0; font-family: system-ui, sans-serif; font-size: 14px; line-height: 1.4; min-width: 220px; max-width: 260px; }
+    .map-card { padding: 12px 14px 14px; }
+    .map-card-title { font-weight: 700; font-size: 15px; color: #0f172a; }
+    .map-card-produto { margin-top: 6px; font-size: 13px; color: #334155; }
+    .map-card-preco { margin-top: 2px; color: #0D9488; font-weight: 700; font-size: 16px; }
+    .map-card-meta { color: #64748b; font-size: 12px; margin-top: 4px; }
+    .map-card-empty { margin-top: 8px; font-size: 13px; color: #475569; line-height: 1.35; }
+    .map-card-img {
+      display: block;
+      width: 100%;
+      height: 88px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-top: 8px;
+      background: #e2e8f0;
+    }
     .popup-btn {
       display: block;
       width: 100%;
-      margin-top: 8px;
-      padding: 7px 10px;
+      margin-top: 10px;
+      padding: 8px 10px;
       background: #14B8A6;
       color: #fff;
       font-weight: 600;
       font-size: 13px;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
       cursor: pointer;
       text-align: center;
     }
@@ -439,8 +449,27 @@ export function buildLojasMapHtml(dadosMapa) {
     }).addTo(map);
 
     // Estado de destaque corrente (atualizado pelo app enquanto o usuário digita).
-    var destaques = { lojaIds: null, produtosPorLoja: {}, imagemPinPorLoja: {} };
+    var destaques = { lojaIds: null, produtosPorLoja: {}, imagemPinPorLoja: {}, buscaAtiva: false };
     var markers = {};
+
+    function haversineKm(lat1, lng1, lat2, lng2) {
+      var R = 6371;
+      var dLat = (lat2 - lat1) * Math.PI / 180;
+      var dLng = (lng2 - lng1) * Math.PI / 180;
+      var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLng / 2) * Math.sin(dLng / 2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function formatarDistancia(m) {
+      var c = DATA.cliente;
+      if (!c || c.lat == null || c.lng == null) return '';
+      var km = haversineKm(c.lat, c.lng, m.lat, m.lng);
+      if (!isFinite(km)) return '';
+      if (km < 1) return Math.round(km * 1000) + ' m';
+      return km.toFixed(1).replace('.', ',') + ' km';
+    }
 
     function pinHtml(m, comDestaque, imagemUrl) {
       var classe = 'pin-loja-feed' + (comDestaque ? ' destaque' : '');
@@ -468,21 +497,42 @@ export function buildLojasMapHtml(dadosMapa) {
     }
 
     function popupHtml(m) {
-      var parts = ['<div class="popup-title">' + m.nome + '</div>'];
-      if (m.endereco) parts.push('<div class="popup-meta">' + m.endereco + '</div>');
-      if (m.media != null) {
-        parts.push('<div class="popup-meta">Avaliação: ' + Number(m.media).toFixed(1) + ' / 5</div>');
+      var produtos = (destaques.produtosPorLoja && destaques.produtosPorLoja[m.id]) || [];
+      var produto = produtos[0];
+      var dist = formatarDistancia(m);
+      var parts = ['<div class="map-card">', '<div class="map-card-title">' + m.nome + '</div>'];
+
+      if (produto) {
+        if (produto.imagemUrl) {
+          parts.push('<img class="map-card-img" src="' + encodeURI(produto.imagemUrl) + '" alt="" />');
+        }
+        parts.push('<div class="map-card-produto">' + esc(produto.nome) + '</div>');
+        parts.push('<div class="map-card-preco">' + esc(produto.preco) + '</div>');
+        if (dist) parts.push('<div class="map-card-meta">' + dist + '</div>');
+        parts.push(
+          '<button type="button" class="popup-btn" data-action="product" data-id="' +
+            esc(produto.id) +
+            '">Ver produto</button>'
+        );
+      } else if (destaques.buscaAtiva) {
+        parts.push('<div class="map-card-empty">Esta loja não possui resultado para sua busca.</div>');
+        if (dist) parts.push('<div class="map-card-meta">' + dist + '</div>');
+        parts.push(
+          '<button type="button" class="popup-btn" data-action="store" data-id="' +
+            esc(String(m.id)) +
+            '">Ver produtos</button>'
+        );
+      } else {
+        if (m.endereco) parts.push('<div class="map-card-meta">' + m.endereco + '</div>');
+        if (dist) parts.push('<div class="map-card-meta">' + dist + '</div>');
+        parts.push(
+          '<button type="button" class="popup-btn" data-action="store" data-id="' +
+            esc(String(m.id)) +
+            '">Ver produtos</button>'
+        );
       }
 
-      var produtos = (destaques.produtosPorLoja && destaques.produtosPorLoja[m.id]) || [];
-      produtos.forEach(function(p) {
-        parts.push(
-          '<div class="popup-produto"><span>' + esc(p.nome) + '</span>' +
-          '<span class="preco">' + esc(p.preco) + '</span></div>' +
-          '<button type="button" class="popup-btn" data-id="' + esc(p.id) + '">Mais informações</button>'
-        );
-      });
-
+      parts.push('</div>');
       return parts.join('');
     }
 
@@ -491,7 +541,13 @@ export function buildLojasMapHtml(dadosMapa) {
       botoes.forEach(function(btn) {
         btn.onclick = function(e) {
           e.stopPropagation();
-          postToApp({ type: 'product', productId: btn.getAttribute('data-id') });
+          var action = btn.getAttribute('data-action');
+          var id = btn.getAttribute('data-id');
+          if (action === 'store') {
+            postToApp({ type: 'store', lojaId: id });
+          } else {
+            postToApp({ type: 'product', productId: id });
+          }
         };
       });
     }
@@ -501,7 +557,7 @@ export function buildLojasMapHtml(dadosMapa) {
 
     DATA.marcadores.forEach(function(m) {
       var marker = L.marker([m.lat, m.lng], { icon: criarIcon(m, false, null) })
-        .bindPopup(popupHtml(m));
+        .bindPopup(function() { return popupHtml(m); });
       marker.on('popupopen', ligarBotoesPopup);
       if (usarCluster) {
         clusterGroup.addLayer(marker);
@@ -519,7 +575,8 @@ export function buildLojasMapHtml(dadosMapa) {
       destaques = {
         lojaIds: payload && payload.lojaIds ? payload.lojaIds : null,
         produtosPorLoja: (payload && payload.produtosPorLoja) || {},
-        imagemPinPorLoja: (payload && payload.imagemPinPorLoja) || {}
+        imagemPinPorLoja: (payload && payload.imagemPinPorLoja) || {},
+        buscaAtiva: Boolean(payload && payload.buscaAtiva)
       };
 
       var ids = destaques.lojaIds === null ? null : {};
@@ -529,23 +586,14 @@ export function buildLojasMapHtml(dadosMapa) {
 
       Object.keys(markers).forEach(function(id) {
         var entry = markers[id];
-        var deveMostrar = ids === null || ids[id] === true;
         var deveDestacar = ids !== null && ids[id] === true;
         var imagemUrl = imagemPinParaLoja(id, deveDestacar);
 
-        if (deveMostrar && !entry.visivel) {
-          entry.marker.addTo(map);
-          entry.visivel = true;
-        } else if (!deveMostrar && entry.visivel) {
-          entry.marker.closePopup();
-          map.removeLayer(entry.marker);
-          entry.visivel = false;
-        }
-
-        if (entry.visivel) {
-          entry.marker.setIcon(criarIcon(entry.dados, deveDestacar, imagemUrl));
-          entry.destaque = deveDestacar;
+        entry.marker.setIcon(criarIcon(entry.dados, deveDestacar, imagemUrl));
+        entry.destaque = deveDestacar;
+        if (entry.marker.isPopupOpen()) {
           entry.marker.setPopupContent(popupHtml(entry.dados));
+          ligarBotoesPopup();
         }
       });
     }
@@ -553,6 +601,7 @@ export function buildLojasMapHtml(dadosMapa) {
     var clienteMarker = null;
     function aplicarCliente(c) {
       if (!c || c.lat == null || c.lng == null) return;
+      DATA.cliente = c;
       if (clienteMarker) {
         clienteMarker.setLatLng([c.lat, c.lng]);
         return;

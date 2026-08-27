@@ -12,7 +12,9 @@ namespace Pc.Servico.Interfaces
             Guid conversaId, Guid usuarioId, PapelUsuario papel, Guid? lojaId,
             DateTime? apos, DateTime? antes = null, int pageSize = 50);
         Task<Mensagem> EnviarMensagemAsync(Guid conversaId, Guid remetenteId, PapelUsuario remetentePapel, string texto);
+        Task<Mensagem> EnviarInteresseProdutoAsync(Guid conversaId, Guid clienteId, Guid produtoId);
         Task MarcarComoLidasAsync(Guid conversaId, Guid leitorId);
+        Task MarcarComoRecebidasAsync(Guid conversaId, Guid leitorId);
         Task<int> ContarNaoLidasAsync(Guid usuarioId, PapelUsuario papel, Guid? lojaId);
         Task<bool> TemNaoLidasAsync(Guid usuarioId, PapelUsuario papel, Guid? lojaId, DateTime? desde = null);
         Task<Dictionary<Guid, int>> ContarNaoLidasPorConversasAsync(Guid usuarioId, PapelUsuario papel, Guid? lojaId);

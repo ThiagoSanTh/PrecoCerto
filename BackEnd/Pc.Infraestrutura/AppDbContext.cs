@@ -57,8 +57,46 @@ namespace Pc.Infraestrutura
             modelBuilder.Entity<Oferta>()
                 .HasIndex(o => o.ProdutoId);
 
-            modelBuilder.Entity<Mensagem>()
-                .HasIndex(m => new { m.ConversaId, m.EnviadaEm });
+            modelBuilder.Entity<Oferta>()
+                .HasOne(o => o.Produto)
+                .WithMany()
+                .HasForeignKey(o => o.ProdutoId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .IsRequired();
+
+            modelBuilder.Entity<Oferta>()
+                .HasOne(o => o.Loja)
+                .WithMany(l => l.Ofertas)
+                .HasForeignKey(o => o.LojaId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .IsRequired();
+
+            modelBuilder.Entity<Favorito>()
+                .HasOne(f => f.Produto)
+                .WithMany()
+                .HasForeignKey(f => f.ProdutoId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Favorito>()
+                .HasOne(f => f.Loja)
+                .WithMany()
+                .HasForeignKey(f => f.LojaId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Favorito>()
+                .HasIndex(f => f.ClienteId);
+
+            modelBuilder.Entity<Favorito>()
+                .HasIndex(f => new { f.ClienteId, f.ProdutoId })
+                .IsUnique()
+                .HasFilter("\"ProdutoId\" IS NOT NULL");
+
+            modelBuilder.Entity<Mensagem>(e =>
+            {
+                e.HasKey(m => m.Id);
+                e.Property(m => m.Texto).IsRequired();
+                e.HasIndex(m => new { m.ConversaId, m.EnviadaEm });
+            });
 
             modelBuilder.Entity<HistoricoPesquisa>()
                 .HasOne(h => h.Produto)

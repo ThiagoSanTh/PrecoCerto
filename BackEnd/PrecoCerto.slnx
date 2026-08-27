@@ -3,5 +3,6 @@
   <Project Path="Pc.Infraestrutura/Pc.Infraestrutura.csproj" Id="8775c7bd-6944-4af7-9d18-a2d85e2e1fe0" />
   <Project Path="Pc.Repositorio/Pc.Repositorio.csproj" />
   <Project Path="Pc.Servico/Pc.Servico.csproj" />
+  <Project Path="Pc.Servico.Tests/Pc.Servico.Tests.csproj" />
   <Project Path="Pc.WebApi/Pc.WebApi.csproj" />
 </Solution>

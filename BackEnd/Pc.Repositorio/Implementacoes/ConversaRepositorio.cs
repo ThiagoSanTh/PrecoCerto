@@ -70,7 +70,7 @@ namespace Pc.Repositorio.Implementacoes
 
             var query = _context.Mensagens
                 .AsNoTracking()
-                .Where(m => m.ConversaId == conversaId && m.Ativo);
+                .Where(m => m.ConversaId == conversaId);
 
             if (apos.HasValue)
             {
@@ -133,6 +133,22 @@ namespace Pc.Repositorio.Implementacoes
 
             foreach (var msg in mensagens)
                 msg.Lida = true;
+
+            if (mensagens.Count > 0)
+                await _context.SaveChangesAsync();
+        }
+
+        public async Task MarcarMensagensComoRecebidasAsync(Guid conversaId, Guid leitorId)
+        {
+            var agora = DateTime.UtcNow;
+            var mensagens = await _context.Mensagens
+                .Where(m => m.ConversaId == conversaId
+                    && m.RemetenteId != leitorId
+                    && m.RecebidaEm == null)
+                .ToListAsync();
+
+            foreach (var msg in mensagens)
+                msg.RecebidaEm = agora;
 
             if (mensagens.Count > 0)
                 await _context.SaveChangesAsync();

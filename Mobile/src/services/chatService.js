@@ -221,10 +221,10 @@ export async function verificarBadgeFallback() {
   return temNovas ? 1 : 0;
 }
 
-export async function abrirConversa(lojaCodigo) {
-  const { data } = await api.post('/Conversas/abrir', null, {
-    params: { lojaCodigo },
-  });
+export async function abrirConversa(lojaCodigo, opcoes = {}) {
+  const params = { lojaCodigo };
+  if (opcoes.produtoId) params.produtoId = opcoes.produtoId;
+  const { data } = await api.post('/Conversas/abrir', null, { params });
   return data;
 }
 

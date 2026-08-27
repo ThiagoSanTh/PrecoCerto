@@ -74,8 +74,6 @@ Variáveis:
 - `ASPNETCORE_ENVIRONMENT` = `Production`
 - `Cors__AllowedOrigins__0` = URL do Vercel (`https://seu-app.vercel.app`)
 
-`*.vercel.app` já entra na política CORS. Chat (SignalR) usa WebSocket em `/hubs/chat`.
-
 **Vercel (web)** — Root Directory = `Mobile`. Build = `npm run build:web`, Output = `dist`. Variáveis **no build** (redeploy após mudar):
 
 - `EXPO_PUBLIC_API_URL` = `https://SEU-SERVICO.up.railway.app/api` (https + `/api`)
@@ -84,7 +82,7 @@ Variáveis:
 
 Sem `https://` o browser trata o host como path (`vercel.app/railway.app/...`) e o login vira 405.
 
-Segredos e connection strings: [`BackEnd/docs/SECRETS.md`](BackEnd/docs/SECRETS.md). Mapa do código: [`.cursor/PROJETO.md`](.cursor/PROJETO.md).
+Segredos e connection strings: [`BackEnd/docs/SECRETS.md`](BackEnd/docs/SECRETS.md). Mapa do código: [`.cursor/PROJETO.md`](.cursor/PROJETO.md). Clima (Open-Meteo, cache, endpoint): [`BackEnd/docs/CLIMA.md`](BackEnd/docs/CLIMA.md).
 
 ## Autores
 

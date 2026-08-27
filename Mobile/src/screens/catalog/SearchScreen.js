@@ -4,7 +4,13 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { listarFeedComStale, listarFeed } from '../../services/feedService';
 import { listarLojasParaFeedMapa } from '../../services/lojaService';
 import { registrarPesquisa } from '../../services/historicoService';
+import {
+  adicionarFavorito,
+  listarFavoritosCliente,
+  removerFavoritoProduto,
+} from '../../services/favoritoService';
 import { obterLocalizacaoAtual } from '../../services/locationService';
+import { obterClima, normalizarCoordenadasClima } from '../../services/weatherService';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useLayoutProfile } from '../../hooks/useLayoutProfile';
@@ -16,6 +22,7 @@ import MapSearchOverlay, {
   MODO_MAPA,
   MAP_SEARCH_OVERLAY_HEIGHT,
 } from '../../components/feed/MapSearchOverlay';
+import WeatherCard, { WEATHER_CARD_SLOT_HEIGHT } from '../../components/feed/WeatherCard';
 import {
   FormScreen,
   FormField,
@@ -26,6 +33,7 @@ import {
 import { montarMapaBuscaPorLoja } from '../../utils/mapaPinUtils';
 
 const DEBOUNCE_BUSCA_MS = 400;
+const DEBOUNCE_HISTORICO_MS = 1200;
 const PAGE_SIZE = 20;
 const MAX_PRODUTOS_POR_PIN = 4;
 const GRID_PADDING_H = 8;
@@ -63,6 +71,9 @@ export default function SearchScreen() {
   const [page, setPage] = useState(1);
   const [hasNext, setHasNext] = useState(false);
   const [feedError, setFeedError] = useState(null);
+  const [favoritosIds, setFavoritosIds] = useState(() => new Set());
+  const [clima, setClima] = useState({ status: 'loading', data: null });
+  const [gpsResolvido, setGpsResolvido] = useState(false);
   const { session, isCliente, sincronizarGpsCliente } = useAuth();
   const { colors } = useTheme();
   const { gridColumns, useSidebarNav, width, sidebarWidth } = useLayoutProfile();
@@ -77,9 +88,10 @@ export default function SearchScreen() {
     );
   }, [width, sidebarWidth, useSidebarNav, gridColumns]);
 
-  const clienteId = session?.perfil?.id;
+  const clienteId = isCliente ? session?.perfil?.id : null;
   const buscaIdRef = useRef(0);
   const feedErroLogadoRef = useRef(false);
+  const climaReqRef = useRef(0);
   const termoAtivo = termoBusca.trim();
   const termoAtivoRef = useRef(termoAtivo);
   termoAtivoRef.current = termoAtivo;
@@ -99,9 +111,38 @@ export default function SearchScreen() {
       const coords = await obterLocalizacaoAtual();
       setLocalizacaoCliente(coords);
     } catch {
-      /* mapa mostra lojas mesmo sem GPS */
+      const lat = session?.perfil?.latitudeAtual;
+      const lng = session?.perfil?.longitudeAtual;
+      if (lat != null && lng != null) {
+        setLocalizacaoCliente({ latitude: Number(lat), longitude: Number(lng) });
+      }
+    } finally {
+      setGpsResolvido(true);
     }
-  }, []);
+  }, [session?.perfil?.latitudeAtual, session?.perfil?.longitudeAtual]);
+
+  const carregarFavoritos = useCallback(async () => {
+    if (!clienteId) {
+      setFavoritosIds(new Set());
+      return;
+    }
+    try {
+      const res = await listarFavoritosCliente(clienteId, 1, 200);
+      const ids = new Set(
+        (res.items || []).map((f) => String(f.produtoId)).filter((id) => id && id !== 'undefined')
+      );
+      setFavoritosIds(ids);
+    } catch (error) {
+      console.error('carregar favoritos:', error?.message || error);
+    }
+  }, [clienteId]);
+
+  function registrarBuscaExecutada(termo, extra = {}) {
+    if (!clienteId || !termo) return;
+    registrarPesquisa(clienteId, termo, extra).catch((error) => {
+      console.error('registrar pesquisa:', error?.message || error);
+    });
+  }
 
   const carregarFeed = useCallback(
     async (termo = '', pagina = 1, append = false, useStale = false) => {
@@ -153,8 +194,41 @@ export default function SearchScreen() {
       carregarFeed(termoAtivoRef.current, 1, false, true);
       carregarLojasMapa();
       carregarGps();
+      carregarFavoritos();
       if (isCliente) sincronizarGpsCliente();
-    }, [isCliente, carregarFeed, carregarLojasMapa, carregarGps, sincronizarGpsCliente])
+    }, [isCliente, carregarFeed, carregarLojasMapa, carregarGps, carregarFavoritos, sincronizarGpsCliente])
+  );
+
+  const coordsClima = useMemo(
+    () =>
+      normalizarCoordenadasClima(
+        localizacaoCliente?.latitude ?? session?.perfil?.latitudeAtual,
+        localizacaoCliente?.longitude ?? session?.perfil?.longitudeAtual
+      ),
+    [
+      localizacaoCliente?.latitude,
+      localizacaoCliente?.longitude,
+      session?.perfil?.latitudeAtual,
+      session?.perfil?.longitudeAtual,
+    ]
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      const req = ++climaReqRef.current;
+      if (!coordsClima) {
+        setClima({
+          status: gpsResolvido ? 'sem-localizacao' : 'loading',
+          data: null,
+        });
+        return undefined;
+      }
+      setClima((prev) => (prev.data ? prev : { status: 'loading', data: null }));
+      obterClima(coordsClima).then((res) => {
+        if (climaReqRef.current === req) setClima(res);
+      });
+      return undefined;
+    }, [coordsClima, gpsResolvido])
   );
 
   const executarBusca = useCallback(
@@ -180,8 +254,15 @@ export default function SearchScreen() {
     }
 
     primeiraBuscaRef.current = false;
-    const timer = setTimeout(() => executarBusca(termoAtivo), DEBOUNCE_BUSCA_MS);
-    return () => clearTimeout(timer);
+    const buscaTimer = setTimeout(() => executarBusca(termoAtivo), DEBOUNCE_BUSCA_MS);
+    const historicoTimer = setTimeout(
+      () => registrarBuscaExecutada(termoAtivo),
+      DEBOUNCE_HISTORICO_MS
+    );
+    return () => {
+      clearTimeout(buscaTimer);
+      clearTimeout(historicoTimer);
+    };
   }, [termoAtivo, executarBusca, carregarFeed]);
 
   async function handleSearch() {
@@ -192,10 +273,7 @@ export default function SearchScreen() {
 
     if (isCliente) sincronizarGpsCliente()?.catch?.(() => {});
     await executarBusca(termoAtivo);
-
-    if (clienteId) {
-      registrarPesquisa(clienteId, termoAtivo).catch(() => {});
-    }
+    registrarBuscaExecutada(termoAtivo);
   }
 
   function carregarMais() {
@@ -219,10 +297,10 @@ export default function SearchScreen() {
     if (!id) return;
 
     if (clienteId && termoAtivo) {
-      registrarPesquisa(clienteId, termoAtivo, {
+      registrarBuscaExecutada(termoAtivo, {
         produtoId: id,
         lojaId: produto?.lojaId ?? null,
-      }).catch(() => {});
+      });
     }
     navigation.navigate({
       name: 'ProductDetail',
@@ -236,6 +314,50 @@ export default function SearchScreen() {
     abrirProduto(productId, produto);
   }
 
+  function abrirCatalogoLoja(lojaId) {
+    if (!lojaId) return;
+    const loja = lojas.find((l) => String(l.id ?? l.Id) === String(lojaId));
+    navigation.navigate({
+      name: 'StoreCatalog',
+      params: {
+        lojaId: String(lojaId),
+        lojaNome: loja?.nomeFantasia || loja?.NomeFantasia,
+      },
+      merge: true,
+    });
+  }
+
+  async function handleFavorito(item) {
+    if (!clienteId || !item?.id) return;
+    const id = String(item.id);
+    const jaFavorito = favoritosIds.has(id);
+    setFavoritosIds((prev) => {
+      const next = new Set(prev);
+      if (jaFavorito) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    try {
+      if (jaFavorito) {
+        await removerFavoritoProduto(clienteId, id);
+      } else {
+        await adicionarFavorito({
+          clienteId,
+          produtoId: id,
+          lojaId: item.lojaId ?? null,
+        });
+      }
+    } catch (error) {
+      console.error('favorito:', error?.message || error);
+      setFavoritosIds((prev) => {
+        const next = new Set(prev);
+        if (jaFavorito) next.add(id);
+        else next.delete(id);
+        return next;
+      });
+    }
+  }
+
   function renderItem({ item }) {
     const card = (
       <ProductGridCard
@@ -243,6 +365,9 @@ export default function SearchScreen() {
         oferta={feedItemParaOferta(item)}
         onPress={() => abrirProduto(item.id, item)}
         fillCell={!isSingleProduct}
+        ehFavorito={favoritosIds.has(String(item.id))}
+        mostrarFavorito={Boolean(clienteId)}
+        onFavorito={() => handleFavorito(item)}
       />
     );
 
@@ -270,6 +395,13 @@ export default function SearchScreen() {
           </View>
           <PrimaryButton label="Buscar" onPress={handleSearch} style={styles.searchButton} />
         </View>
+
+        <WeatherCard
+          status={clima.status}
+          dados={clima.data}
+          stale={clima.stale}
+          style={styles.weatherClassic}
+        />
 
         <FormTabs
           options={[
@@ -301,6 +433,9 @@ export default function SearchScreen() {
           onModoChange={setModoVisualizacao}
           buscando={buscando}
         />
+        <View style={styles.weatherOverlay} pointerEvents="none">
+          <WeatherCard status={clima.status} dados={clima.data} stale={clima.stale} />
+        </View>
       </View>
     );
   }
@@ -315,7 +450,9 @@ export default function SearchScreen() {
             lojaIdsDestaque={lojaIdsDestaque}
             produtosPorLoja={produtosPorLoja}
             imagemPinPorLoja={imagemPinPorLoja}
+            buscaAtiva={Boolean(termoAtivo)}
             onProductPress={abrirProdutoDoMapa}
+            onStorePress={abrirCatalogoLoja}
             edgeToEdge={edgeToEdge}
           />
           {loading ? (
@@ -344,7 +481,7 @@ export default function SearchScreen() {
         style={[styles.gridList, { backgroundColor: colors.listBackground }]}
         contentContainerStyle={[
           styles.gridContent,
-          edgeToEdge && { paddingTop: MAP_SEARCH_OVERLAY_HEIGHT + 16 },
+          edgeToEdge && { paddingTop: MAP_SEARCH_OVERLAY_HEIGHT + WEATHER_CARD_SLOT_HEIGHT + 16 },
           isSingleProduct && styles.gridContentSingle,
         ]}
         data={produtos}
@@ -414,6 +551,14 @@ const styles = StyleSheet.create({
   },
   searchInputWrap: { flex: 1 },
   searchButton: { marginBottom: 10, paddingHorizontal: 16, paddingVertical: 12 },
+  weatherClassic: { marginBottom: 8 },
+  weatherOverlay: {
+    position: 'absolute',
+    top: MAP_SEARCH_OVERLAY_HEIGHT,
+    left: 16,
+    right: 16,
+    zIndex: 9,
+  },
   buscandoIndicator: { marginVertical: 4 },
   loadingOverlay: {
     flex: 1,

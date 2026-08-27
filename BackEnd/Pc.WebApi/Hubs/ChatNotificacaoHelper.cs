@@ -24,6 +24,7 @@ namespace Pc.WebApi.Hubs
             RemetentePapel = (int)mensagem.RemetentePapel,
             Texto = mensagem.Texto,
             EnviadaEm = mensagem.EnviadaEm,
+            RecebidaEm = mensagem.RecebidaEm,
             Lida = mensagem.Lida
         };
 

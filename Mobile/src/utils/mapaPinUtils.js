@@ -80,13 +80,18 @@ export function montarMapaBuscaPorLoja(produtos, termo, maxPorPin = 4) {
   });
 
   Object.entries(grupos).forEach(([lojaId, itens]) => {
-    produtosPorLoja[lojaId] = itens.slice(0, maxPorPin).map((p) => ({
+    const escolhido = selecionarProdutoParaPin(itens, termoAtivo);
+    const ordenados = escolhido
+      ? [escolhido, ...itens.filter((p) => p.id !== escolhido.id)]
+      : itens;
+
+    produtosPorLoja[lojaId] = ordenados.slice(0, maxPorPin).map((p) => ({
       id: p.id,
       nome: nomeProduto(p),
       preco: formatarPrecoBrl(p.preco),
+      imagemUrl: p.imagemUrl || null,
     }));
 
-    const escolhido = selecionarProdutoParaPin(itens, termoAtivo);
     imagemPinPorLoja[lojaId] = escolhido?.imagemUrl ?? null;
   });
 

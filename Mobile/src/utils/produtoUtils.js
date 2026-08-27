@@ -20,6 +20,8 @@ export function normalizarProdutoApi(produto) {
     imagemUrl: imagemUrl && String(imagemUrl).trim() ? String(imagemUrl).trim() : null,
     lojaNomeFantasia:
       produto.lojaNomeFantasia ?? produto.LojaNomeFantasia ?? null,
+    lojaCodigoPublico:
+      produto.lojaCodigoPublico ?? produto.LojaCodigoPublico ?? null,
     latitude: lat != null && lat !== '' ? Number(lat) : null,
     longitude: lng != null && lng !== '' ? Number(lng) : null,
     logradouro: produto.logradouro ?? produto.Logradouro ?? null,

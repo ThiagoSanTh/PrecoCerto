@@ -42,5 +42,10 @@ namespace Pc.Repositorio.Interfaces
         /// <param name="lojaId">ID da loja</param>
         /// <returns>Lista de históricos relacionados à loja</returns>
         Task<List<HistoricoPesquisa>> ObterPorLojaAsync(Guid lojaId);
+
+        /// <summary>
+        /// Último registro do cliente para o termo (case-insensitive), se existir.
+        /// </summary>
+        Task<HistoricoPesquisa?> ObterMaisRecentePorTermoAsync(Guid clienteId, string termo);
     }
 }

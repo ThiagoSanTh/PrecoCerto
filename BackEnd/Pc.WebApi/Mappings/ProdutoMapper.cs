@@ -1,4 +1,5 @@
 using Pc.Dominio.Entities.Catalogo;
+using Pc.Servico.Interfaces;
 using Pc.WebApi.DTOs.Catalogo;
 
 namespace Pc.WebApi.Mappings
@@ -22,7 +23,7 @@ namespace Pc.WebApi.Mappings
             };
         }
 
-        public static ProdutoRespostaDto ParaRespostaDto(Produto p)
+        public static ProdutoRespostaDto ParaRespostaDto(Produto p, IIdCodificador? codificador = null)
         {
             var dto = new ProdutoRespostaDto
             {
@@ -33,6 +34,9 @@ namespace Pc.WebApi.Mappings
                 CodigoBarras = p.CodigoBarras ?? string.Empty,
                 Preco = p.Preco,
                 LojaId = p.LojaId,
+                LojaCodigoPublico = p.LojaId.HasValue
+                    ? (codificador?.Codificar(p.LojaId.Value) ?? p.LojaId.Value.ToString())
+                    : null,
                 ImagemUrl = p.ImagemUrl,
                 Categoria = p.Categoria,
                 CategoriaNome = p.Categoria.ToString()

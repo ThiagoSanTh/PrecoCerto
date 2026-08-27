@@ -16,6 +16,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Pc.Servico.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Pc.Infraestrutura\Pc.Infraestrutura.csproj" />
     <ProjectReference Include="..\Pc.Repositorio\Pc.Repositorio.csproj" />
   </ItemGroup>

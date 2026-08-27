@@ -7,6 +7,7 @@ namespace Pc.WebApi.DTOs.Estabelecimentos
         public string NomeProduto { get; set; } = string.Empty;
         public string MarcaProduto { get; set; } = string.Empty;
         public Guid LojaId { get; set; }
+        public string CodigoLoja { get; set; } = string.Empty;
         public string NomeLoja { get; set; } = string.Empty;
         public decimal Preco { get; set; }
         public decimal? PrecoAnterior { get; set; }

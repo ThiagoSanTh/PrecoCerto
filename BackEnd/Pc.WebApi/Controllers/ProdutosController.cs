@@ -16,10 +16,12 @@ namespace Pc.WebApi.Controllers
     public class ProdutosController : ControllerBase
     {
         private readonly IProdutoServico _produtoServico;
+        private readonly IIdCodificador _idCodificador;
 
-        public ProdutosController(IProdutoServico produtoServico)
+        public ProdutosController(IProdutoServico produtoServico, IIdCodificador idCodificador)
         {
             _produtoServico = produtoServico;
+            _idCodificador = idCodificador;
         }
 
         [HttpGet]
@@ -42,9 +44,9 @@ namespace Pc.WebApi.Controllers
         {
             var produto = await _produtoServico.ObterPorIdAsync(id);
             if (produto is null)
-                return NotFound(new { code = "PRODUCT_NOT_FOUND", message = "Produto não encontrado." });
+                return NotFound(new { code = "PRODUCT_NOT_FOUND", message = "Produto nï¿½o encontrado." });
 
-            return Ok(ProdutoMapper.ParaRespostaDto(produto));
+            return Ok(ProdutoMapper.ParaRespostaDto(produto, _idCodificador));
         }
 
         [HttpPost("Buscar")]
@@ -62,7 +64,7 @@ namespace Pc.WebApi.Controllers
         public async Task<IActionResult> Adicionar([FromBody] ProdutoCriarDto dto)
         {
             if (!dto.LojaId.HasValue)
-                return BadRequest("LojaId é obrigatório.");
+                return BadRequest("LojaId ï¿½ obrigatï¿½rio.");
 
             if (!Authz.OwnsLoja(this, dto.LojaId.Value))
                 return Forbid();
@@ -84,7 +86,7 @@ namespace Pc.WebApi.Controllers
             return CreatedAtAction(
                 nameof(ObterPorId),
                 new { id = novoProduto.Id },
-                ProdutoMapper.ParaRespostaDto(recarregado ?? novoProduto));
+                ProdutoMapper.ParaRespostaDto(recarregado ?? novoProduto, _idCodificador));
         }
 
         [HttpPut("{id:guid}")]

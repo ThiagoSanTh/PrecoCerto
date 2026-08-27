@@ -12,8 +12,8 @@ import { styles as appStyles } from '../theme';
 
 /**
  * Mapa do feed com lojas.
- * Enquanto o usuário digita, `lojaIdsDestaque` destaca os pins das lojas que
- * têm o produto buscado e oculta as demais — sem recriar o HTML do mapa.
+ * Enquanto o usuário busca, pins com resultado ganham destaque.
+ * Lojas sem match continuam visíveis; o Card do marker explica o estado.
  */
 export default function LojasMapView({
   lojas,
@@ -21,7 +21,9 @@ export default function LojasMapView({
   lojaIdsDestaque = null,
   produtosPorLoja = {},
   imagemPinPorLoja = {},
+  buscaAtiva = false,
   onProductPress,
+  onStorePress,
   edgeToEdge = false,
 }) {
   const [localizacaoInterna, setLocalizacaoInterna] = useState(null);
@@ -93,9 +95,14 @@ export default function LojasMapView({
     if (!mapaProntoRef.current) return;
     frameRef.current?.enviarMensagem({
       type: 'destaques',
-      payload: { lojaIds: lojaIdsDestaque, produtosPorLoja, imagemPinPorLoja },
+      payload: {
+        lojaIds: lojaIdsDestaque,
+        produtosPorLoja,
+        imagemPinPorLoja,
+        buscaAtiva: Boolean(buscaAtiva),
+      },
     });
-  }, [lojaIdsDestaque, produtosPorLoja, imagemPinPorLoja]);
+  }, [lojaIdsDestaque, produtosPorLoja, imagemPinPorLoja, buscaAtiva]);
 
   const enviarCliente = useCallback(() => {
     if (!mapaProntoRef.current || !localizacaoCliente) return;
@@ -129,6 +136,8 @@ export default function LojasMapView({
         enviarCliente();
       } else if (data.type === 'product' && data.productId && onProductPress) {
         onProductPress(data.productId);
+      } else if (data.type === 'store' && data.lojaId && onStorePress) {
+        onStorePress(data.lojaId);
       }
     } catch {
       /* ignore */

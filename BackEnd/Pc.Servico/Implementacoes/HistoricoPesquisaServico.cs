@@ -38,6 +38,21 @@ namespace Pc.Servico.Implementacoes
 
             // Normaliza o termo (remove espaços extras)
             historico.TermoPesquisa = historico.TermoPesquisa.Trim();
+            historico.DataPesquisa = DateTime.UtcNow;
+
+            var recente = await _historicoPesquisaRepositorio
+                .ObterMaisRecentePorTermoAsync(historico.ClienteId, historico.TermoPesquisa);
+
+            if (recente != null && DateTime.UtcNow - recente.DataPesquisa < TimeSpan.FromMinutes(10))
+            {
+                recente.DataPesquisa = historico.DataPesquisa;
+                if (historico.ProdutoId.HasValue)
+                    recente.ProdutoId = historico.ProdutoId;
+                if (historico.LojaId.HasValue)
+                    recente.LojaId = historico.LojaId;
+                await _historicoPesquisaRepositorio.AtualizarAsync(recente);
+                return recente;
+            }
 
             return await _historicoPesquisaRepositorio.AdicionarAsync(historico);
         }

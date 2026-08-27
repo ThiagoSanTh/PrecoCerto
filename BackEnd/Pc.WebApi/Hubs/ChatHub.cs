@@ -70,6 +70,7 @@ namespace Pc.WebApi.Hubs
                 throw new HubException("Acesso negado.");
 
             await Groups.AddToGroupAsync(Context.ConnectionId, conversaCodigo);
+            await _conversaServico.MarcarComoRecebidasAsync(conversaId, userId.Value);
         }
 
         private static PapelUsuario ObterPapel(System.Security.Claims.ClaimsPrincipal user)

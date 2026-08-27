@@ -14,10 +14,12 @@ namespace Pc.WebApi.Controllers
     public class OfertasController : ControllerBase
     {
         private readonly IOfertaServico _ofertaServico;
+        private readonly IIdCodificador _idCodificador;
 
-        public OfertasController(IOfertaServico ofertaServico)
+        public OfertasController(IOfertaServico ofertaServico, IIdCodificador idCodificador)
         {
             _ofertaServico = ofertaServico;
+            _idCodificador = idCodificador;
         }
 
         [HttpGet]
@@ -37,7 +39,7 @@ namespace Pc.WebApi.Controllers
             var oferta = await _ofertaServico.ObterPorIdAsync(id);
 
             if (oferta == null)
-                return NotFound("Oferta no encontrada.");
+                return NotFound("Oferta n?o encontrada.");
 
             return Ok(MapResposta(oferta));
         }
@@ -71,22 +73,7 @@ namespace Pc.WebApi.Controllers
             };
 
             var novaOferta = await _ofertaServico.AdicionarAsync(oferta);
-
-            var resposta = new OfertaRespostaDto
-            {
-                Id = novaOferta.Id,
-                ProdutoId = novaOferta.ProdutoId,
-                LojaId = novaOferta.LojaId,
-                Preco = novaOferta.Preco,
-                PrecoAnterior = novaOferta.PrecoAnterior,
-                EmPromocao = novaOferta.EmPromocao,
-                DataInicioPromocao = novaOferta.DataInicioPromocao,
-                DataFimPromocao = novaOferta.DataFimPromocao,
-                Disponivel = novaOferta.Disponivel,
-                DataAtualizacaoPreco = novaOferta.DataAtualizacaoPreco
-            };
-
-            return CreatedAtAction(nameof(ObterPorId), new { id = resposta.Id }, resposta);
+            return CreatedAtAction(nameof(ObterPorId), new { id = novaOferta.Id }, MapResposta(novaOferta));
         }
 
         [HttpPut("{id:guid}")]
@@ -98,7 +85,7 @@ namespace Pc.WebApi.Controllers
             var ofertaExistente = await _ofertaServico.ObterPorIdAsync(id);
 
             if (ofertaExistente == null)
-                return NotFound("Oferta no encontrada.");
+                return NotFound("Oferta n?o encontrada.");
 
             ofertaExistente.ProdutoId = dto.ProdutoId;
             ofertaExistente.LojaId = dto.LojaId;
@@ -122,7 +109,7 @@ namespace Pc.WebApi.Controllers
             var ofertaExistente = await _ofertaServico.ObterPorIdAsync(id);
 
             if (ofertaExistente == null)
-                return NotFound("Oferta no encontrada.");
+                return NotFound("Oferta n?o encontrada.");
 
             if (!Authz.OwnsLoja(this, ofertaExistente.LojaId))
                 return Forbid();
@@ -131,13 +118,14 @@ namespace Pc.WebApi.Controllers
             return NoContent();
         }
 
-        private static OfertaRespostaDto MapResposta(Oferta oferta) => new()
+        private OfertaRespostaDto MapResposta(Oferta oferta) => new()
         {
             Id = oferta.Id,
             ProdutoId = oferta.ProdutoId,
             NomeProduto = oferta.Produto?.NomeProduto ?? string.Empty,
             MarcaProduto = oferta.Produto?.Marca ?? string.Empty,
             LojaId = oferta.LojaId,
+            CodigoLoja = _idCodificador.Codificar(oferta.LojaId),
             NomeLoja = oferta.Loja?.NomeFantasia ?? string.Empty,
             Preco = oferta.Preco,
             PrecoAnterior = oferta.PrecoAnterior,

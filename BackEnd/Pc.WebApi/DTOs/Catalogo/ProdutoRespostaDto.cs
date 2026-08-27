@@ -11,6 +11,7 @@ namespace Pc.WebApi.DTOs.Catalogo
         public string CodigoBarras { get; set; } = string.Empty;
         public decimal Preco { get; set; }
         public Guid? LojaId { get; set; }
+        public string? LojaCodigoPublico { get; set; }
         public string? ImagemUrl { get; set; }
         public CategoriaProduto Categoria { get; set; }
         public string CategoriaNome { get; set; } = string.Empty;

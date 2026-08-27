@@ -7,6 +7,7 @@ import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import CreateStoreScreen from '../screens/store/CreateStoreScreen';
 import CreateProductScreen from '../screens/store/CreateProductScreen';
 import ProductDetailScreen from '../screens/catalog/ProductDetailScreen';
+import StoreCatalogScreen from '../screens/catalog/StoreCatalogScreen';
 import CreateOfertaScreen from '../screens/store/CreateOfertaScreen';
 import VendedoresScreen from '../screens/store/VendedoresScreen';
 import ChangePasswordScreen from '../screens/user/ChangePasswordScreen';
@@ -28,6 +29,7 @@ export default function Routes() {
         <Stack.Screen name="CreateStore" component={CreateStoreScreen} options={{ headerShown: false }} />
         <Stack.Screen name="CreateProduct" component={CreateProductScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="StoreCatalog" component={StoreCatalogScreen} options={{ headerShown: false }} />
         <Stack.Screen name="CreateOferta" component={CreateOfertaScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Vendedores" component={VendedoresScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ headerShown: false }} />

@@ -31,6 +31,7 @@ import {
 } from '../../services/favoritoService';
 import { useAuth } from '../../context/AuthContext';
 import { abrirConversa } from '../../services/chatService';
+import { navegarParaChat } from '../../navigation/chatNavigation';
 import { nomeProduto, produtoPertenceALoja } from '../../utils/produtoUtils';
 import { formatarPrecoBrl } from '../../utils/mapaUtils';
 import { formatarDataBr, parseDataBr } from '../../utils/dataUtils';
@@ -379,19 +380,24 @@ export default function ProductDetailScreen({ route, navigation }) {
     }
     if (!produto) return;
 
-    const lojaCodigo = oferta?.codigoLoja || produto?.lojaCodigoPublico || produto?.lojaId || oferta?.lojaId;
+    const lojaCodigo =
+      oferta?.codigoLoja ||
+      produto?.lojaCodigoPublico ||
+      produto?.lojaId ||
+      oferta?.lojaId;
     if (!lojaCodigo) {
       Alert.alert('Chat', 'Loja não identificada para este produto.');
       return;
     }
     try {
-      const data = await abrirConversa(lojaCodigo);
-      navigation.navigate('Chat', {
+      const data = await abrirConversa(lojaCodigo, { produtoId: productId });
+      navegarParaChat(navigation, {
         conversaCodigo: data.codigoPublico,
         titulo: produto.lojaNomeFantasia || oferta?.nomeLoja || 'Loja',
       });
-    } catch {
-      Alert.alert('Erro', 'Não foi possível abrir o chat com a loja.');
+    } catch (error) {
+      const detalhe = error?.response?.data?.message;
+      Alert.alert('Erro', detalhe || 'Não foi possível abrir o chat com a loja.');
     }
   }
 

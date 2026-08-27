@@ -17,6 +17,7 @@ namespace Pc.WebApi.DTOs.Interacoes
         public int RemetentePapel { get; set; }
         public string Texto { get; set; } = string.Empty;
         public DateTime EnviadaEm { get; set; }
+        public DateTime? RecebidaEm { get; set; }
         public bool Lida { get; set; }
     }
 

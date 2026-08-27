@@ -81,7 +81,7 @@ namespace Pc.WebApi.Controllers
 
         [HttpPost("abrir")]
         [Authorize(Roles = "Cliente")]
-        public async Task<IActionResult> Abrir([FromQuery] string lojaCodigo)
+        public async Task<IActionResult> Abrir([FromQuery] string lojaCodigo, [FromQuery] Guid? produtoId)
         {
             var userId = User.GetUserId();
             if (!userId.HasValue || !_idCodificador.TentarDecodificar(lojaCodigo, out var lojaId))
@@ -90,7 +90,21 @@ namespace Pc.WebApi.Controllers
             try
             {
                 var conversa = await _conversaServico.AbrirComLojaAsync(userId.Value, lojaId);
-                return Ok(new { codigoPublico = _idCodificador.Codificar(conversa.Id) });
+                MensagemRespostaDto? mensagemInicial = null;
+
+                if (produtoId.HasValue && produtoId.Value != Guid.Empty)
+                {
+                    var mensagem = await _conversaServico.EnviarInteresseProdutoAsync(
+                        conversa.Id, userId.Value, produtoId.Value);
+                    await _notificacao.NotificarMensagemEnviadaAsync(conversa, mensagem);
+                    mensagemInicial = _notificacao.ParaDto(mensagem);
+                }
+
+                return Ok(new
+                {
+                    codigoPublico = _idCodificador.Codificar(conversa.Id),
+                    mensagemInicial
+                });
             }
             catch (Exception ex)
             {
@@ -117,6 +131,8 @@ namespace Pc.WebApi.Controllers
                 var mensagens = await _conversaServico.ListarMensagensAsync(
                     conversaId, userId.Value, ObterPapel(), User.GetLojaId(), apos, antes, pageSize);
 
+                await _conversaServico.MarcarComoRecebidasAsync(conversaId, userId.Value);
+
                 if (apos == null)
                     await _conversaServico.MarcarComoLidasAsync(conversaId, userId.Value);
 
@@ -127,6 +143,7 @@ namespace Pc.WebApi.Controllers
                     RemetentePapel = (int)m.RemetentePapel,
                     Texto = m.Texto,
                     EnviadaEm = m.EnviadaEm,
+                    RecebidaEm = m.RecebidaEm,
                     Lida = m.Lida
                 }));
             }

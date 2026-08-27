@@ -99,11 +99,14 @@ Orquestra repositórios, validações e exceções de domínio.
 | `Implementacoes/HistoricoPesquisaServico.cs` | Registrar e listar buscas |
 | `Implementacoes/AvaliacaoServico.cs` | Criar e listar avaliações |
 | `Implementacoes/ConsultaCnpjServico.cs` | Consulta externa de CNPJ (Receita) |
+| `Implementacoes/ClimaServico.cs` | Clima com cache (`IClimaServico` → `IClimaProvedor`) |
+| `Implementacoes/OpenMeteoClimaProvedor.cs` | Open-Meteo + Nominatim; não vaza JSON do fornecedor |
 | `Implementacoes/ValidadorEmailServico.cs` | Valida formato e disponibilidade de e-mail |
 | `Implementacoes/IdCodificadorServico.cs` | Codifica/decodifica IDs públicos (Sqids) nas URLs |
 | `Implementacoes/BcryptPasswordHasher.cs` | Hash e verificação de senhas |
 | `Excecoes/` | Exceções de negócio (`EmailJaRegistradoException`, etc.) |
 | `Modelos/FeedItem.cs` | Modelo interno usado pelo serviço de feed |
+| `Modelos/ClimaResposta.cs` | Clima normalizado (localidade, atual, horária, diária) |
 
 ---
 
@@ -128,6 +131,7 @@ Expõe endpoints REST e SignalR. Traduz HTTP ↔ serviços ↔ DTOs.
 | `AvaliacoesController` | Avaliações de lojas |
 | `PreferenciasClienteController` | Preferências do usuário |
 | `ConsultasController` | Consulta de CNPJ |
+| `WeatherController` | `GET /api/Weather` — clima normalizado por lat/lng (Open-Meteo, cache) |
 | `AdminsController` | Gestão de administradores |
 | `HealthController` | Health check leve (`/api/Health`) |
 
@@ -218,6 +222,7 @@ App Expo (React Native) em `Mobile/src/`.
 | `historicoService.js` | Histórico de buscas |
 | `avaliacaoService.js` | Avaliações |
 | `consultaService.js` | Consulta de CNPJ |
+| `weatherService.js` | `GET /Weather` com cache 15 min (não chama o provedor meteorológico) |
 | `locationService.js` | GPS do dispositivo |
 | `storageService.js` | Upload de imagens (Supabase Storage) |
 | `tokenStorage.js` | Persistência segura do JWT |
@@ -229,7 +234,7 @@ App Expo (React Native) em `Mobile/src/`.
 | Pasta | O que é |
 |-------|---------|
 | `form/` | FormScreen, FormField, FormButton, ListCard — base visual de formulários |
-| `feed/` | ProductGridCard, FavoritoListCard — cards do feed |
+| `feed/` | ProductGridCard, FavoritoListCard, WeatherCard, MapSearchOverlay |
 | `product/` | Galeria, rating, barra de ações, seletor de categoria |
 | `LojasMapView.js` | Mapa Leaflet com lojas próximas |
 | `LeafletMapFrame.js` | WebView que renderiza o HTML do mapa |

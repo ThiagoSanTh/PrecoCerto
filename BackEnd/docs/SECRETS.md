@@ -52,3 +52,13 @@ Com Supabase pooler, ajuste na connection string para evitar esgotar o pool sob 
 | `Command Timeout` | 30 s | Evita queries longas segurando conexão |
 
 Use **Direct** só para migrations locais; em produção prefira o **pooler** (IPv4). Com rate limit de catálogo (120 req/min) e paginação, uma instância API sustenta leituras sem saturar o pool.
+
+## Clima
+
+O provedor padrão (Open-Meteo) **não usa API key**. Não coloque chave de clima no React Native. Se um provedor futuro exigir segredo:
+
+```bash
+dotnet user-secrets set "Clima:ApiKey" "SUA_CHAVE"
+```
+
+No Railway: `Clima__ApiKey`. Detalhes em [`CLIMA.md`](CLIMA.md).

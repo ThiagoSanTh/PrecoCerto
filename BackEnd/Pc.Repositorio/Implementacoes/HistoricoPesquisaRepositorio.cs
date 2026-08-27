@@ -73,5 +73,15 @@ namespace Pc.Repositorio.Implementacoes
                 .OrderByDescending(h => h.DataPesquisa)
                 .ToListAsync();
         }
+
+        public async Task<HistoricoPesquisa?> ObterMaisRecentePorTermoAsync(Guid clienteId, string termo)
+        {
+            var normalizado = termo.Trim();
+            var chave = normalizado.ToLower();
+            return await _context.HistoricosPesquisa
+                .Where(h => h.ClienteId == clienteId && h.TermoPesquisa.ToLower() == chave)
+                .OrderByDescending(h => h.DataPesquisa)
+                .FirstOrDefaultAsync();
+        }
     }
 }

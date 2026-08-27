@@ -235,7 +235,8 @@ builder.Services.AddRateLimiter(options =>
         if (path.StartsWith("/api/Feed", StringComparison.OrdinalIgnoreCase)
             || path.StartsWith("/api/Produtos", StringComparison.OrdinalIgnoreCase)
             || path.StartsWith("/api/Lojas", StringComparison.OrdinalIgnoreCase)
-            || path.StartsWith("/api/Ofertas", StringComparison.OrdinalIgnoreCase))
+            || path.StartsWith("/api/Ofertas", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("/api/Weather", StringComparison.OrdinalIgnoreCase))
         {
             return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
             {
@@ -260,10 +261,22 @@ builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 // ✉️ E-mail (boas-vindas, recuperação de senha)
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection(EmailSettings.SectionName));
 builder.Services.Configure<ConsultaCnpjSettings>(builder.Configuration.GetSection(ConsultaCnpjSettings.SectionName));
+builder.Services.Configure<ClimaSettings>(builder.Configuration.GetSection(ClimaSettings.SectionName));
 builder.Services.Configure<IdEncodingSettings>(builder.Configuration.GetSection(IdEncodingSettings.SectionName));
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 builder.Services.AddSingleton<IIdCodificador, IdCodificadorServico>();
 builder.Services.AddHttpClient<IConsultaCnpjServico, ConsultaCnpjServico>();
+builder.Services.AddHttpClient<IClimaProvedor, OpenMeteoClimaProvedor>((sp, client) =>
+{
+    var clima = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<ClimaSettings>>().Value;
+    var timeout = Math.Clamp(clima.TimeoutSegundos, 3, 15);
+    client.Timeout = TimeSpan.FromSeconds(timeout);
+    client.DefaultRequestHeaders.TryAddWithoutValidation(
+        "User-Agent",
+        "PrecoCerto/1.0 (https://github.com/ThiagoSanTh/PrecoCerto)");
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+});
+builder.Services.AddScoped<IClimaServico, ClimaServico>();
 
 // Repositórios — Catálogo e Estabelecimentos
 builder.Services.AddScoped<IProdutoRepositorio, ProdutoRepositorio>();

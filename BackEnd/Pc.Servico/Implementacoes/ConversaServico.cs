@@ -1,3 +1,4 @@
+using System.Globalization;
 using Pc.Dominio.Entities.Interacoes;
 using Pc.Dominio.Enums;
 using Pc.Repositorio.Interfaces;
@@ -7,13 +8,24 @@ namespace Pc.Servico.Implementacoes
 {
     public class ConversaServico : IConversaServico
     {
+        private static readonly CultureInfo CulturaPtBr = CultureInfo.GetCultureInfo("pt-BR");
+        private static readonly TimeSpan JanelaMensagemInteresse = TimeSpan.FromMinutes(10);
+
         private readonly IConversaRepositorio _repo;
         private readonly ILojaRepositorio _lojaRepo;
+        private readonly IProdutoRepositorio _produtoRepo;
+        private readonly IOfertaRepositorio _ofertaRepo;
 
-        public ConversaServico(IConversaRepositorio repo, ILojaRepositorio lojaRepo)
+        public ConversaServico(
+            IConversaRepositorio repo,
+            ILojaRepositorio lojaRepo,
+            IProdutoRepositorio produtoRepo,
+            IOfertaRepositorio ofertaRepo)
         {
             _repo = repo;
             _lojaRepo = lojaRepo;
+            _produtoRepo = produtoRepo;
+            _ofertaRepo = ofertaRepo;
         }
 
         public async Task<List<Conversa>> ListarDoUsuarioAsync(Guid usuarioId, PapelUsuario papel, Guid? lojaId)
@@ -98,10 +110,41 @@ namespace Pc.Servico.Implementacoes
             return salva;
         }
 
+        public async Task<Mensagem> EnviarInteresseProdutoAsync(Guid conversaId, Guid clienteId, Guid produtoId)
+        {
+            var conversa = await _repo.ObterPorIdAsync(conversaId)
+                ?? throw new Exception("Conversa não encontrada.");
+
+            if (conversa.ClienteId != clienteId)
+                throw new UnauthorizedAccessException("Acesso negado à conversa.");
+
+            var produto = await _produtoRepo.ObterPorIdAsync(produtoId)
+                ?? throw new Exception("Produto não encontrado.");
+
+            var ofertas = await _ofertaRepo.ObterPorProdutoAsync(produtoId);
+            var oferta = ofertas.FirstOrDefault(o => o.LojaId == conversa.LojaId);
+            var loja = conversa.Loja ?? await _lojaRepo.ObterPorIdAsync(conversa.LojaId);
+
+            var texto = MontarMensagemInteresse(produto.NomeProduto, oferta?.Preco ?? produto.Preco, loja?.NomeFantasia);
+
+            var recentes = await _repo.ListarMensagensAsync(conversaId, null, null, 20);
+            var duplicada = recentes.LastOrDefault(m =>
+                m.RemetenteId == clienteId
+                && m.Texto == texto
+                && DateTime.UtcNow - m.EnviadaEm < JanelaMensagemInteresse);
+            if (duplicada != null)
+                return duplicada;
+
+            return await EnviarMensagemAsync(conversaId, clienteId, PapelUsuario.Cliente, texto);
+        }
+
         public async Task MarcarComoLidasAsync(Guid conversaId, Guid leitorId)
         {
             await _repo.MarcarMensagensComoLidasAsync(conversaId, leitorId);
         }
+
+        public Task MarcarComoRecebidasAsync(Guid conversaId, Guid leitorId) =>
+            _repo.MarcarMensagensComoRecebidasAsync(conversaId, leitorId);
 
         public Task<int> ContarNaoLidasAsync(Guid usuarioId, PapelUsuario papel, Guid? lojaId)
         {
@@ -130,6 +173,18 @@ namespace Pc.Servico.Implementacoes
                 return lojaId.HasValue && conversa.LojaId == lojaId.Value;
 
             return false;
+        }
+
+        internal static string MontarMensagemInteresse(string nomeProduto, decimal preco, string? nomeLoja)
+        {
+            var precoFmt = preco.ToString("C", CulturaPtBr);
+            var loja = string.IsNullOrWhiteSpace(nomeLoja) ? "a loja" : nomeLoja.Trim();
+            return
+                "Olá! Tenho interesse neste produto.\n\n" +
+                $"Produto: {nomeProduto}\n" +
+                $"Preço: {precoFmt}\n" +
+                $"Loja: {loja}\n\n" +
+                "Gostaria de saber se o produto está disponível.";
         }
     }
 }

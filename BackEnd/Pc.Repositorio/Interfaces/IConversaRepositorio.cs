@@ -14,6 +14,7 @@ namespace Pc.Repositorio.Interfaces
         Task<Dictionary<Guid, int>> ContarNaoLidasPorConversasAsync(Guid usuarioId, bool ehLojista, Guid? lojaId);
         Task<Mensagem> AdicionarMensagemAsync(Mensagem mensagem);
         Task MarcarMensagensComoLidasAsync(Guid conversaId, Guid leitorId);
+        Task MarcarMensagensComoRecebidasAsync(Guid conversaId, Guid leitorId);
         Task<int> ContarNaoLidasAsync(Guid usuarioId, bool ehLojista, Guid? lojaId);
         Task<bool> TemNaoLidasAsync(Guid usuarioId, bool ehLojista, Guid? lojaId, DateTime? desde = null);
     }
