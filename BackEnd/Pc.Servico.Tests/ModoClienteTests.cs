@@ -36,6 +36,13 @@ namespace Pc.Servico.Tests
         {
             Assert.Equal(new[] { "Admin" }, PapelClaims.RolesPara(TipoUsuario.Admin));
         }
+
+        [Fact]
+        public void Capacidade_cliente_nao_e_exclusiva_da_role_cliente()
+        {
+            Assert.Equal("CapacidadeCliente", AuthPolicies.CapacidadeCliente);
+            Assert.Equal("CapacidadeClienteOuAdmin", AuthPolicies.CapacidadeClienteOuAdmin);
+        }
     }
 
     public class ContextoOperacionalTests

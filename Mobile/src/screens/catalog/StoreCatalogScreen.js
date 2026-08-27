@@ -1,4 +1,4 @@
-import { FlatList, ActivityIndicator, StyleSheet } from 'react-native';
+import { FlatList, ActivityIndicator, StyleSheet, Alert } from 'react-native';
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { listarFeed } from '../../services/feedService';
@@ -115,13 +115,20 @@ export default function StoreCatalogScreen({ route, navigation }) {
           lojaId: item.lojaId ?? lojaId ?? null,
         });
       }
-    } catch {
+    } catch (error) {
       setFavoritosIds((prev) => {
         const next = new Set(prev);
         if (jaFavorito) next.add(id);
         else next.delete(id);
         return next;
       });
+      const status = error?.response?.status;
+      Alert.alert(
+        'Favoritos',
+        status === 403
+          ? 'Não foi possível favoritar neste modo. Entre de novo e tente outra vez.'
+          : 'Não foi possível atualizar os favoritos.'
+      );
     }
   }
 

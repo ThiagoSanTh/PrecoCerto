@@ -29,7 +29,7 @@ namespace Pc.WebApi.Controllers
         /// Valida: nota entre 1-5, evita duplicatas
         /// </summary>
         [HttpPost]
-        [Authorize(Roles = "Cliente")]
+        [Authorize(Policy = AuthPolicies.CapacidadeCliente)]
         public async Task<IActionResult> Adicionar([FromBody] AvaliacaoCriarDto dto)
         {
             if (User.GetUserId() != dto.ClienteId)
@@ -150,7 +150,7 @@ namespace Pc.WebApi.Controllers
         /// Body: AvaliacaoCriarDto
         /// </summary>
         [HttpPut("{id:guid}")]
-        [Authorize(Roles = "Cliente,Admin")]
+        [Authorize(Policy = AuthPolicies.CapacidadeClienteOuAdmin)]
         public async Task<IActionResult> Atualizar(Guid id, [FromBody] AvaliacaoCriarDto dto)
         {
             var avaliacao = await _avaliacaoServico.ObterPorIdAsync(id);
@@ -185,7 +185,7 @@ namespace Pc.WebApi.Controllers
         /// Remove uma avaliação
         /// </summary>
         [HttpDelete("{id:guid}")]
-        [Authorize(Roles = "Cliente,Admin")]
+        [Authorize(Policy = AuthPolicies.CapacidadeClienteOuAdmin)]
         public async Task<IActionResult> Remover(Guid id)
         {
             var avaliacao = await _avaliacaoServico.ObterPorIdAsync(id);

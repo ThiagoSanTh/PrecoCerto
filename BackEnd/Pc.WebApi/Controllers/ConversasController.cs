@@ -81,7 +81,7 @@ namespace Pc.WebApi.Controllers
         }
 
         [HttpPost("abrir")]
-        [Authorize(Roles = "Cliente")]
+        [Authorize(Policy = AuthPolicies.CapacidadeCliente)]
         public async Task<IActionResult> Abrir([FromQuery] string lojaCodigo, [FromQuery] Guid? produtoId)
         {
             var userId = User.GetUserId();

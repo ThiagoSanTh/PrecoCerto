@@ -25,7 +25,7 @@ namespace Pc.WebApi.Controllers
         }
 
         [HttpGet("cliente/{clienteId:guid}")]
-        [Authorize(Roles = "Cliente,Admin")]
+        [Authorize(Policy = AuthPolicies.CapacidadeClienteOuAdmin)]
         public async Task<IActionResult> ListarPorCliente(
             Guid clienteId,
             [FromQuery] int page = 1,
@@ -45,7 +45,7 @@ namespace Pc.WebApi.Controllers
         }
 
         [HttpGet("{id:guid}")]
-        [Authorize(Roles = "Cliente,Admin")]
+        [Authorize(Policy = AuthPolicies.CapacidadeClienteOuAdmin)]
         public async Task<IActionResult> ObterPorId(Guid id)
         {
             var favorito = await _favoritoServico.ObterPorIdAsync(id);
@@ -63,7 +63,7 @@ namespace Pc.WebApi.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Cliente")]
+        [Authorize(Policy = AuthPolicies.CapacidadeCliente)]
         public async Task<IActionResult> Adicionar([FromBody] FavoritoCriarDto dto)
         {
             if (User.GetUserId() != dto.ClienteId)
@@ -81,7 +81,7 @@ namespace Pc.WebApi.Controllers
         }
 
         [HttpDelete("{id:guid}")]
-        [Authorize(Roles = "Cliente,Admin")]
+        [Authorize(Policy = AuthPolicies.CapacidadeClienteOuAdmin)]
         public async Task<IActionResult> Remover(Guid id)
         {
             var favorito = await _favoritoServico.ObterPorIdAsync(id);
@@ -96,7 +96,7 @@ namespace Pc.WebApi.Controllers
         }
 
         [HttpDelete("cliente/{clienteId:guid}/produto/{produtoId:guid}")]
-        [Authorize(Roles = "Cliente")]
+        [Authorize(Policy = AuthPolicies.CapacidadeCliente)]
         public async Task<IActionResult> RemoverFavoritoProduto(Guid clienteId, Guid produtoId)
         {
             if (User.GetUserId() != clienteId)
@@ -107,7 +107,7 @@ namespace Pc.WebApi.Controllers
         }
 
         [HttpDelete("cliente/{clienteId:guid}/loja/{lojaId:guid}")]
-        [Authorize(Roles = "Cliente")]
+        [Authorize(Policy = AuthPolicies.CapacidadeCliente)]
         public async Task<IActionResult> RemoverFavoritoLoja(Guid clienteId, Guid lojaId)
         {
             if (User.GetUserId() != clienteId)
@@ -118,7 +118,7 @@ namespace Pc.WebApi.Controllers
         }
 
         [HttpGet("verificar/{clienteId:guid}")]
-        [Authorize(Roles = "Cliente,Admin")]
+        [Authorize(Policy = AuthPolicies.CapacidadeClienteOuAdmin)]
         public async Task<IActionResult> VerificaFavorito(Guid clienteId, Guid? produtoId = null, Guid? lojaId = null)
         {
             if (!Authz.IsSelfOrAdmin(this, clienteId))

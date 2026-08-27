@@ -31,7 +31,7 @@ namespace Pc.WebApi.Controllers
         /// Padrão chave-valor: permite flexibilidade na adição de novas configurações
         /// </summary>
         [HttpPost]
-        [Authorize(Roles = "Cliente")]
+        [Authorize(Policy = AuthPolicies.CapacidadeCliente)]
         public async Task<IActionResult> Salvar([FromBody] PreferenciaClienteCriarDto dto)
         {
             if (User.GetUserId() != dto.ClienteId)
@@ -86,7 +86,7 @@ namespace Pc.WebApi.Controllers
         /// Retorna todas as preferências de um cliente
         /// </summary>
         [HttpGet("cliente/{clienteId:guid}")]
-        [Authorize(Roles = "Cliente,Admin")]
+        [Authorize(Policy = AuthPolicies.CapacidadeClienteOuAdmin)]
         public async Task<IActionResult> ListarPorCliente(Guid clienteId)
         {
             if (!Authz.IsSelfOrAdmin(this, clienteId))
@@ -110,7 +110,7 @@ namespace Pc.WebApi.Controllers
         /// Retorna o valor de uma preferência específica
         /// </summary>
         [HttpGet("cliente/{clienteId:guid}/valor")]
-        [Authorize(Roles = "Cliente,Admin")]
+        [Authorize(Policy = AuthPolicies.CapacidadeClienteOuAdmin)]
         public async Task<IActionResult> ObterValor(Guid clienteId, [FromQuery] string chave)
         {
             if (!Authz.IsSelfOrAdmin(this, clienteId))
@@ -129,7 +129,7 @@ namespace Pc.WebApi.Controllers
         /// Body: { "valor": "desabilitado" }
         /// </summary>
         [HttpPut("cliente/{clienteId:guid}")]
-        [Authorize(Roles = "Cliente")]
+        [Authorize(Policy = AuthPolicies.CapacidadeCliente)]
         public async Task<IActionResult> Atualizar(Guid clienteId, [FromQuery] string chave, [FromBody] PreferenciaValorDto dto)
         {
             if (User.GetUserId() != clienteId)
@@ -158,7 +158,7 @@ namespace Pc.WebApi.Controllers
         /// Remove uma preferência específica por chave
         /// </summary>
         [HttpDelete("cliente/{clienteId:guid}")]
-        [Authorize(Roles = "Cliente")]
+        [Authorize(Policy = AuthPolicies.CapacidadeCliente)]
         public async Task<IActionResult> RemoverPorChave(Guid clienteId, [FromQuery] string chave)
         {
             if (User.GetUserId() != clienteId)
@@ -173,7 +173,7 @@ namespace Pc.WebApi.Controllers
         /// CUIDADO: Operação irreversível
         /// </summary>
         [HttpDelete("cliente/{clienteId:guid}/limpar")]
-        [Authorize(Roles = "Cliente,Admin")]
+        [Authorize(Policy = AuthPolicies.CapacidadeClienteOuAdmin)]
         public async Task<IActionResult> LimparTodas(Guid clienteId)
         {
             if (!Authz.IsSelfOrAdmin(this, clienteId))

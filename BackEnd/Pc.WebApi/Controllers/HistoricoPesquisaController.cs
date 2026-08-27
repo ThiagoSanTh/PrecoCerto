@@ -30,7 +30,7 @@ namespace Pc.WebApi.Controllers
         /// Body: HistoricoPesquisaCriarDto
         /// </summary>
         [HttpPost]
-        [Authorize(Roles = "Cliente")]
+        [Authorize(Policy = AuthPolicies.CapacidadeCliente)]
         public async Task<IActionResult> RegistrarPesquisa([FromBody] HistoricoPesquisaCriarDto dto)
         {
             if (User.GetUserId() != dto.ClienteId)
@@ -87,7 +87,7 @@ namespace Pc.WebApi.Controllers
         /// Ordenado por data descrescente (mais recentes primeiro)
         /// </summary>
         [HttpGet("cliente/{clienteId:guid}")]
-        [Authorize(Roles = "Cliente,Admin")]
+        [Authorize(Policy = AuthPolicies.CapacidadeClienteOuAdmin)]
         public async Task<IActionResult> ObterHistoricoCliente(Guid clienteId)
         {
             if (!Authz.IsSelfOrAdmin(this, clienteId))
@@ -110,7 +110,7 @@ namespace Pc.WebApi.Controllers
         /// Retorna os últimos N termos de pesquisa (padrão: 5)
         /// </summary>
         [HttpGet("cliente/{clienteId:guid}/ultimos")]
-        [Authorize(Roles = "Cliente,Admin")]
+        [Authorize(Policy = AuthPolicies.CapacidadeClienteOuAdmin)]
         public async Task<IActionResult> ObterUltimos(Guid clienteId, [FromQuery] int quantidade = 5)
         {
             if (!Authz.IsSelfOrAdmin(this, clienteId))
@@ -169,7 +169,7 @@ namespace Pc.WebApi.Controllers
         /// CUIDADO: Operação irreversível
         /// </summary>
         [HttpDelete("cliente/{clienteId:guid}/limpar")]
-        [Authorize(Roles = "Cliente,Admin")]
+        [Authorize(Policy = AuthPolicies.CapacidadeClienteOuAdmin)]
         public async Task<IActionResult> LimparHistorico(Guid clienteId)
         {
             if (!Authz.IsSelfOrAdmin(this, clienteId))

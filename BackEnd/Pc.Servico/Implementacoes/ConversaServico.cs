@@ -88,6 +88,9 @@ namespace Pc.Servico.Implementacoes
             var conversa = await _repo.ObterPorIdAsync(conversaId)
                 ?? throw new Exception("Conversa não encontrada.");
 
+            if (conversa.ClienteId == remetenteId)
+                remetentePapel = PapelUsuario.Cliente;
+
             var lojaId = remetentePapel is PapelUsuario.Lojista or PapelUsuario.Vendedor
                 ? conversa.LojaId
                 : (Guid?)null;
@@ -166,8 +169,8 @@ namespace Pc.Servico.Implementacoes
             if (conversa == null)
                 return false;
 
-            if (papel == PapelUsuario.Cliente)
-                return conversa.ClienteId == usuarioId;
+            if (conversa.ClienteId == usuarioId)
+                return true;
 
             if (papel is PapelUsuario.Lojista or PapelUsuario.Vendedor)
                 return lojaId.HasValue && conversa.LojaId == lojaId.Value;

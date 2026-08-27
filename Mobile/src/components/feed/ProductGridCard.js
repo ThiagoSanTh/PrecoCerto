@@ -163,7 +163,8 @@ export default function ProductGridCard({
         {mostrarFavorito ? (
           <Pressable
             style={[styles.heartBtn, ehFavorito && styles.heartBtnAtivo]}
-            onPress={() => {
+            onPress={(event) => {
+              event?.stopPropagation?.();
               onFavorito?.();
             }}
             disabled={favoritoLoading || !onFavorito}

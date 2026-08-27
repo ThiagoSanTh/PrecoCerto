@@ -44,6 +44,8 @@ export function invalidarCacheConversas() {
   invalidarCache('conversas');
 }
 
+let hubContexto = null;
+
 async function criarHubConnection(signalR, token) {
   const contexto = encodeURIComponent(getContextoOperacional());
   const connection = new signalR.HubConnectionBuilder()
@@ -83,6 +85,13 @@ async function obterHubCompartilhado() {
   const token = await getToken();
   if (!token) return null;
 
+  const contextoAtual = getContextoOperacional();
+  if (hubConnection && hubContexto && hubContexto !== contextoAtual) {
+    await hubConnection.stop().catch(() => {});
+    hubConnection = null;
+    hubContexto = null;
+  }
+
   if (hubConnection?.state === 'Connected' || hubConnection?.state === 'Reconnecting') {
     return hubConnection;
   }
@@ -104,6 +113,7 @@ async function obterHubCompartilhado() {
         }
         hubConnection = await criarHubConnection(signalR, token);
         await hubConnection.start();
+        hubContexto = getContextoOperacional();
       }
 
       ultimaFalhaHubEm = 0;
@@ -113,6 +123,7 @@ async function obterHubCompartilhado() {
       if (hubConnection) {
         await hubConnection.stop().catch(() => {});
         hubConnection = null;
+        hubContexto = null;
       }
       return null;
     } finally {
@@ -181,6 +192,7 @@ export async function encerrarHub() {
     hubConnection = null;
   }
   hubStarting = null;
+  hubContexto = null;
 }
 
 export const CHAT_POLL_INTERVAL_MS = CHAT_POLL_FALLBACK_MS;

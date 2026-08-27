@@ -12,6 +12,7 @@ using Pc.Repositorio.Implementacoes;
 using Pc.Repositorio.Interfaces;
 using Pc.Servico.Implementacoes;
 using Pc.Servico.Interfaces;
+using Pc.WebApi.Authorization;
 using Pc.WebApi.Configuration;
 using Pc.WebApi.Diagnostics;
 using Pc.WebApi.Hubs;
@@ -172,7 +173,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(AuthPolicies.CapacidadeCliente, policy =>
+        policy.RequireRole("Cliente", "Lojista", "Vendedor"));
+    options.AddPolicy(AuthPolicies.CapacidadeClienteOuAdmin, policy =>
+        policy.RequireRole("Cliente", "Lojista", "Vendedor", "Admin"));
+});
 builder.Services.AddSignalR();
 builder.Services.AddMemoryCache();
 builder.Services.AddResponseCompression(options =>

@@ -24,6 +24,9 @@ function isMinhaMensagem(item, session, emModoLoja) {
   const meuCodigo = session?.perfil?.codigoPublico;
   if (meuCodigo && item.codigoRemetente === meuCodigo) return true;
 
+  const meuId = session?.perfil?.id;
+  if (meuId && String(item.remetenteId) === String(meuId)) return true;
+
   const meuPapel = emModoLoja
     ? PAPEL_POR_TIPO[session?.tipo]
     : PAPEL_POR_TIPO.cliente;

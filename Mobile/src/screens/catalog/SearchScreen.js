@@ -1,4 +1,4 @@
-import { FlatList, ActivityIndicator, View, StyleSheet } from 'react-native';
+import { FlatList, ActivityIndicator, View, StyleSheet, Alert } from 'react-native';
 import { useCallback, useState, useMemo, useEffect, useRef } from 'react';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { listarFeedComStale, listarFeed } from '../../services/feedService';
@@ -355,6 +355,13 @@ export default function SearchScreen() {
         else next.delete(id);
         return next;
       });
+      const status = error?.response?.status;
+      Alert.alert(
+        'Favoritos',
+        status === 403
+          ? 'Não foi possível favoritar neste modo. Entre de novo e tente outra vez.'
+          : 'Não foi possível atualizar os favoritos.'
+      );
     }
   }
 
