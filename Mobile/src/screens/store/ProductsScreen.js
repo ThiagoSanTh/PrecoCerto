@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { listarProdutos } from '../../services/productService';
 import { listarOfertas } from '../../services/ofertaService';
 import { useAuth } from '../../context/AuthContext';
+import { podeCriarLoja } from '../../utils/modoUsuario';
 import { useTheme } from '../../context/ThemeContext';
 import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import { mapApiError } from '../../utils/apiErrorUtils';
@@ -91,19 +92,26 @@ export default function ProductsScreen({ navigation }) {
   }
 
   if (!lojaId) {
+    const podeCriar = podeCriarLoja(session);
     return (
       <FormScreen
         title="Meus produtos"
-        subtitle="Vincule uma loja ao perfil"
+        subtitle={podeCriar ? 'Vincule uma loja ao perfil' : 'Loja vinculada ao perfil'}
         scrollable={false}
         footer={
-          <PrimaryButton
-            label="Criar loja"
-            onPress={() => navigation.navigate('CreateStore')}
-          />
+          podeCriar ? (
+            <PrimaryButton
+              label="Criar loja"
+              onPress={() => navigation.navigate('CreateStore')}
+            />
+          ) : undefined
         }
       >
-        <ListCardText>Cadastre sua loja para gerenciar produtos.</ListCardText>
+        <ListCardText>
+          {podeCriar
+            ? 'Cadastre sua loja para gerenciar produtos.'
+            : 'Sua conta já está vinculada a uma loja. Atualize a tela ou entre novamente se os produtos não aparecerem.'}
+        </ListCardText>
       </FormScreen>
     );
   }

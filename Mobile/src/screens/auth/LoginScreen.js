@@ -3,7 +3,7 @@ import { View, Text, Pressable } from 'react-native';
 import { useState } from 'react';
 import { login as authLogin } from '../../services/authService';
 import { mapApiError } from '../../utils/apiErrorUtils';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth, podeUsarModoLoja } from '../../context/AuthContext';
 import { useFormStyles } from '../../hooks/useFormStyles';
 import {
   FormScreen,
@@ -29,9 +29,9 @@ export default function LoginScreen({ navigation }) {
     setLoading(true);
     try {
       const { tipo, perfil } = await authLogin(email.trim().toLowerCase(), senha);
-      const ehLojaUser = tipo === 'lojista' || tipo === 'vendedor';
-      const modo = ehLojaUser ? 'store' : 'user';
-      await salvarSessao({ tipo, perfil }, modo);
+      const novaSessao = { tipo, perfil };
+      const modo = podeUsarModoLoja(novaSessao) ? 'store' : 'user';
+      await salvarSessao(novaSessao, modo);
       navigation.replace('Home');
 
       if (perfil?.id) {

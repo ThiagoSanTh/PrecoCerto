@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { podeCriarLoja } from '../../utils/modoUsuario';
 import { FormScreen, PrimaryButton, SecondaryButton, formStyles } from '../../components/form';
 
 export default function ProfileScreen({ navigation }) {
@@ -58,7 +59,7 @@ export default function ProfileScreen({ navigation }) {
         <SecondaryButton label="Alterar e-mail" onPress={() => navigation.navigate('EditEmail')} />
         <SecondaryButton label="Alterar senha" onPress={() => navigation.navigate('ChangePassword')} />
 
-        {!temModoLoja ? (
+        {podeCriarLoja(session) ? (
           <PrimaryButton
             label="Criar loja"
             onPress={() => navigation.navigate('CreateStore')}
@@ -68,7 +69,7 @@ export default function ProfileScreen({ navigation }) {
 
         {temModoLoja && !emModoLoja ? (
           <PrimaryButton
-            label="Modo loja"
+            label="Modo lojista"
             onPress={() => setAppMode('store')}
             style={{ marginTop: 8 }}
           />

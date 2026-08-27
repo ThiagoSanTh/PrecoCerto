@@ -13,6 +13,7 @@ import {
   emModoLoja as resolverEmModoLoja,
   emModoCliente as resolverEmModoCliente,
   sincronizarContextoOperacional,
+  aplicarGpsNaSessao,
 } from '../utils/modoUsuario';
 
 const AuthContext = createContext(null);
@@ -34,6 +35,13 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [appMode, setAppModeState] = useState(MODO_CLIENTE);
   const [loading, setLoading] = useState(true);
+  const sessionRef = useRef(null);
+  const ultimoGpsSyncEmRef = useRef(0);
+
+  function gravarSessaoEmMemoria(novaSessao) {
+    sessionRef.current = novaSessao;
+    setSession(novaSessao);
+  }
 
   useEffect(() => {
     carregarSessao();
@@ -47,7 +55,7 @@ export function AuthProvider({ children }) {
 
       if (token && raw) {
         const parsed = JSON.parse(raw);
-        setSession(parsed);
+        gravarSessaoEmMemoria(parsed);
 
         const modoValido = resolverModoSalvo(savedMode, parsed);
         setAppModeState(aplicarModo(modoValido, parsed));
@@ -56,6 +64,7 @@ export function AuthProvider({ children }) {
         }
       } else if (!token) {
         await AsyncStorage.multiRemove([SESSION_KEY, MODE_KEY]);
+        gravarSessaoEmMemoria(null);
         setAppModeState(aplicarModo(MODO_CLIENTE, null));
       }
     } finally {
@@ -64,14 +73,14 @@ export function AuthProvider({ children }) {
   }
 
   async function setAppMode(modo) {
-    const modoFinal = aplicarModo(modo, session);
+    const modoFinal = aplicarModo(modo, sessionRef.current);
     await AsyncStorage.setItem(MODE_KEY, modoFinal);
     setAppModeState(modoFinal);
   }
 
   async function salvarSessao(novaSessao, modo) {
     await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(novaSessao));
-    setSession(novaSessao);
+    gravarSessaoEmMemoria(novaSessao);
 
     if (modo !== undefined) {
       const modoFinal =
@@ -88,12 +97,13 @@ export function AuthProvider({ children }) {
   }
 
   async function atualizarPerfilSessao(perfilAtualizado, modo = null) {
-    if (!session) return;
+    const atual = sessionRef.current;
+    if (!atual) return;
 
     const novaSessao = {
-      ...session,
+      ...atual,
       perfil: {
-        ...session.perfil,
+        ...atual.perfil,
         ...perfilAtualizado,
       },
     };
@@ -101,21 +111,16 @@ export function AuthProvider({ children }) {
     await salvarSessao(novaSessao, modo === null ? undefined : modo);
   }
 
-  const sessionRef = useRef(session);
-  sessionRef.current = session;
-  const ultimoGpsSyncEmRef = useRef(0);
-
   async function logout() {
     await clearToken();
     await AsyncStorage.multiRemove([SESSION_KEY, MODE_KEY]);
-    setSession(null);
+    gravarSessaoEmMemoria(null);
     setAppModeState(aplicarModo(MODO_CLIENTE, null));
     ultimoGpsSyncEmRef.current = 0;
   }
 
   const sincronizarGpsCliente = useCallback(async (clienteIdOverride = null, { force = false } = {}) => {
-    const sess = sessionRef.current;
-    const id = clienteIdOverride ?? sess?.perfil?.id;
+    const id = clienteIdOverride ?? sessionRef.current?.perfil?.id;
     if (!id) return null;
 
     const agora = Date.now();
@@ -128,13 +133,10 @@ export function AuthProvider({ children }) {
       await atualizarLocalizacao(id, latitude, longitude);
       ultimoGpsSyncEmRef.current = Date.now();
 
-      if (sess?.perfil?.id) {
-        const perfilAtualizado = {
-          ...sess.perfil,
-          latitudeAtual: latitude,
-          longitudeAtual: longitude,
-        };
-        const novaSessao = { ...sess, perfil: perfilAtualizado };
+      const sessAtual = sessionRef.current;
+      const novaSessao = aplicarGpsNaSessao(sessAtual, id, latitude, longitude);
+      if (novaSessao && novaSessao !== sessAtual) {
+        sessionRef.current = novaSessao;
         await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(novaSessao));
         setSession(novaSessao);
       }

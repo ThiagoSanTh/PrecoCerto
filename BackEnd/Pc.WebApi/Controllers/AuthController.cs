@@ -6,6 +6,7 @@ using Pc.Dominio.Entities.Usuarios;
 using Pc.Dominio.Enums;
 using Pc.Servico.Interfaces;
 using Pc.Servico.Modelos;
+using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Comum;
 using Pc.WebApi.DTOs.Usuarios;
 using Pc.WebApi.Services;
@@ -146,24 +147,11 @@ namespace Pc.WebApi.Controllers
             }
 
             var usuario = result.Usuario!;
-
-            var lojaId = usuario.Papel switch
-            {
-                PapelUsuario.Lojista => usuario.LojaPropria?.Id,
-                PapelUsuario.Vendedor => usuario.LojaVinculadaId,
-                _ => null
-            };
-
-            var tipoJwt = usuario.Papel switch
-            {
-                PapelUsuario.Lojista => TipoUsuario.Lojista,
-                PapelUsuario.Vendedor => TipoUsuario.Vendedor,
-                _ => TipoUsuario.Cliente
-            };
-
+            var tipoJwt = LoginLojaResolver.ResolverTipoJwt(usuario);
+            var lojaId = LoginLojaResolver.ResolverLojaId(usuario);
             var token = _jwtTokenService.GenerateToken(usuario.Id, tipoJwt, lojaId);
 
-            if (usuario.Papel == PapelUsuario.Cliente)
+            if (!LoginLojaResolver.EhStaffLoja(usuario))
             {
                 return Ok(new AuthLoginRespostaDto
                 {
@@ -173,11 +161,10 @@ namespace Pc.WebApi.Controllers
                 });
             }
 
-            var tipoStr = usuario.Papel == PapelUsuario.Vendedor ? "vendedor" : "lojista";
             return Ok(new AuthLoginRespostaDto
             {
                 Token = token,
-                Tipo = tipoStr,
+                Tipo = LoginLojaResolver.ResolverTipoResposta(usuario),
                 Perfil = MapLojista(usuario, lojaId)
             });
         }
@@ -226,7 +213,7 @@ namespace Pc.WebApi.Controllers
             Papel = (int)u.Papel,
             UltimoLogin = u.UltimoLogin,
             LojaId = lojaId,
-            NomeLoja = u.LojaPropria?.NomeFantasia ?? string.Empty,
+            NomeLoja = LoginLojaResolver.ResolverNomeLoja(u),
             Cargo = u.Cargo,
             LatitudeAtual = u.LatitudeAtual,
             LongitudeAtual = u.LongitudeAtual,

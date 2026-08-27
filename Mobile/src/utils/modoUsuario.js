@@ -9,13 +9,38 @@ export function getContextoOperacional() {
   return contextoOperacional;
 }
 
-export function podeUsarModoLoja(session) {
+const PAPEL_LOJISTA = 2;
+const PAPEL_VENDEDOR = 3;
+const TIPO_NUM_LOJISTA = 2;
+const TIPO_NUM_VENDEDOR = 4;
+
+function temIdLoja(valor) {
+  if (valor == null || valor === '') return false;
+  const texto = String(valor).trim().toLowerCase();
+  return texto !== 'null' && texto !== 'undefined' && texto !== '0';
+}
+
+export function temVinculoLoja(session) {
   if (!session) return false;
-  return (
-    session.tipo === 'lojista' ||
-    session.tipo === 'vendedor' ||
-    !!session.perfil?.lojaId
-  );
+  const tipo = String(session.tipo ?? '').toLowerCase();
+  if (tipo === 'lojista' || tipo === 'vendedor') return true;
+
+  const perfil = session.perfil || {};
+  if (temIdLoja(perfil.lojaId) || temIdLoja(perfil.lojaVinculadaId)) return true;
+
+  const papel = Number(perfil.papel);
+  if (papel === PAPEL_LOJISTA || papel === PAPEL_VENDEDOR) return true;
+
+  const tipoNum = Number(perfil.tipo);
+  return tipoNum === TIPO_NUM_LOJISTA || tipoNum === TIPO_NUM_VENDEDOR;
+}
+
+export function podeCriarLoja(session) {
+  return Boolean(session) && !temVinculoLoja(session);
+}
+
+export function podeUsarModoLoja(session) {
+  return temVinculoLoja(session);
 }
 
 export function modoPadraoParaSessao(session) {
@@ -53,4 +78,21 @@ export function funcionalidadesClienteAtivas(session, appMode) {
 
 export function funcionalidadesLojistaAtivas(session, appMode) {
   return emModoLoja(appMode, session);
+}
+
+export function mesmaIdentidade(session, userId) {
+  if (!session?.perfil?.id || userId == null || userId === '') return false;
+  return String(session.perfil.id) === String(userId);
+}
+
+export function aplicarGpsNaSessao(session, userId, latitude, longitude) {
+  if (!mesmaIdentidade(session, userId)) return session;
+  return {
+    ...session,
+    perfil: {
+      ...session.perfil,
+      latitudeAtual: latitude,
+      longitudeAtual: longitude,
+    },
+  };
 }

@@ -25,6 +25,7 @@ namespace Pc.Repositorio.Implementacoes
         {
             return await _context.Usuarios
                 .Include(u => u.LojaPropria)
+                .Include(u => u.LojaVinculada)
                 .FirstOrDefaultAsync(c => c.Id == id && c.Ativo);
         }
 
@@ -32,6 +33,7 @@ namespace Pc.Repositorio.Implementacoes
         {
             return await _context.Usuarios
                 .Include(u => u.LojaPropria)
+                .Include(u => u.LojaVinculada)
                 .FirstOrDefaultAsync(c => c.Email.ToLower() == email.ToLower() && c.Ativo);
         }
 

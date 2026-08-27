@@ -258,6 +258,7 @@ namespace Pc.Servico.Implementacoes
                 throw new Exception("Lojistas não podem ser promovidos a vendedores.");
 
             usuario.Papel = PapelUsuario.Vendedor;
+            usuario.Tipo = TipoUsuario.Vendedor;
             usuario.LojaVinculadaId = lojaId;
             usuario.Cargo = string.IsNullOrWhiteSpace(cargo) ? "Vendedor" : cargo;
             await _clienteRepositorio.AtualizarAsync(usuario);
@@ -273,6 +274,7 @@ namespace Pc.Servico.Implementacoes
                 throw new Exception("Usuário não é um vendedor.");
 
             usuario.Papel = PapelUsuario.Cliente;
+            usuario.Tipo = TipoUsuario.Cliente;
             usuario.LojaVinculadaId = null;
             usuario.Cargo = null;
             await _clienteRepositorio.AtualizarAsync(usuario);

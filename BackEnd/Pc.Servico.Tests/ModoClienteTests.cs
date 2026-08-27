@@ -163,4 +163,95 @@ namespace Pc.Servico.Tests
                 .ToList();
         }
     }
+
+    public class LoginLojaResolverTests
+    {
+        [Fact]
+        public void Vendedor_usa_loja_vinculada_nao_a_loja_do_dono()
+        {
+            var lojaDono = Guid.NewGuid();
+            var lojaVinculada = Guid.NewGuid();
+            var vendedorId = Guid.NewGuid();
+            var usuario = new Pc.Dominio.Entities.Usuarios.Usuario
+            {
+                Id = vendedorId,
+                Email = "thiagoalmeidasantanay@gmail.com",
+                NomeUsuario = "Thiago",
+                Papel = PapelUsuario.Vendedor,
+                Tipo = TipoUsuario.Vendedor,
+                LojaVinculadaId = lojaVinculada,
+                LojaVinculada = new Pc.Dominio.Entities.Estabelecimentos.Loja
+                {
+                    Id = lojaVinculada,
+                    NomeFantasia = "Brink",
+                    UsuarioId = lojaDono
+                }
+            };
+
+            Assert.True(LoginLojaResolver.EhStaffLoja(usuario));
+            Assert.Equal(TipoUsuario.Vendedor, LoginLojaResolver.ResolverTipoJwt(usuario));
+            Assert.Equal("vendedor", LoginLojaResolver.ResolverTipoResposta(usuario));
+            Assert.Equal(lojaVinculada, LoginLojaResolver.ResolverLojaId(usuario));
+            Assert.Equal("Brink", LoginLojaResolver.ResolverNomeLoja(usuario));
+            Assert.NotEqual(lojaDono, usuario.Id);
+        }
+
+        [Fact]
+        public void Vendedor_com_papel_desatualizado_ainda_e_staff_pela_loja_vinculada()
+        {
+            var lojaId = Guid.NewGuid();
+            var usuario = new Pc.Dominio.Entities.Usuarios.Usuario
+            {
+                Id = Guid.NewGuid(),
+                Email = "thiago@exemplo.com",
+                Papel = PapelUsuario.Cliente,
+                Tipo = TipoUsuario.Cliente,
+                LojaVinculadaId = lojaId,
+                LojaVinculada = new Pc.Dominio.Entities.Estabelecimentos.Loja
+                {
+                    Id = lojaId,
+                    NomeFantasia = "Brink"
+                }
+            };
+
+            Assert.True(LoginLojaResolver.EhStaffLoja(usuario));
+            Assert.Equal(TipoUsuario.Vendedor, LoginLojaResolver.ResolverTipoJwt(usuario));
+            Assert.Equal(lojaId, LoginLojaResolver.ResolverLojaId(usuario));
+            Assert.Equal("Brink", LoginLojaResolver.ResolverNomeLoja(usuario));
+        }
+
+        [Fact]
+        public void Lojista_usa_loja_propria()
+        {
+            var lojaId = Guid.NewGuid();
+            var usuario = new Pc.Dominio.Entities.Usuarios.Usuario
+            {
+                Id = Guid.NewGuid(),
+                Papel = PapelUsuario.Lojista,
+                LojaPropria = new Pc.Dominio.Entities.Estabelecimentos.Loja
+                {
+                    Id = lojaId,
+                    NomeFantasia = "Brink"
+                }
+            };
+
+            Assert.Equal(TipoUsuario.Lojista, LoginLojaResolver.ResolverTipoJwt(usuario));
+            Assert.Equal(lojaId, LoginLojaResolver.ResolverLojaId(usuario));
+            Assert.Equal("Brink", LoginLojaResolver.ResolverNomeLoja(usuario));
+        }
+
+        [Fact]
+        public void Cliente_sem_loja_nao_e_staff()
+        {
+            var usuario = new Pc.Dominio.Entities.Usuarios.Usuario
+            {
+                Id = Guid.NewGuid(),
+                Papel = PapelUsuario.Cliente
+            };
+
+            Assert.False(LoginLojaResolver.EhStaffLoja(usuario));
+            Assert.Equal(TipoUsuario.Cliente, LoginLojaResolver.ResolverTipoJwt(usuario));
+            Assert.Null(LoginLojaResolver.ResolverLojaId(usuario));
+        }
+    }
 }

@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { listarOfertas } from '../../services/ofertaService';
 import { obterLoja } from '../../services/lojaService';
 import { useAuth } from '../../context/AuthContext';
+import { podeCriarLoja } from '../../utils/modoUsuario';
 import {
   FormScreen,
   PrimaryButton,
@@ -56,17 +57,24 @@ export default function StoreScreen({ navigation }) {
   }
 
   if (!lojaId) {
+    const podeCriar = podeCriarLoja(session);
     return (
       <FormScreen
         title="Minha loja"
-        subtitle="Vincule uma loja ao seu perfil"
+        subtitle={podeCriar ? 'Vincule uma loja ao seu perfil' : 'Loja vinculada ao perfil'}
         scrollable={false}
         footer={
-          <PrimaryButton label="Criar loja" onPress={() => navigation.navigate('CreateStore')} />
+          podeCriar ? (
+            <PrimaryButton label="Criar loja" onPress={() => navigation.navigate('CreateStore')} />
+          ) : undefined
         }
       >
-        <ListCard title="Nenhuma loja vinculada">
-          <ListCardText>Cadastre sua loja para começar a publicar ofertas.</ListCardText>
+        <ListCard title={podeCriar ? 'Nenhuma loja vinculada' : 'Loja em carregamento'}>
+          <ListCardText>
+            {podeCriar
+              ? 'Cadastre sua loja para começar a publicar ofertas.'
+              : 'Sua conta já está vinculada a uma loja. Atualize a tela ou entre novamente se os dados não aparecerem.'}
+          </ListCardText>
         </ListCard>
       </FormScreen>
     );
