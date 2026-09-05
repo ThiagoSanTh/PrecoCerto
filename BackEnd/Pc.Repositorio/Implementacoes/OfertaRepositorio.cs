@@ -57,8 +57,26 @@ namespace Pc.Repositorio.Implementacoes
             return await _context.Ofertas
                 .Include(o => o.Produto)
                 .Include(o => o.Loja)
+                    .ThenInclude(l => l!.Endereco)
                 .Where(o => o.ProdutoId == produtoId)
                 .AsNoTracking()
+                .ToListAsync();
+        }
+
+        public async Task<List<Oferta>> ListarDisponiveisPorProdutosAsync(IEnumerable<Guid> produtoIds)
+        {
+            var ids = produtoIds.Distinct().Take(20).ToList();
+            if (ids.Count == 0)
+                return new List<Oferta>();
+
+            return await _context.Ofertas
+                .AsNoTracking()
+                .Include(o => o.Produto)
+                .Include(o => o.Loja)
+                    .ThenInclude(l => l!.Endereco)
+                .Where(o => ids.Contains(o.ProdutoId) && o.Disponivel)
+                .OrderBy(o => o.Preco)
+                .Take(100)
                 .ToListAsync();
         }
 

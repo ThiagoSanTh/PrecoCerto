@@ -2,11 +2,20 @@ import api from './api';
 import { saveToken } from './tokenStorage';
 
 export async function login(email, senha, tipo = undefined) {
-  const { data } = await api.post('/Auth/login', {
-    email: email.trim(),
+  let emailNorm = String(email || '').trim().toLowerCase();
+  // Atalho de testes: "admin" → e-mail seed do AdminSeedHostedService
+  if (emailNorm === 'admin') {
+    emailNorm = 'admin@precocerto.local';
+  }
+  const payload = {
+    email: emailNorm,
     senha,
-    tipo,
-  });
+  };
+  if (tipo !== undefined && tipo !== null && String(tipo).trim() !== '') {
+    payload.tipo = tipo;
+  }
+
+  const { data } = await api.post('/Auth/login', payload);
 
   if (data.token) {
     await saveToken(data.token);

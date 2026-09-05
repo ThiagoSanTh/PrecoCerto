@@ -19,7 +19,7 @@ namespace Pc.Infraestrutura
                 ?? "Host=localhost;Port=5432;Database=precocerto;Username=postgres;Password=postgres";
 
             var options = new DbContextOptionsBuilder<AppDbContext>()
-                .UseNpgsql(connectionString)
+                .UseNpgsql(connectionString, o => o.UseVector())
                 .Options;
 
             return new AppDbContext(options);

@@ -10,8 +10,7 @@ namespace Pc.WebApi.DTOs.Comum
         [Required, MinLength(6)]
         public string Senha { get; set; } = string.Empty;
 
-        /// <summary>cliente | lojista | admin</summary>
-        [Required]
-        public string Tipo { get; set; } = "cliente";
+        /// <summary>cliente | lojista | admin — opcional; default cliente / fallback admin no controller.</summary>
+        public string? Tipo { get; set; }
     }
 }

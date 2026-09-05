@@ -11,7 +11,13 @@ using Pc.Infraestrutura;
 using Pc.Repositorio.Implementacoes;
 using Pc.Repositorio.Interfaces;
 using Pc.Servico.Implementacoes;
+using Pc.Servico.Implementacoes.IA;
+using Pc.Servico.Implementacoes.MotorIA;
+using Pc.Servico.Implementacoes.MotorIA.Regras;
+using Pc.Servico.Implementacoes.Rag;
 using Pc.Servico.Interfaces;
+using Pc.Servico.Interfaces.MotorIA;
+using Pc.Servico.Modelos.Rag;
 using Pc.WebApi.Authorization;
 using Pc.WebApi.Configuration;
 using Pc.WebApi.Diagnostics;
@@ -219,6 +225,18 @@ builder.Services.AddRateLimiter(options =>
         limiter.PermitLimit = 300;
         limiter.QueueLimit = 0;
     });
+    options.AddFixedWindowLimiter("ia", limiter =>
+    {
+        limiter.Window = TimeSpan.FromMinutes(1);
+        limiter.PermitLimit = 30;
+        limiter.QueueLimit = 0;
+    });
+    options.AddFixedWindowLimiter("rag", limiter =>
+    {
+        limiter.Window = TimeSpan.FromMinutes(1);
+        limiter.PermitLimit = 20;
+        limiter.QueueLimit = 0;
+    });
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
     {
         var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
@@ -235,6 +253,26 @@ builder.Services.AddRateLimiter(options =>
             {
                 Window = TimeSpan.FromMinutes(1),
                 PermitLimit = 10,
+                QueueLimit = 0
+            });
+        }
+
+        if (path.StartsWith("/api/IA", StringComparison.OrdinalIgnoreCase))
+        {
+            return RateLimitPartition.GetFixedWindowLimiter($"ia:{ip}", _ => new FixedWindowRateLimiterOptions
+            {
+                Window = TimeSpan.FromMinutes(1),
+                PermitLimit = 30,
+                QueueLimit = 0
+            });
+        }
+
+        if (path.StartsWith("/api/Rag", StringComparison.OrdinalIgnoreCase))
+        {
+            return RateLimitPartition.GetFixedWindowLimiter($"rag:{ip}", _ => new FixedWindowRateLimiterOptions
+            {
+                Window = TimeSpan.FromMinutes(1),
+                PermitLimit = 20,
                 QueueLimit = 0
             });
         }
@@ -270,6 +308,17 @@ builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection(Email
 builder.Services.Configure<ConsultaCnpjSettings>(builder.Configuration.GetSection(ConsultaCnpjSettings.SectionName));
 builder.Services.Configure<ClimaSettings>(builder.Configuration.GetSection(ClimaSettings.SectionName));
 builder.Services.Configure<IdEncodingSettings>(builder.Configuration.GetSection(IdEncodingSettings.SectionName));
+builder.Services.Configure<RagSettings>(builder.Configuration.GetSection(RagSettings.SectionName));
+builder.Services.PostConfigure<RagSettings>(rag =>
+{
+    if (string.IsNullOrWhiteSpace(rag.ApiKey))
+    {
+        rag.ApiKey = builder.Configuration["Rag:ApiKey"]
+            ?? Environment.GetEnvironmentVariable("Rag__ApiKey")
+            ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY")
+            ?? string.Empty;
+    }
+});
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 builder.Services.AddSingleton<IIdCodificador, IdCodificadorServico>();
 builder.Services.AddHttpClient<IConsultaCnpjServico, ConsultaCnpjServico>();
@@ -284,6 +333,17 @@ builder.Services.AddHttpClient<IClimaProvedor, OpenMeteoClimaProvedor>((sp, clie
     client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
 });
 builder.Services.AddScoped<IClimaServico, ClimaServico>();
+
+builder.Services.AddHttpClient<IEmbeddingService, OpenAIEmbeddingService>((sp, client) =>
+{
+    var rag = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<RagSettings>>().Value;
+    var baseUrl = string.IsNullOrWhiteSpace(rag.ApiBaseUrl)
+        ? "https://api.openai.com/v1/"
+        : rag.ApiBaseUrl.TrimEnd('/') + "/";
+    client.BaseAddress = new Uri(baseUrl);
+    client.Timeout = TimeSpan.FromSeconds(Math.Clamp(rag.TimeoutSegundos, 5, 120));
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+});
 
 // Repositórios — Catálogo e Estabelecimentos
 builder.Services.AddScoped<IProdutoRepositorio, ProdutoRepositorio>();
@@ -300,6 +360,7 @@ builder.Services.AddScoped<IHistoricoPesquisaRepositorio, HistoricoPesquisaRepos
 builder.Services.AddScoped<IAvaliacaoRepositorio, AvaliacaoRepositorio>();
 builder.Services.AddScoped<IPreferenciaClienteRepositorio, PreferenciaClienteRepositorio>();
 builder.Services.AddScoped<IConversaRepositorio, ConversaRepositorio>();
+builder.Services.AddScoped<IDocumentoRagRepositorio, DocumentoRagRepositorio>();
 
 // Serviços — Catálogo e Estabelecimentos
 builder.Services.AddScoped<IProdutoServico, ProdutoServico>();
@@ -319,7 +380,36 @@ builder.Services.AddScoped<IAvaliacaoServico, AvaliacaoServico>();
 builder.Services.AddScoped<IPreferenciaClienteServico, PreferenciaClienteServico>();
 builder.Services.AddScoped<IConversaServico, ConversaServico>();
 builder.Services.AddScoped<ChatNotificacaoHelper>();
+builder.Services.AddScoped<IRespostaIAServico, RespostaDeterministicaServico>();
+builder.Services.AddScoped<IIAServico, IAServico>();
+
+// MotorIA v2
+builder.Services.AddScoped<IClassificadorIntencaoIA, ClassificadorIntencaoIA>();
+builder.Services.AddScoped<IExtratorEntidadesIA, ExtratorEntidadesIA>();
+builder.Services.AddScoped<IInterpretadorIA, InterpretadorIA>();
+builder.Services.AddScoped<IRegraIA, RegraEconomizar>();
+builder.Services.AddScoped<IRegraIA, RegraUrgencia>();
+builder.Services.AddScoped<IRegraIA, RegraChuva>();
+builder.Services.AddScoped<IRegraIA, RegraEntrega>();
+builder.Services.AddScoped<IRegraIA, RegraProximidade>();
+builder.Services.AddScoped<IRegraIA, RegraPromocao>();
+builder.Services.AddScoped<IRegraIA, RegraQualidade>();
+builder.Services.AddScoped<IMotorRegrasIA, MotorRegrasIA>();
+builder.Services.AddScoped<IMotorPontuacaoIA, MotorPontuacaoIA>();
+builder.Services.AddScoped<IMotorRecomendacaoIA, MotorRecomendacaoIA>();
+builder.Services.AddScoped<IGeradorRespostaIA, GeradorRespostaIA>();
+builder.Services.AddScoped<IRagConhecimentoIA, RagConhecimentoIA>();
+builder.Services.AddScoped<IMotorIA, MotorIA>();
+
+// RAG
+builder.Services.AddSingleton<IRagIndexFila, RagIndexFila>();
+builder.Services.AddScoped<IRagDocumentBuilder, RagDocumentBuilder>();
+builder.Services.AddScoped<IRagIndexadorServico, RagIndexadorServico>();
+builder.Services.AddScoped<IRagServico, RagServico>();
+builder.Services.AddHostedService<RagIndexWorker>();
+builder.Services.AddHostedService<RagInitialIndexHostedService>();
 builder.Services.AddHostedService<MigracaoStartupHostedService>();
+builder.Services.AddHostedService<AdminSeedHostedService>();
 
 if (BenchmarkMode.Enabled)
 {
@@ -332,7 +422,11 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 {
     options.UseNpgsql(
         connectionString,
-        npgsql => npgsql.EnableRetryOnFailure(maxRetryCount: 3));
+        npgsql =>
+        {
+            npgsql.EnableRetryOnFailure(maxRetryCount: 3);
+            npgsql.UseVector();
+        });
     if (BenchmarkMode.Enabled)
         options.AddInterceptors(sp.GetRequiredService<EfQueryInterceptor>());
 });

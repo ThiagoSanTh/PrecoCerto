@@ -2,6 +2,7 @@
 using Pc.Dominio.Entities.Catalogo;
 using Pc.Dominio.Entities.Estabelecimentos;
 using Pc.Dominio.Entities.Interacoes;
+using Pc.Dominio.Entities.Rag;
 using Pc.Dominio.Entities.Usuarios;
 
 namespace Pc.Infraestrutura
@@ -29,9 +30,13 @@ namespace Pc.Infraestrutura
         public DbSet<Conversa> Conversas { get; set; }
         public DbSet<Mensagem> Mensagens { get; set; }
 
+        public DbSet<DocumentoRag> DocumentosRag { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            modelBuilder.HasPostgresExtension("vector");
 
             modelBuilder.Entity<Loja>()
                 .HasOne(l => l.Usuario)
@@ -131,6 +136,25 @@ namespace Pc.Infraestrutura
                 .WithMany(c => c.Mensagens)
                 .HasForeignKey(m => m.ConversaId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<DocumentoRag>(e =>
+            {
+                e.ToTable("DocumentosRag");
+                e.HasKey(d => d.Id);
+                e.Property(d => d.Titulo).HasMaxLength(300).IsRequired();
+                e.Property(d => d.Conteudo).IsRequired();
+                e.Property(d => d.HashConteudo).HasMaxLength(64).IsRequired();
+                e.Property(d => d.Metadata).HasColumnType("text");
+                e.HasIndex(d => new { d.Tipo, d.EntidadeId })
+                    .IsUnique()
+                    .HasFilter("\"UsuarioId\" IS NULL");
+                e.HasIndex(d => d.Ativo);
+                e.HasIndex(d => d.Embedding)
+                    .HasMethod("hnsw")
+                    .HasOperators("vector_cosine_ops")
+                    .HasStorageParameter("m", 16)
+                    .HasStorageParameter("ef_construction", 64);
+            });
         }
     }
 }

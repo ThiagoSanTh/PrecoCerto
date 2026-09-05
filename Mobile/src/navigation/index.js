@@ -14,6 +14,7 @@ import ChangePasswordScreen from '../screens/user/ChangePasswordScreen';
 import EditProfileScreen from '../screens/user/EditProfileScreen';
 import EditEmailScreen from '../screens/user/EditEmailScreen';
 import ChatScreen from '../screens/user/ChatScreen';
+import AiChatScreen from '../screens/user/AiChatScreen';
 
 import AppRoutes from './AppRoutes';
 
@@ -36,6 +37,7 @@ export default function Routes() {
         <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ headerShown: false }} />
         <Stack.Screen name="EditEmail" component={EditEmailScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Chat" component={ChatScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="AiChat" component={AiChatScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Home" component={AppRoutes} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>

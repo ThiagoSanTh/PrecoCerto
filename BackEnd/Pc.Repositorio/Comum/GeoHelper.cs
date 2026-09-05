@@ -1,6 +1,6 @@
 namespace Pc.Repositorio.Comum
 {
-    internal static class GeoHelper
+    public static class GeoHelper
     {
         public static decimal CalcularDistanciaKm(decimal lat1, decimal lon1, decimal lat2, decimal lon2)
         {
