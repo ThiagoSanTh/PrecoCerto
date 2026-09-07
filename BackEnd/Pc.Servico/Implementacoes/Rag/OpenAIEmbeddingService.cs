@@ -44,12 +44,21 @@ namespace Pc.Servico.Implementacoes.Rag
             if (!response.IsSuccessStatusCode)
             {
                 var body = await response.Content.ReadAsStringAsync(cancellationToken);
+                var status = (int)response.StatusCode;
                 _logger.LogError(
                     "Erro no provider de embeddings. Status={Status} BodyLength={Len}",
-                    (int)response.StatusCode,
+                    status,
                     body.Length);
-                throw new HttpRequestException(
-                    $"Provider de embeddings retornou {(int)response.StatusCode}.");
+
+                if (status is 401 or 403)
+                {
+                    throw new RagEmbeddingAuthException(
+                        status,
+                        "Rag:ApiKey rejeitada pelo provider OpenAI (401/403). "
+                        + "Use uma key OpenAI válida em user-secrets — key Gemini não funciona neste endpoint.");
+                }
+
+                throw new HttpRequestException($"Provider de embeddings retornou {status}.");
             }
 
             var payload = await response.Content.ReadFromJsonAsync<OpenAiEmbeddingResponse>(cancellationToken)

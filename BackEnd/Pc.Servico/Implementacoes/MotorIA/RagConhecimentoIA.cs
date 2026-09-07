@@ -30,12 +30,46 @@ namespace Pc.Servico.Implementacoes.MotorIA
             if (!_settings.EstaConfigurado)
             {
                 _logger.LogInformation("RAG auxiliar indisponível (não configurado).");
+                // #region agent log
+                try
+                {
+                    var payload = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        sessionId = "6c7c29",
+                        runId = "pre-fix",
+                        hypothesisId = "B",
+                        location = "RagConhecimentoIA.cs:BuscarAuxiliarAsync",
+                        message = "rag-nao-configurado",
+                        data = new { consulta, enabled = _settings.Enabled, hasKey = !string.IsNullOrWhiteSpace(_settings.ApiKey), dim = _settings.EmbeddingDimension },
+                        timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                    });
+                    System.IO.File.AppendAllText(@"d:\Dev\PrecoCerto\debug-6c7c29.log", payload + "\n");
+                }
+                catch { /* debug */ }
+                // #endregion
                 return Array.Empty<RagHitIA>();
             }
 
             try
             {
                 var hits = await _rag.BuscarAsync(consulta, limite, cancellationToken);
+                // #region agent log
+                try
+                {
+                    var payload = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        sessionId = "6c7c29",
+                        runId = "pre-fix",
+                        hypothesisId = "C,D",
+                        location = "RagConhecimentoIA.cs:BuscarAuxiliarAsync",
+                        message = "rag-busca-ok",
+                        data = new { consulta, hitCount = hits.Count, provider = _settings.Provider, threshold = _settings.SimilarityThreshold },
+                        timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                    });
+                    System.IO.File.AppendAllText(@"d:\Dev\PrecoCerto\debug-6c7c29.log", payload + "\n");
+                }
+                catch { /* debug */ }
+                // #endregion
                 return hits.Select(h => new RagHitIA
                 {
                     Tipo = h.Tipo.ToString(),
@@ -48,6 +82,23 @@ namespace Pc.Servico.Implementacoes.MotorIA
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Falha no RAG auxiliar — degradando graciosamente.");
+                // #region agent log
+                try
+                {
+                    var payload = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        sessionId = "6c7c29",
+                        runId = "pre-fix",
+                        hypothesisId = "B",
+                        location = "RagConhecimentoIA.cs:catch",
+                        message = "rag-exception",
+                        data = new { consulta, error = ex.GetType().Name, ex.Message },
+                        timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                    });
+                    System.IO.File.AppendAllText(@"d:\Dev\PrecoCerto\debug-6c7c29.log", payload + "\n");
+                }
+                catch { /* debug */ }
+                // #endregion
                 return Array.Empty<RagHitIA>();
             }
         }

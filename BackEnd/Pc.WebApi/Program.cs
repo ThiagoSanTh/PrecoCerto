@@ -315,10 +315,78 @@ builder.Services.PostConfigure<RagSettings>(rag =>
     {
         rag.ApiKey = builder.Configuration["Rag:ApiKey"]
             ?? Environment.GetEnvironmentVariable("Rag__ApiKey")
+            ?? Environment.GetEnvironmentVariable("GEMINI_API_KEY")
+            ?? Environment.GetEnvironmentVariable("GOOGLE_API_KEY")
             ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY")
             ?? string.Empty;
     }
+
+    // Defaults por provider (sem sobrescrever valores explícitos não-padrão).
+    if (rag.EhGemini)
+    {
+        if (string.IsNullOrWhiteSpace(rag.EmbeddingModel)
+            || rag.EmbeddingModel.Contains("text-embedding-3", StringComparison.OrdinalIgnoreCase)
+            || rag.EmbeddingModel.Equals("text-embedding-004", StringComparison.OrdinalIgnoreCase))
+            rag.EmbeddingModel = "gemini-embedding-001";
+
+        if (string.IsNullOrWhiteSpace(rag.ApiBaseUrl)
+            || rag.ApiBaseUrl.Contains("openai.com", StringComparison.OrdinalIgnoreCase))
+            rag.ApiBaseUrl = "https://generativelanguage.googleapis.com/v1beta";
+    }
+    else if (rag.EhOpenAi)
+    {
+        if (string.IsNullOrWhiteSpace(rag.EmbeddingModel)
+            || rag.EmbeddingModel.Contains("gemini", StringComparison.OrdinalIgnoreCase))
+            rag.EmbeddingModel = "text-embedding-3-small";
+
+        if (string.IsNullOrWhiteSpace(rag.ApiBaseUrl)
+            || rag.ApiBaseUrl.Contains("generativelanguage.googleapis.com", StringComparison.OrdinalIgnoreCase))
+            rag.ApiBaseUrl = "https://api.openai.com/v1";
+    }
 });
+
+builder.Services.AddHttpClient("OpenAIEmbeddings", (sp, client) =>
+{
+    var rag = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<RagSettings>>().Value;
+    var baseUrl = string.IsNullOrWhiteSpace(rag.ApiBaseUrl) || rag.EhGemini
+        ? "https://api.openai.com/v1/"
+        : rag.ApiBaseUrl.TrimEnd('/') + "/";
+    client.BaseAddress = new Uri(baseUrl);
+    client.Timeout = TimeSpan.FromSeconds(Math.Clamp(rag.TimeoutSegundos, 5, 120));
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+});
+
+builder.Services.AddHttpClient("GeminiEmbeddings", (sp, client) =>
+{
+    var rag = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<RagSettings>>().Value;
+    var baseUrl = string.IsNullOrWhiteSpace(rag.ApiBaseUrl) || rag.EhOpenAi
+        ? "https://generativelanguage.googleapis.com/v1beta/"
+        : rag.ApiBaseUrl.TrimEnd('/') + "/";
+    client.BaseAddress = new Uri(baseUrl);
+    client.Timeout = TimeSpan.FromSeconds(Math.Clamp(rag.TimeoutSegundos, 5, 120));
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+});
+
+builder.Services.AddScoped<IEmbeddingService>(sp =>
+{
+    var rag = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<RagSettings>>().Value;
+    var httpFactory = sp.GetRequiredService<IHttpClientFactory>();
+    var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+
+    if (rag.EhGemini)
+    {
+        return new GeminiEmbeddingService(
+            httpFactory.CreateClient("GeminiEmbeddings"),
+            sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<RagSettings>>(),
+            loggerFactory.CreateLogger<GeminiEmbeddingService>());
+    }
+
+    return new OpenAIEmbeddingService(
+        httpFactory.CreateClient("OpenAIEmbeddings"),
+        sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<RagSettings>>(),
+        loggerFactory.CreateLogger<OpenAIEmbeddingService>());
+});
+
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 builder.Services.AddSingleton<IIdCodificador, IdCodificadorServico>();
 builder.Services.AddHttpClient<IConsultaCnpjServico, ConsultaCnpjServico>();
@@ -333,17 +401,6 @@ builder.Services.AddHttpClient<IClimaProvedor, OpenMeteoClimaProvedor>((sp, clie
     client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
 });
 builder.Services.AddScoped<IClimaServico, ClimaServico>();
-
-builder.Services.AddHttpClient<IEmbeddingService, OpenAIEmbeddingService>((sp, client) =>
-{
-    var rag = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<RagSettings>>().Value;
-    var baseUrl = string.IsNullOrWhiteSpace(rag.ApiBaseUrl)
-        ? "https://api.openai.com/v1/"
-        : rag.ApiBaseUrl.TrimEnd('/') + "/";
-    client.BaseAddress = new Uri(baseUrl);
-    client.Timeout = TimeSpan.FromSeconds(Math.Clamp(rag.TimeoutSegundos, 5, 120));
-    client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
-});
 
 // Repositórios — Catálogo e Estabelecimentos
 builder.Services.AddScoped<IProdutoRepositorio, ProdutoRepositorio>();
@@ -405,6 +462,8 @@ builder.Services.AddScoped<IMotorIA, MotorIA>();
 builder.Services.AddSingleton<IRagIndexFila, RagIndexFila>();
 builder.Services.AddScoped<IRagDocumentBuilder, RagDocumentBuilder>();
 builder.Services.AddScoped<IRagIndexadorServico, RagIndexadorServico>();
+builder.Services.AddScoped<IRagCascadeIndexador, RagCascadeIndexador>();
+builder.Services.AddScoped<IRagIndexDlqServico, RagIndexDlqServico>();
 builder.Services.AddScoped<IRagServico, RagServico>();
 builder.Services.AddHostedService<RagIndexWorker>();
 builder.Services.AddHostedService<RagInitialIndexHostedService>();

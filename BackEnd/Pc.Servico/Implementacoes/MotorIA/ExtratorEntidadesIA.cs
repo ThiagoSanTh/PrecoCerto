@@ -13,19 +13,30 @@ namespace Pc.Servico.Implementacoes.MotorIA
     {
         private static readonly HashSet<string> Stopwords = new(StringComparer.Ordinal)
         {
-            "a", "o", "os", "as", "um", "uma", "de", "da", "do", "das", "dos", "em", "no", "na",
-            "quero", "preciso", "buscar", "encontrar", "comprar", "barato", "barata", "perto",
-            "proximo", "proxima", "mim", "agora", "rapido", "urgente", "entrega", "delivery",
-            "loja", "lojas", "produto", "produtos", "mais", "menos", "ate", "até", "com", "sem",
-            "para", "por", "qual", "quais", "onde", "tem", "nao", "não", "sair", "casa", "fazer",
-            "fazem", "faz", "voce", "voces", "vocês", "vcs", "compra", "gastando", "pouco",
-            "vale", "pena", "opcao", "opção", "hoje", "clima", "marte"
+            "a", "o", "os", "as", "um", "uma", "uns", "umas", "de", "da", "do", "das", "dos", "em", "no", "na",
+            "nos", "nas", "eu", "me", "mim", "voce", "você", "voces", "vocês", "vcs",
+            "quero", "preciso", "buscar", "encontrar", "comprar", "achar", "acho", "encontro",
+            "estou", "estava", "to", "tô", "ta", "tá", "procurando", "procuro", "buscando", "busco",
+            "duma", "dum", "numa", "num", "dessa", "desse", "desta", "deste",
+            "barato", "barata", "perto", "proximo", "proxima", "agora", "rapido", "urgente",
+            "entrega", "delivery", "loja", "lojas", "produto", "produtos", "mercado", "supermercado",
+            "mais", "menos", "ate", "até", "com", "sem", "para", "por", "qual", "quais",
+            "onde", "aonde", "tem", "nao", "não", "sair", "casa", "fazer", "fazem", "faz",
+            "compra", "gastando", "pouco", "vale", "pena", "opcao", "opção", "hoje", "clima", "marte",
+            "posso", "pode", "podem", "alguem", "alguém", "algo", "algum", "alguma", "tipo",
+            "vendo", "vende", "vendem", "vendendo", "venda", "vendas", "disponivel", "disponível",
+            "favor", "pf", "pfv", "quando", "como", "aqui", "la", "lá", "ainda",
+            "esse", "essa", "este", "esta", "isso", "isto", "aquele", "aquela",
+            "alguma", "algum", "cidade", "redondezas"
         };
 
         public void Extrair(ContextoIA contexto)
         {
             var original = contexto.MensagemOriginal;
             var t = contexto.MensagemNormalizada;
+
+            if (contexto.Intencao == IntencaoIA.Saudacao)
+                return;
 
             if (VocabularioIA.ContemAlgum(t, VocabularioIA.PrecoBaixo))
             {
@@ -125,7 +136,6 @@ namespace Pc.Servico.Implementacoes.MotorIA
             var nome = m.Groups[1].Value.Trim();
             nome = Regex.Replace(nome, @"[?\.,!;:].*$", "").Trim();
             nome = Limpar(TextoNormalizador.Normalizar(nome));
-            // Evita capturar "loja mais próxima" / "loja perto" como nome de estabelecimento.
             if (nome.Length >= 2
                 && !VocabularioIA.DistanciaBaixa.Any(s => TextoNormalizador.Normalizar(s).Contains(nome) || nome.Contains(TextoNormalizador.Normalizar(s)))
                 && !nome.Equals("mais", StringComparison.Ordinal))
@@ -136,11 +146,12 @@ namespace Pc.Servico.Implementacoes.MotorIA
 
         private static void ExtrairProduto(ContextoIA ctx, string t)
         {
-            // Promo/oferta primeiro — evita capturar "tem promocao de X" como produto "promocao".
             var padroes = new[]
             {
-                @"\b(?:promocao(?:\s+de)?|oferta(?:\s+de)?)\s+([a-z][\w\s\-]{1,40}?)(?:\s|$|\?)",
-                @"\b(?:quero|preciso|buscar|encontrar|comprar|tem)\s+(?:de\s+|um\s+|uma\s+|o\s+|a\s+)?([a-z][\w\s\-]{1,40}?)(?:\s+(?:barato|perto|agora|com|sem|ate|na|no|em|da|do|promocao|oferta|\?|$))"
+                @"\b(?:promocao(?:\s+de)?|oferta(?:\s+de)?)\s+([a-z][\w\s\-]{1,40}?)(?:\s|$|\?|,)",
+                @"\b(?:estou\s+)?(?:procurando|buscando|procuro|busco)\s+(?:por\s+)?(?:de\s+|um\s+|uma\s+|o\s+|a\s+)?([a-z][\w\s\-]{1,40}?)(?:\s*[,.]|\s+(?:aonde|onde|mais|barato|perto|agora|com|sem|ate|na|no|em|da|do|promocao|oferta|vendendo|vendo|\?|$))",
+                @"\b(?:quero|preciso|buscar|encontrar|achar|comprar|tem|vende|vendem)\s+(?:de\s+|um\s+|uma\s+|o\s+|a\s+)?([a-z][\w\s\-]{1,40}?)(?:\s+(?:barato|perto|agora|com|sem|ate|na|no|em|da|do|promocao|oferta|vendendo|vendo|vende|aonde|onde|\?|$|,))",
+                @"\b(?:aonde|onde)\s+(?:eu\s+)?(?:posso|pode|podem)\s+(?:achar|encontrar|comprar)\s+(?:um\s+|uma\s+|o\s+|a\s+)?([a-z][\w\s\-]{1,40}?)(?:\s+(?:barato|perto|agora|vendendo|vendo|\?|$|,))"
             };
 
             foreach (var p in padroes)
@@ -151,21 +162,43 @@ namespace Pc.Servico.Implementacoes.MotorIA
                 if (string.IsNullOrWhiteSpace(cand)) continue;
                 if (VocabularioIA.Promocao.Any(s => TextoNormalizador.Normalizar(s) == TextoNormalizador.Normalizar(cand)))
                     continue;
-                ctx.ProdutoTermo = cand;
+                ctx.ProdutoTermo = EscolherTermoPrincipal(cand);
                 return;
             }
 
-            var tokens = Regex.Split(t, @"[^\p{L}\p{N}]+")
+            var tokens = TokensSignificativos(t);
+            if (tokens.Count == 0)
+                return;
+
+            // Preferência: 1 substantivo (último token útil). Multi-palavra só se parecer marca+produto curto.
+            ctx.ProdutoTermo = tokens.Count == 1
+                ? tokens[0]
+                : tokens[^1];
+        }
+
+        private static List<string> TokensSignificativos(string t) =>
+            Regex.Split(t, @"[^\p{L}\p{N}]+")
                 .Where(x => x.Length >= 3)
-                .Where(x => !Stopwords.Contains(TextoNormalizador.Normalizar(x)))
-                .Where(x => !VocabularioIA.PrecoBaixo.Any(s => TextoNormalizador.Normalizar(s) == TextoNormalizador.Normalizar(x)))
-                .Where(x => !VocabularioIA.DistanciaBaixa.Any(s => TextoNormalizador.Normalizar(s).Contains(TextoNormalizador.Normalizar(x))))
-                .Where(x => !VocabularioIA.Promocao.Any(s => TextoNormalizador.Normalizar(s) == TextoNormalizador.Normalizar(x)))
-                .Take(3)
+                .Select(TextoNormalizador.Normalizar)
+                .Where(x => !Stopwords.Contains(x))
+                .Where(x => !VocabularioIA.PrecoBaixo.Any(s => TextoNormalizador.Normalizar(s) == x))
+                .Where(x => !VocabularioIA.DistanciaBaixa.Any(s => TextoNormalizador.Normalizar(s).Contains(x)))
+                .Where(x => !VocabularioIA.Promocao.Any(s => TextoNormalizador.Normalizar(s) == x))
+                .Where(x => !VocabularioIA.Saudacoes.Any(s => TextoNormalizador.Normalizar(s) == x || TextoNormalizador.Normalizar(s).Contains(x)))
                 .ToList();
 
-            if (tokens.Count > 0)
-                ctx.ProdutoTermo = string.Join(' ', tokens);
+        private static string EscolherTermoPrincipal(string cand)
+        {
+            var partes = cand.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Select(TextoNormalizador.Normalizar)
+                .Where(p => !Stopwords.Contains(p))
+                .ToList();
+            if (partes.Count == 0)
+                return cand.Trim();
+            if (partes.Count == 1)
+                return partes[0];
+            // "camera fotografica nikon" → mantém até 3; "uma coca" já limpo
+            return string.Join(' ', partes.Take(3));
         }
 
         private static string Limpar(string valor)

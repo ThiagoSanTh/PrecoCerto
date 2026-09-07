@@ -12,11 +12,16 @@ namespace Pc.Servico.Implementacoes
     {
         private readonly IProdutoRepositorio _produtoRepositorio;
         private readonly IRagIndexFila _ragFila;
+        private readonly IRagCascadeIndexador _ragCascade;
 
-        public ProdutoServico(IProdutoRepositorio produtoRepositorio, IRagIndexFila ragFila)
+        public ProdutoServico(
+            IProdutoRepositorio produtoRepositorio,
+            IRagIndexFila ragFila,
+            IRagCascadeIndexador ragCascade)
         {
             _produtoRepositorio = produtoRepositorio;
             _ragFila = ragFila;
+            _ragCascade = ragCascade;
         }
 
         public async Task<Produto> AdicionarAsync(Produto produto)
@@ -51,6 +56,11 @@ namespace Pc.Servico.Implementacoes
             return await _produtoRepositorio.BuscarPorNomeAsync(nome, lojaId);
         }
 
+        public async Task<List<Produto>> BuscarPorTermosAsync(IEnumerable<string> termos, Guid? lojaId = null)
+        {
+            return await _produtoRepositorio.BuscarPorTermosAsync(termos, lojaId);
+        }
+
         public Task<PaginacaoResultado<Produto>> BuscarPorNomePaginadoAsync(
             string nome, PaginacaoParametros paginacao, Guid? lojaId = null) =>
             _produtoRepositorio.BuscarPorNomePaginadoAsync(nome, paginacao, lojaId);
@@ -61,13 +71,13 @@ namespace Pc.Servico.Implementacoes
                 throw new Exception("O nome do produto é obrigatório.");
 
             await _produtoRepositorio.AtualizarAsync(produto);
-            _ragFila.Enfileirar(RagDocumentoTipo.Produto, produto.Id, RagIndexAcao.Indexar);
+            await _ragCascade.EnfileirarProdutoAtualizadoAsync(produto.Id);
         }
 
         public async Task RemoverAsync(Guid id)
         {
+            await _ragCascade.EnfileirarProdutoRemovidoAsync(id);
             await _produtoRepositorio.RemoverAsync(id);
-            _ragFila.Enfileirar(RagDocumentoTipo.Produto, id, RagIndexAcao.Remover);
         }
 
         public async Task AtualizarPorLojaAsync(Guid id, Produto dados, Guid lojaId)
@@ -96,7 +106,7 @@ namespace Pc.Servico.Implementacoes
             if (!atualizado)
                 throw new ProdutoOperacaoException("Produto não encontrado.");
 
-            _ragFila.Enfileirar(RagDocumentoTipo.Produto, id, RagIndexAcao.Indexar);
+            await _ragCascade.EnfileirarProdutoAtualizadoAsync(id);
         }
 
         public async Task RemoverPorLojaAsync(Guid id, Guid lojaId)
@@ -110,11 +120,11 @@ namespace Pc.Servico.Implementacoes
                     "Somente a loja que cadastrou este produto pode excluí-lo.",
                     acessoNegado: true);
 
+            await _ragCascade.EnfileirarProdutoRemovidoAsync(id);
+
             var removido = await _produtoRepositorio.RemoverPorIdAsync(id);
             if (!removido)
                 throw new ProdutoOperacaoException("Produto não encontrado.");
-
-            _ragFila.Enfileirar(RagDocumentoTipo.Produto, id, RagIndexAcao.Remover);
         }
 
         private static void ValidarDadosProduto(Produto produto)

@@ -63,6 +63,28 @@ namespace Pc.Repositorio.Implementacoes
                 .ToListAsync();
         }
 
+        public async Task<List<Guid>> ListarIdsPorProdutoAsync(Guid produtoId, int limite = 200)
+        {
+            limite = Math.Clamp(limite, 1, 2000);
+            return await _context.Ofertas.AsNoTracking()
+                .Where(o => o.ProdutoId == produtoId)
+                .OrderBy(o => o.Id)
+                .Select(o => o.Id)
+                .Take(limite)
+                .ToListAsync();
+        }
+
+        public async Task<List<Guid>> ListarIdsPorLojaAsync(Guid lojaId, int limite = 500)
+        {
+            limite = Math.Clamp(limite, 1, 5000);
+            return await _context.Ofertas.AsNoTracking()
+                .Where(o => o.LojaId == lojaId)
+                .OrderBy(o => o.Id)
+                .Select(o => o.Id)
+                .Take(limite)
+                .ToListAsync();
+        }
+
         public async Task<List<Oferta>> ListarDisponiveisPorProdutosAsync(IEnumerable<Guid> produtoIds)
         {
             var ids = produtoIds.Distinct().Take(20).ToList();

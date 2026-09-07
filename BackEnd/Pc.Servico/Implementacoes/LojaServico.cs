@@ -3,19 +3,18 @@ using Pc.Dominio.Entities.Estabelecimentos;
 using Pc.Dominio.Enums;
 using Pc.Repositorio.Interfaces;
 using Pc.Servico.Interfaces;
-using Pc.Servico.Modelos.Rag;
 
 namespace Pc.Servico.Implementacoes
 {
     public class LojaServico : ILojaServico
     {
         private readonly ILojaRepositorio _lojaRepositorio;
-        private readonly IRagIndexFila _ragFila;
+        private readonly IRagCascadeIndexador _ragCascade;
 
-        public LojaServico(ILojaRepositorio lojaRepositorio, IRagIndexFila ragFila)
+        public LojaServico(ILojaRepositorio lojaRepositorio, IRagCascadeIndexador ragCascade)
         {
             _lojaRepositorio = lojaRepositorio;
-            _ragFila = ragFila;
+            _ragCascade = ragCascade;
         }
 
         public async Task<Loja> AdicionarAsync(Loja loja)
@@ -24,7 +23,7 @@ namespace Pc.Servico.Implementacoes
                 throw new Exception("O nome fantasia da loja é obrigatório.");
 
             var criada = await _lojaRepositorio.AdicionarAsync(loja);
-            _ragFila.Enfileirar(RagDocumentoTipo.Loja, criada.Id, RagIndexAcao.Indexar);
+            await _ragCascade.EnfileirarLojaAtualizadaAsync(criada.Id);
             return criada;
         }
 
@@ -64,13 +63,13 @@ namespace Pc.Servico.Implementacoes
                 throw new Exception("O nome fantasia da loja é obrigatório.");
 
             await _lojaRepositorio.AtualizarAsync(loja);
-            _ragFila.Enfileirar(RagDocumentoTipo.Loja, loja.Id, RagIndexAcao.Indexar);
+            await _ragCascade.EnfileirarLojaAtualizadaAsync(loja.Id);
         }
 
         public async Task RemoverAsync(Guid id)
         {
+            await _ragCascade.EnfileirarLojaRemovidaAsync(id);
             await _lojaRepositorio.RemoverAsync(id);
-            _ragFila.Enfileirar(RagDocumentoTipo.Loja, id, RagIndexAcao.Remover);
         }
     }
 }

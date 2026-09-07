@@ -12,6 +12,7 @@ namespace Pc.Servico.Interfaces
         Task<PaginacaoResultado<Produto>> ListarProdutosPaginadoAsync(
             PaginacaoParametros paginacao, Guid? lojaId = null, CategoriaProduto? categoria = null);
         Task<List<Produto>> BuscarPorNomeAsync(string nome, Guid? lojaId = null);
+        Task<List<Produto>> BuscarPorTermosAsync(IEnumerable<string> termos, Guid? lojaId = null);
         Task<PaginacaoResultado<Produto>> BuscarPorNomePaginadoAsync(
             string nome, PaginacaoParametros paginacao, Guid? lojaId = null);
         Task AtualizarAsync(Produto produto);

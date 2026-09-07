@@ -8,6 +8,7 @@ namespace Pc.Servico.Interfaces
         Task ProcessarEventoAsync(RagIndexEvento evento, CancellationToken cancellationToken = default);
         Task<RagReindexResultado> ReindexarAsync(
             RagDocumentoTipo? apenasTipo = null,
+            bool somentePendentes = false,
             CancellationToken cancellationToken = default);
     }
 }

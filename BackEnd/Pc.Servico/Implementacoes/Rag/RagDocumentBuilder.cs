@@ -59,6 +59,9 @@ namespace Pc.Servico.Implementacoes.Rag
             if (!string.IsNullOrWhiteSpace(p.Marca))
                 linhas.Add($"Marca: {p.Marca}.");
             linhas.Add($"Categoria: {p.Categoria}.");
+            var glossario = GlossarioCategoria(p.Categoria);
+            if (!string.IsNullOrWhiteSpace(glossario))
+                linhas.Add($"Termos relacionados: {glossario}.");
             if (!string.IsNullOrWhiteSpace(p.Descricao))
                 linhas.Add($"Descrição: {p.Descricao}.");
             if (!string.IsNullOrWhiteSpace(p.CodigoBarras))
@@ -75,6 +78,44 @@ namespace Pc.Servico.Implementacoes.Rag
                 Metadata = JsonSerializer.Serialize(new { categoria = p.Categoria.ToString(), marca = p.Marca })
             };
         }
+
+        /// <summary>
+        /// Glossário fixo por categoria (enriquecimento de índice, não regras por mensagem).
+        /// </summary>
+        public static string GlossarioCategoria(CategoriaProduto categoria) => categoria switch
+        {
+            CategoriaProduto.Eletronicos =>
+                "eletrônicos aparelhos dispositivos câmera celular notebook computador tv televisão fone tablet",
+            CategoriaProduto.Alimentos =>
+                "alimentos comida mantimentos mercearia arroz feijão óleo tempero",
+            CategoriaProduto.Bebidas =>
+                "bebidas refrigerante suco água cerveja vinho",
+            CategoriaProduto.Hortifruti =>
+                "hortifruti frutas legumes verduras",
+            CategoriaProduto.Padaria =>
+                "padaria pão bolo biscoito",
+            CategoriaProduto.Acougue =>
+                "açougue carne churrasco bovino frango linguiça",
+            CategoriaProduto.Frios =>
+                "frios queijo presunto peito peru",
+            CategoriaProduto.Congelados =>
+                "congelados sorvete pizza congelada",
+            CategoriaProduto.Limpeza =>
+                "limpeza detergente sabão desinfetante",
+            CategoriaProduto.HigienePessoal =>
+                "higiene sabonete shampoo pasta dente",
+            CategoriaProduto.Farmacia =>
+                "farmácia remédio medicamento vitamina",
+            CategoriaProduto.Bebes =>
+                "bebê fralda leite infantil",
+            CategoriaProduto.Petshop =>
+                "petshop ração animal cachorro gato",
+            CategoriaProduto.Casa =>
+                "casa utensílio cozinha festa decoração",
+            CategoriaProduto.Vestuario =>
+                "vestuário roupa calça camisa",
+            _ => "produto item mercadoria"
+        };
 
         private async Task<RagDocumentoConstruido?> ConstruirLojaAsync(Guid id, CancellationToken ct)
         {
@@ -142,10 +183,13 @@ namespace Pc.Servico.Implementacoes.Rag
             {
                 $"Oferta do produto {o.ProdutoNome ?? "desconhecido"} na loja {o.LojaNome ?? "desconhecida"}.",
                 $"Categoria: {o.Categoria}.",
-                $"Preço: R$ {preco}.",
-                o.EmPromocao ? "Em promoção." : "Sem promoção ativa.",
-                o.Disponivel ? "Disponível." : "Indisponível."
             };
+            var glossario = GlossarioCategoria(o.Categoria);
+            if (!string.IsNullOrWhiteSpace(glossario))
+                linhas.Add($"Termos relacionados: {glossario}.");
+            linhas.Add($"Preço: R$ {preco}.");
+            linhas.Add(o.EmPromocao ? "Em promoção." : "Sem promoção ativa.");
+            linhas.Add(o.Disponivel ? "Disponível à venda." : "Indisponível.");
 
             return new RagDocumentoConstruido
             {

@@ -66,6 +66,9 @@ namespace Pc.Repositorio.Implementacoes
             double maxDistancia,
             CancellationToken ct = default)
         {
+            var totalComEmbedding = await _context.DocumentosRag.AsNoTracking()
+                .CountAsync(d => d.Ativo && d.UsuarioId == null && d.Embedding != null, ct);
+
             var rows = await _context.DocumentosRag
                 .AsNoTracking()
                 .Where(d => d.Ativo && d.UsuarioId == null && d.Embedding != null)
@@ -78,10 +81,39 @@ namespace Pc.Repositorio.Implementacoes
                 })
                 .ToListAsync(ct);
 
-            return rows
+            var filtrados = rows
                 .Where(r => r.Distancia <= maxDistancia)
                 .Select(r => (r.Doc, (double)r.Distancia))
                 .ToList();
+
+            // #region agent log
+            try
+            {
+                var payload = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    sessionId = "6c7c29",
+                    runId = "post-fix",
+                    hypothesisId = "C,D",
+                    location = "DocumentoRagRepositorio.cs:BuscarPorSimilaridadeAsync",
+                    message = "rag-vector-filter",
+                    data = new
+                    {
+                        totalComEmbedding,
+                        rowsAntesFiltro = rows.Count,
+                        rowsAposFiltro = filtrados.Count,
+                        maxDistancia,
+                        indiceVazio = totalComEmbedding == 0,
+                        topDists = rows.Select(r => Math.Round((double)r.Distancia, 4)).Take(5).ToList(),
+                        topTitulos = rows.Select(r => r.Doc.Titulo).Take(5).ToList()
+                    },
+                    timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                });
+                System.IO.File.AppendAllText(@"d:\Dev\PrecoCerto\debug-6c7c29.log", payload + "\n");
+            }
+            catch { /* debug */ }
+            // #endregion
+
+            return filtrados;
         }
 
         public Task<int> ContarAtivosAsync(CancellationToken ct = default) =>

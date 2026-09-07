@@ -44,6 +44,7 @@ namespace Pc.Servico.Implementacoes.Rag
                 {
                     _logger.LogError(ex, "Erro não tratado no worker RAG. Tipo={Tipo} Id={Id}",
                         evento.Tipo, evento.EntidadeId);
+                    await TentarRegistrarDlqAsync(evento, ex.ToString(), stoppingToken);
                 }
                 finally
                 {
@@ -55,6 +56,7 @@ namespace Pc.Servico.Implementacoes.Rag
         private async Task ProcessarComRetryAsync(RagIndexEvento evento, CancellationToken ct)
         {
             var max = Math.Clamp(_settings.MaxRetries, 1, 10);
+            Exception? ultima = null;
 
             for (var tentativa = 0; tentativa < max; tentativa++)
             {
@@ -69,8 +71,19 @@ namespace Pc.Servico.Implementacoes.Rag
                         evento.Tipo, evento.EntidadeId, evento.Tentativas);
                     return;
                 }
+                catch (RagEmbeddingAuthException ex)
+                {
+                    // Não faz sentido retry em 401/403 — key inválida.
+                    ultima = ex;
+                    _logger.LogError(
+                        ex,
+                        "RAG auth falhou; sem retry. Tipo={Tipo} Id={Id}",
+                        evento.Tipo, evento.EntidadeId);
+                    break;
+                }
                 catch (Exception ex) when (tentativa < max - 1)
                 {
+                    ultima = ex;
                     var delay = TimeSpan.FromSeconds(Math.Pow(2, tentativa));
                     _logger.LogWarning(
                         ex,
@@ -80,11 +93,29 @@ namespace Pc.Servico.Implementacoes.Rag
                 }
                 catch (Exception ex)
                 {
+                    ultima = ex;
                     _logger.LogError(
                         ex,
                         "Erro no provider / indexação após retries. Tipo={Tipo} Id={Id}",
                         evento.Tipo, evento.EntidadeId);
                 }
+            }
+
+            if (ultima is not null)
+                await TentarRegistrarDlqAsync(evento, ultima.ToString(), ct);
+        }
+
+        private async Task TentarRegistrarDlqAsync(RagIndexEvento evento, string erro, CancellationToken ct)
+        {
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var dlq = scope.ServiceProvider.GetRequiredService<IRagIndexDlqServico>();
+                await dlq.RegistrarFalhaAsync(evento, erro, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Falha ao gravar RAG DLQ. Tipo={Tipo} Id={Id}", evento.Tipo, evento.EntidadeId);
             }
         }
     }

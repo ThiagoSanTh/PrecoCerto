@@ -14,6 +14,11 @@ namespace Pc.Servico.Implementacoes.MotorIA
                 return "Posso ajudar apenas com informações sobre produtos, lojas, ofertas e serviços disponíveis no Preço Certo.";
             }
 
+            if (contexto.Intencao == IntencaoIA.Saudacao)
+            {
+                return "Olá! Sou o assistente do Preço Certo. Posso ajudar com produtos, lojas, preços e ofertas. O que você procura?";
+            }
+
             if (contexto.Intencao == IntencaoIA.NaoEntendida)
             {
                 return "Não entendi sua solicitação. Tente perguntar sobre produtos, preços, lojas ou ofertas.";

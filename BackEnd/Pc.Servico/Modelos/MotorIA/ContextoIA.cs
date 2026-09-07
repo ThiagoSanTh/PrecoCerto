@@ -75,6 +75,8 @@ namespace Pc.Servico.Modelos.MotorIA
         public ObjetivoIA? Objetivo { get; set; }
 
         public string? ProdutoTermo { get; set; }
+        /// <summary>Tokens/sinônimos derivados de <see cref="ProdutoTermo"/> para busca SQL/RAG.</summary>
+        public List<string> TermosBuscaProduto { get; set; } = new();
         public string? LojaTermo { get; set; }
         public CategoriaProduto? Categoria { get; set; }
         public string? Caracteristica { get; set; }

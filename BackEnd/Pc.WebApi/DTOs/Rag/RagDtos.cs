@@ -43,4 +43,24 @@ namespace Pc.WebApi.DTOs.Rag
         public int Erros { get; set; }
         public long TempoMs { get; set; }
     }
+
+    public class RagDlqItemResponseDto
+    {
+        public Guid Id { get; set; }
+        public string Tipo { get; set; } = string.Empty;
+        public Guid EntidadeId { get; set; }
+        public string Acao { get; set; } = string.Empty;
+        public int Tentativas { get; set; }
+        public string UltimoErro { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public DateTime CriadoEmUtc { get; set; }
+        public DateTime? ReprocessadoEmUtc { get; set; }
+    }
+
+    public class RagDlqListResponseDto
+    {
+        public bool Sucesso { get; set; }
+        public int Total { get; set; }
+        public List<RagDlqItemResponseDto> Itens { get; set; } = new();
+    }
 }

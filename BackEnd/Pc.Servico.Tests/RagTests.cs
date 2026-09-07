@@ -83,6 +83,7 @@ namespace Pc.Servico.Tests
                 _builder.Object,
                 _embeddings.Object,
                 db: null!,
+                new Mock<IRagIndexDlqServico>().Object,
                 Options.Create(_settings),
                 NullLogger<RagIndexadorServico>.Instance);
         }

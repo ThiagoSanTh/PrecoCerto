@@ -34,6 +34,12 @@ namespace Pc.Servico.Tests.MotorIA
         [InlineData("Quem é Neymar?", IntencaoIA.ForaDoDominio)]
         [InlineData("Não quero sair de casa, tem entrega?", IntencaoIA.ConsultarEntrega)]
         [InlineData("Vocês fazem entrega de feijão?", IntencaoIA.ConsultarEntrega)]
+        [InlineData("ola", IntencaoIA.Saudacao)]
+        [InlineData("Bom dia", IntencaoIA.Saudacao)]
+        [InlineData("Oi!", IntencaoIA.Saudacao)]
+        [InlineData("aonde eu posso achar uma câmera vendendo?", IntencaoIA.BuscarProduto)]
+        [InlineData("coca", IntencaoIA.BuscarProduto)]
+        [InlineData("estou procurando por uma coca, aonde eu posso encontrar o mais barato", IntencaoIA.BuscarProdutoMaisBarato)]
         public void Classifica_intencoes(string msg, IntencaoIA esperada)
         {
             var ctx = _sut.Interpretar(new PedidoAnaliseIA { Mensagem = msg });
@@ -88,6 +94,57 @@ namespace Pc.Servico.Tests.MotorIA
             Assert.Equal(IntencaoIA.BuscarPromocao, ctx.Intencao);
             Assert.NotNull(ctx.ProdutoTermo);
             Assert.Contains("leite", ctx.ProdutoTermo!, StringComparison.OrdinalIgnoreCase);
+        }
+
+        [Fact]
+        public void Extrai_camera_da_frase_completa_nao_so_o_inicio()
+        {
+            var ctx = _sut.Interpretar(new PedidoAnaliseIA
+            {
+                Mensagem = "aonde eu posso achar uma câmera vendendo?"
+            });
+            Assert.Equal(IntencaoIA.BuscarProduto, ctx.Intencao);
+            Assert.NotNull(ctx.ProdutoTermo);
+            Assert.Contains("camera", TextoNormalizador.Normalizar(ctx.ProdutoTermo!), StringComparison.Ordinal);
+            Assert.DoesNotContain("aonde", TextoNormalizador.Normalizar(ctx.ProdutoTermo!), StringComparison.Ordinal);
+            Assert.DoesNotContain("posso", TextoNormalizador.Normalizar(ctx.ProdutoTermo!), StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void Saudacao_nao_extrai_produto()
+        {
+            var ctx = _sut.Interpretar(new PedidoAnaliseIA { Mensagem = "Bom dia" });
+            Assert.Equal(IntencaoIA.Saudacao, ctx.Intencao);
+            Assert.True(string.IsNullOrWhiteSpace(ctx.ProdutoTermo));
+        }
+
+        [Theory]
+        [InlineData("estou procurando por uma coca, aonde eu posso encontrar o mais barato", "coca")]
+        [InlineData("estou procurando por uma camera, aonde eu posso encontrar o mais barato", "camera")]
+        [InlineData("estou procurando por uma brinco, aonde eu posso encontrar o mais barato", "brinco")]
+        [InlineData("to procurando um arroz mais barato", "arroz")]
+        [InlineData("preciso duma coca barata", "coca")]
+        public void Frases_elaboradas_extraem_so_o_produto(string msg, string produtoEsperado)
+        {
+            var ctx = _sut.Interpretar(new PedidoAnaliseIA { Mensagem = msg });
+            Assert.False(string.IsNullOrWhiteSpace(ctx.ProdutoTermo));
+            var termo = TextoNormalizador.Normalizar(ctx.ProdutoTermo!);
+            Assert.Contains(produtoEsperado, termo, StringComparison.Ordinal);
+            Assert.DoesNotContain("estou", termo, StringComparison.Ordinal);
+            Assert.DoesNotContain("procurando", termo, StringComparison.Ordinal);
+            Assert.DoesNotContain("aonde", termo, StringComparison.Ordinal);
+            Assert.Contains(ctx.TermosBuscaProduto, t =>
+                TextoNormalizador.Normalizar(t).Contains(produtoEsperado, StringComparison.Ordinal));
+        }
+
+        [Fact]
+        public void Coca_expande_sinonimos_de_busca()
+        {
+            var ctx = _sut.Interpretar(new PedidoAnaliseIA { Mensagem = "coca" });
+            Assert.Equal(IntencaoIA.BuscarProduto, ctx.Intencao);
+            Assert.Contains(ctx.TermosBuscaProduto, t =>
+                TextoNormalizador.Normalizar(t).Contains("refrigerante", StringComparison.Ordinal)
+                || TextoNormalizador.Normalizar(t).Contains("cola", StringComparison.Ordinal));
         }
 
         [Fact]
@@ -224,6 +281,15 @@ namespace Pc.Servico.Tests.MotorIA
             var ctx = new ContextoIA { Intencao = IntencaoIA.ForaDoDominio };
             var texto = new GeradorRespostaIA().Gerar(ctx);
             Assert.Contains("Preço Certo", texto);
+        }
+
+        [Fact]
+        public void Saudacao_resposta_amigavel()
+        {
+            var ctx = new ContextoIA { Intencao = IntencaoIA.Saudacao };
+            var texto = new GeradorRespostaIA().Gerar(ctx);
+            Assert.Contains("Olá", texto);
+            Assert.DoesNotContain("Não entendi", texto);
         }
     }
 

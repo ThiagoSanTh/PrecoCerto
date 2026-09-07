@@ -18,6 +18,7 @@ namespace Pc.Servico.Implementacoes.Rag
         private readonly IRagDocumentBuilder _builder;
         private readonly IEmbeddingService _embeddings;
         private readonly AppDbContext _db;
+        private readonly IRagIndexDlqServico _dlq;
         private readonly RagSettings _settings;
         private readonly ILogger<RagIndexadorServico> _logger;
 
@@ -26,6 +27,7 @@ namespace Pc.Servico.Implementacoes.Rag
             IRagDocumentBuilder builder,
             IEmbeddingService embeddings,
             AppDbContext db,
+            IRagIndexDlqServico dlq,
             IOptions<RagSettings> settings,
             ILogger<RagIndexadorServico> logger)
         {
@@ -33,6 +35,7 @@ namespace Pc.Servico.Implementacoes.Rag
             _builder = builder;
             _embeddings = embeddings;
             _db = db;
+            _dlq = dlq;
             _settings = settings.Value;
             _logger = logger;
         }
@@ -42,6 +45,14 @@ namespace Pc.Servico.Implementacoes.Rag
             if (!_settings.Enabled)
             {
                 _logger.LogInformation("RAG desabilitado. Evento ignorado. Tipo={Tipo}", evento.Tipo);
+                return;
+            }
+
+            if (!_settings.EstaConfigurado)
+            {
+                _logger.LogWarning(
+                    "RAG Enabled sem ApiKey/configuração completa. Evento ignorado. Tipo={Tipo} Id={Id}",
+                    evento.Tipo, evento.EntidadeId);
                 return;
             }
 
@@ -57,11 +68,15 @@ namespace Pc.Servico.Implementacoes.Rag
 
         public async Task<RagReindexResultado> ReindexarAsync(
             RagDocumentoTipo? apenasTipo = null,
+            bool somentePendentes = false,
             CancellationToken cancellationToken = default)
         {
             var sw = Stopwatch.StartNew();
             var resultado = new RagReindexResultado();
-            _logger.LogInformation("RAG index iniciado. Tipo={Tipo}", apenasTipo?.ToString() ?? "Todos");
+            _logger.LogInformation(
+                "RAG index iniciado. Tipo={Tipo} SomentePendentes={Pend}",
+                apenasTipo?.ToString() ?? "Todos",
+                somentePendentes);
 
             if (!_settings.EstaConfigurado)
             {
@@ -71,16 +86,28 @@ namespace Pc.Servico.Implementacoes.Rag
                 return resultado;
             }
 
-            var batch = Math.Clamp(_settings.BatchSize, 10, 200);
+            try
+            {
+                var batch = Math.Clamp(_settings.BatchSize, 10, 200);
 
-            if (apenasTipo is null or RagDocumentoTipo.Produto)
-                await ReindexTipoAsync(RagDocumentoTipo.Produto, batch, resultado, cancellationToken);
-            if (apenasTipo is null or RagDocumentoTipo.Loja)
-                await ReindexTipoAsync(RagDocumentoTipo.Loja, batch, resultado, cancellationToken);
-            if (apenasTipo is null or RagDocumentoTipo.Oferta)
-                await ReindexTipoAsync(RagDocumentoTipo.Oferta, batch, resultado, cancellationToken);
-            if (apenasTipo is null or RagDocumentoTipo.Avaliacao)
-                await ReindexTipoAsync(RagDocumentoTipo.Avaliacao, batch, resultado, cancellationToken);
+                if (apenasTipo is null or RagDocumentoTipo.Produto)
+                    await ReindexTipoAsync(RagDocumentoTipo.Produto, batch, somentePendentes, resultado, cancellationToken);
+                if (apenasTipo is null or RagDocumentoTipo.Loja)
+                    await ReindexTipoAsync(RagDocumentoTipo.Loja, batch, somentePendentes, resultado, cancellationToken);
+                if (apenasTipo is null or RagDocumentoTipo.Oferta)
+                    await ReindexTipoAsync(RagDocumentoTipo.Oferta, batch, somentePendentes, resultado, cancellationToken);
+                if (apenasTipo is null or RagDocumentoTipo.Avaliacao)
+                    await ReindexTipoAsync(RagDocumentoTipo.Avaliacao, batch, somentePendentes, resultado, cancellationToken);
+            }
+            catch (RagEmbeddingAuthException ex)
+            {
+                resultado.Erros++;
+                _logger.LogError(
+                    ex,
+                    "RAG reindex abortado: autenticação no provider falhou (Status={Status}). "
+                    + "Corrija Rag:ApiKey.",
+                    ex.StatusCode);
+            }
 
             resultado.TotalDocumentos = await _docs.ContarAtivosAsync(cancellationToken);
             sw.Stop();
@@ -98,14 +125,17 @@ namespace Pc.Servico.Implementacoes.Rag
         private async Task ReindexTipoAsync(
             RagDocumentoTipo tipo,
             int batch,
+            bool somentePendentes,
             RagReindexResultado resultado,
             CancellationToken ct)
         {
             var page = 0;
+            var delayMs = Math.Clamp(_settings.DelayEntreEmbeddingsMs, 0, 10_000);
+
             while (true)
             {
                 ct.ThrowIfCancellationRequested();
-                var ids = await ListarIdsAsync(tipo, page, batch, ct);
+                var ids = await ListarIdsAsync(tipo, page, batch, somentePendentes, ct);
                 if (ids.Count == 0)
                     break;
 
@@ -129,11 +159,39 @@ namespace Pc.Servico.Implementacoes.Rag
 
                         if (embeddingGerado) resultado.TotalEmbeddingsGerados++;
                         if (ignoradoHash) resultado.IgnoradosPorHash++;
+
+                        if (embeddingGerado && delayMs > 0)
+                            await Task.Delay(delayMs, ct);
+                    }
+                    catch (RagEmbeddingAuthException)
+                    {
+                        throw;
                     }
                     catch (Exception ex)
                     {
                         resultado.Erros++;
                         _logger.LogError(ex, "Erro ao indexar RAG. Tipo={Tipo} Id={Id}", tipo, id);
+                        try
+                        {
+                            await _dlq.RegistrarFalhaAsync(
+                                new RagIndexEvento
+                                {
+                                    Tipo = tipo,
+                                    EntidadeId = id,
+                                    Acao = RagIndexAcao.Indexar,
+                                    Tentativas = 1
+                                },
+                                ex.Message,
+                                ct);
+                        }
+                        catch (Exception dlqEx)
+                        {
+                            _logger.LogWarning(dlqEx, "Falha ao registrar DLQ RAG. Tipo={Tipo} Id={Id}", tipo, id);
+                        }
+
+                        // Após 429 em cascata, pausa extra antes do próximo item.
+                        if (ex.Message.Contains("429", StringComparison.Ordinal))
+                            await Task.Delay(Math.Max(delayMs * 6, 5000), ct);
                     }
                 }
 
@@ -143,33 +201,79 @@ namespace Pc.Servico.Implementacoes.Rag
             }
         }
 
-        private async Task<List<Guid>> ListarIdsAsync(RagDocumentoTipo tipo, int page, int batch, CancellationToken ct)
+        private async Task<List<Guid>> ListarIdsAsync(
+            RagDocumentoTipo tipo,
+            int page,
+            int batch,
+            bool somentePendentes,
+            CancellationToken ct)
         {
+            if (!somentePendentes)
+            {
+                return tipo switch
+                {
+                    RagDocumentoTipo.Produto => await _db.Produtos.AsNoTracking()
+                        .Where(p => p.Ativo)
+                        .OrderBy(p => p.Id)
+                        .Skip(page * batch)
+                        .Take(batch)
+                        .Select(p => p.Id)
+                        .ToListAsync(ct),
+                    RagDocumentoTipo.Loja => await _db.Lojas.AsNoTracking()
+                        .Where(l => l.Ativo)
+                        .OrderBy(l => l.Id)
+                        .Skip(page * batch)
+                        .Take(batch)
+                        .Select(l => l.Id)
+                        .ToListAsync(ct),
+                    RagDocumentoTipo.Oferta => await _db.Ofertas.AsNoTracking()
+                        .Where(o => o.Ativo)
+                        .OrderBy(o => o.Id)
+                        .Skip(page * batch)
+                        .Take(batch)
+                        .Select(o => o.Id)
+                        .ToListAsync(ct),
+                    RagDocumentoTipo.Avaliacao => await _db.Avaliacoes.AsNoTracking()
+                        .Where(a => a.Ativo && a.Comentario != null && a.Comentario != "")
+                        .OrderBy(a => a.Id)
+                        .Skip(page * batch)
+                        .Take(batch)
+                        .Select(a => a.Id)
+                        .ToListAsync(ct),
+                    _ => new List<Guid>()
+                };
+            }
+
+            // Só entidades sem documento RAG ativo com embedding (os que falharam / nunca indexaram).
+            var docsIndexados = _db.DocumentosRag.AsNoTracking()
+                .Where(d => d.Ativo && d.UsuarioId == null && d.Embedding != null && d.Tipo == tipo)
+                .Select(d => d.EntidadeId);
+
             return tipo switch
             {
                 RagDocumentoTipo.Produto => await _db.Produtos.AsNoTracking()
-                    .Where(p => p.Ativo)
+                    .Where(p => p.Ativo && !docsIndexados.Contains(p.Id))
                     .OrderBy(p => p.Id)
                     .Skip(page * batch)
                     .Take(batch)
                     .Select(p => p.Id)
                     .ToListAsync(ct),
                 RagDocumentoTipo.Loja => await _db.Lojas.AsNoTracking()
-                    .Where(l => l.Ativo)
+                    .Where(l => l.Ativo && !docsIndexados.Contains(l.Id))
                     .OrderBy(l => l.Id)
                     .Skip(page * batch)
                     .Take(batch)
                     .Select(l => l.Id)
                     .ToListAsync(ct),
                 RagDocumentoTipo.Oferta => await _db.Ofertas.AsNoTracking()
-                    .Where(o => o.Ativo)
+                    .Where(o => o.Ativo && !docsIndexados.Contains(o.Id))
                     .OrderBy(o => o.Id)
                     .Skip(page * batch)
                     .Take(batch)
                     .Select(o => o.Id)
                     .ToListAsync(ct),
                 RagDocumentoTipo.Avaliacao => await _db.Avaliacoes.AsNoTracking()
-                    .Where(a => a.Ativo && a.Comentario != null && a.Comentario != "")
+                    .Where(a => a.Ativo && a.Comentario != null && a.Comentario != "" && !docsIndexados.Contains(a.Id))
                     .OrderBy(a => a.Id)
                     .Skip(page * batch)
                     .Take(batch)

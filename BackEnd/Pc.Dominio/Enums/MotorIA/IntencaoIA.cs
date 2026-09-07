@@ -16,7 +16,8 @@ namespace Pc.Dominio.Enums.MotorIA
         ConsultarEntrega = 11,
         MontarCesta = 12,
         ForaDoDominio = 13,
-        NaoEntendida = 14
+        NaoEntendida = 14,
+        Saudacao = 15
     }
 
     public enum ObjetivoIA

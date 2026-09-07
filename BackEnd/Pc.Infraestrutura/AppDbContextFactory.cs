@@ -1,21 +1,25 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Configuration;
 
 namespace Pc.Infraestrutura
 {
     /// <summary>
-    /// Fábrica usada apenas em tempo de design (dotnet ef migrations/database).
-    /// Evita executar o Program da WebApi (e o MigrateAsync de startup) durante
-    /// a geração de migrations. A connection string vem da variável de ambiente
-    /// ConnectionStrings__DefaultConnection quando presente, ou de um placeholder
-    /// (suficiente para gerar migrations, que não acessam o banco).
+    /// Fábrica de design-time (dotnet ef migrations / database update).
+    /// Ordem da connection string:
+    /// 1) env ConnectionStrings__DefaultConnection
+    /// 2) user-secrets do Pc.WebApi (Development)
+    /// 3) placeholder local (só para gerar migration sem tocar no banco)
     /// </summary>
     public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
     {
+        private const string WebApiUserSecretsId = "preco-certo-webapi-dev";
+
         public AppDbContext CreateDbContext(string[] args)
         {
             var connectionString =
                 Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
+                ?? TentarUserSecretsWebApi()
                 ?? "Host=localhost;Port=5432;Database=precocerto;Username=postgres;Password=postgres";
 
             var options = new DbContextOptionsBuilder<AppDbContext>()
@@ -23,6 +27,28 @@ namespace Pc.Infraestrutura
                 .Options;
 
             return new AppDbContext(options);
+        }
+
+        private static string? TentarUserSecretsWebApi()
+        {
+            try
+            {
+                var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                var secretsPath = Path.Combine(appData, "Microsoft", "UserSecrets", WebApiUserSecretsId, "secrets.json");
+                if (!File.Exists(secretsPath))
+                    return null;
+
+                var config = new ConfigurationBuilder()
+                    .AddJsonFile(secretsPath, optional: true, reloadOnChange: false)
+                    .Build();
+
+                var cs = config.GetConnectionString("DefaultConnection");
+                return string.IsNullOrWhiteSpace(cs) ? null : cs;
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }

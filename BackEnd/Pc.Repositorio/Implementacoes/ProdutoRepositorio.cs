@@ -30,11 +30,44 @@ namespace Pc.Repositorio.Implementacoes
 
         private static IQueryable<Produto> AplicarFiltroTermo(IQueryable<Produto> query, string termo)
         {
-            var pattern = $"%{termo.Trim()}%";
+            var t = termo.Trim();
+            if (t.Length < 2)
+                return query.Where(_ => false);
+
+            var pattern = $"%{t}%";
+            // Postgres ILIKE não ignora acento: "camera" não acha "Câmera".
+            // Gera variante com acentos comuns do PT-BR a partir do termo já normalizado.
+            var comAcento = TentarFormaComAcento(t);
+            if (comAcento is not null && !string.Equals(comAcento, t, StringComparison.OrdinalIgnoreCase))
+            {
+                var patternAcc = $"%{comAcento}%";
+                return query.Where(p =>
+                    EF.Functions.ILike(p.NomeProduto, pattern) ||
+                    EF.Functions.ILike(p.NomeProduto, patternAcc) ||
+                    (p.Marca != null && (EF.Functions.ILike(p.Marca, pattern) || EF.Functions.ILike(p.Marca, patternAcc))) ||
+                    (p.Descricao != null && (EF.Functions.ILike(p.Descricao, pattern) || EF.Functions.ILike(p.Descricao, patternAcc))));
+            }
+
             return query.Where(p =>
                 EF.Functions.ILike(p.NomeProduto, pattern) ||
                 (p.Marca != null && EF.Functions.ILike(p.Marca, pattern)) ||
                 (p.Descricao != null && EF.Functions.ILike(p.Descricao, pattern)));
+        }
+
+        private static string? TentarFormaComAcento(string termoNormalizado)
+        {
+            // Mapa mínimo dos termos que o MotorIA mais busca sem acento.
+            return termoNormalizado.ToLowerInvariant() switch
+            {
+                "camera" => "câmera",
+                "fotografica" => "fotográfica",
+                "cafe" => "café",
+                "pao" => "pão",
+                "feijao" => "feijão",
+                "promocao" => "promoção",
+                "preco" => "preço",
+                _ => null
+            };
         }
 
         private static IQueryable<Produto> AplicarFiltros(
@@ -66,6 +99,17 @@ namespace Pc.Repositorio.Implementacoes
             return await query.OrderBy(p => p.NomeProduto).ToListAsync();
         }
 
+        public async Task<List<Guid>> ListarIdsPorLojaAsync(Guid lojaId, int limite = 500)
+        {
+            limite = Math.Clamp(limite, 1, 5000);
+            return await _context.Produtos.AsNoTracking()
+                .Where(p => p.LojaId == lojaId)
+                .OrderBy(p => p.Id)
+                .Select(p => p.Id)
+                .Take(limite)
+                .ToListAsync();
+        }
+
         public async Task<PaginacaoResultado<Produto>> ListarPorLojaPaginadoAsync(
             PaginacaoParametros paginacao,
             Guid? lojaId = null,
@@ -93,11 +137,60 @@ namespace Pc.Repositorio.Implementacoes
             if (string.IsNullOrWhiteSpace(nome))
                 return new List<Produto>();
 
-            var query = AplicarFiltroTermo(QueryComLojaEEndereco(), nome);
-            if (lojaId.HasValue)
-                query = query.Where(p => p.LojaId == lojaId);
+            var tokens = nome
+                .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(t => t.Length >= 2)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(6)
+                .ToList();
 
-            return await query.OrderBy(p => p.NomeProduto).Take(50).ToListAsync();
+            if (tokens.Count <= 1)
+            {
+                var query = AplicarFiltroTermo(QueryComLojaEEndereco(), nome);
+                if (lojaId.HasValue)
+                    query = query.Where(p => p.LojaId == lojaId);
+                return await query.OrderBy(p => p.NomeProduto).Take(50).ToListAsync();
+            }
+
+            return await BuscarPorTermosAsync(tokens, lojaId);
+        }
+
+        public async Task<List<Produto>> BuscarPorTermosAsync(IEnumerable<string> termos, Guid? lojaId = null)
+        {
+            var lista = termos
+                .Where(t => !string.IsNullOrWhiteSpace(t))
+                .Select(t => t.Trim())
+                .Where(t => t.Length >= 2)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(8)
+                .ToList();
+
+            if (lista.Count == 0)
+                return new List<Produto>();
+
+            // Acumula hits e ranqueia por quantos termos batem no nome.
+            var scorePorId = new Dictionary<Guid, int>();
+            var produtos = new Dictionary<Guid, Produto>();
+
+            foreach (var termo in lista)
+            {
+                var query = AplicarFiltroTermo(QueryComLojaEEndereco(), termo);
+                if (lojaId.HasValue)
+                    query = query.Where(p => p.LojaId == lojaId);
+
+                var encontrados = await query.OrderBy(p => p.NomeProduto).Take(40).ToListAsync();
+                foreach (var p in encontrados)
+                {
+                    produtos[p.Id] = p;
+                    scorePorId[p.Id] = scorePorId.GetValueOrDefault(p.Id) + 1;
+                }
+            }
+
+            return produtos.Values
+                .OrderByDescending(p => scorePorId[p.Id])
+                .ThenBy(p => p.NomeProduto)
+                .Take(50)
+                .ToList();
         }
 
         public async Task<PaginacaoResultado<Produto>> BuscarPorNomePaginadoAsync(

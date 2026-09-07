@@ -57,7 +57,7 @@ namespace Pc.Servico.Implementacoes.MotorIA
             var ctx = _interpretador.Interpretar(pedido);
             swInterp.Stop();
 
-            if (ctx.Intencao is IntencaoIA.ForaDoDominio or IntencaoIA.NaoEntendida)
+            if (ctx.Intencao is IntencaoIA.ForaDoDominio or IntencaoIA.NaoEntendida or IntencaoIA.Saudacao)
             {
                 return Finalizar(ctx, swTotal, swInterp.ElapsedMilliseconds, 0, 0);
             }
@@ -68,6 +68,30 @@ namespace Pc.Servico.Implementacoes.MotorIA
             var swDados = Stopwatch.StartNew();
             await CarregarCandidatosAsync(ctx, cancellationToken);
             swDados.Stop();
+
+            // #region agent log
+            try
+            {
+                var payload = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    sessionId = "6c7c29",
+                    runId = "pre-fix",
+                    hypothesisId = "E",
+                    location = "MotorIA.cs:apos-SQL",
+                    message = "candidatos-apos-sql",
+                    data = new
+                    {
+                        produto = ctx.ProdutoTermo,
+                        termos = ctx.TermosBuscaProduto,
+                        candidatos = ctx.Candidatos.Count,
+                        intencao = ctx.Intencao.ToString()
+                    },
+                    timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                });
+                System.IO.File.AppendAllText(@"d:\Dev\PrecoCerto\debug-6c7c29.log", payload + "\n");
+            }
+            catch { /* debug */ }
+            // #endregion
 
             var swRag = Stopwatch.StartNew();
             await TentarRagAsync(ctx, cancellationToken);
@@ -157,17 +181,33 @@ namespace Pc.Servico.Implementacoes.MotorIA
 
             if (ctx.Intencao is IntencaoIA.BuscarLoja or IntencaoIA.BuscarLojaMaisProxima or IntencaoIA.RecomendarLoja)
             {
-                await CarregarLojasAsync(ctx, ct);
-                return;
+                // "onde achar X" pode ter sido classificado como loja; se há produto, pesquisa o catálogo.
+                if (!string.IsNullOrWhiteSpace(ctx.ProdutoTermo)
+                    && ctx.Intencao is not IntencaoIA.BuscarLojaMaisProxima)
+                {
+                    // segue para carga por produto abaixo
+                }
+                else
+                {
+                    await CarregarLojasAsync(ctx, ct);
+                    return;
+                }
             }
 
             var termo = ctx.ProdutoTermo;
             if (string.IsNullOrWhiteSpace(termo) && ctx.Categoria.HasValue)
                 termo = ctx.Categoria.Value.ToString();
 
-            if (!string.IsNullOrWhiteSpace(termo))
+            if (!string.IsNullOrWhiteSpace(termo) || ctx.TermosBuscaProduto.Count > 0)
             {
-                var produtos = await _produtos.BuscarPorNomeAsync(termo);
+                var produtos = ctx.TermosBuscaProduto.Count > 0
+                    ? await _produtos.BuscarPorTermosAsync(ctx.TermosBuscaProduto)
+                    : await _produtos.BuscarPorNomeAsync(termo!);
+
+                // Fallback: termo limpo único se sinônimos não acharam nada.
+                if (produtos.Count == 0 && !string.IsNullOrWhiteSpace(termo))
+                    produtos = await _produtos.BuscarPorNomeAsync(termo);
+
                 if (produtos.Count > 0)
                 {
                     if (ctx.Categoria.HasValue)
@@ -310,22 +350,95 @@ namespace Pc.Servico.Implementacoes.MotorIA
         {
             var precisaRag =
                 ctx.Intencao == IntencaoIA.BuscarProdutosRelacionados
-                || (ctx.Candidatos.Count == 0 && !string.IsNullOrWhiteSpace(ctx.ProdutoTermo))
+                || (ctx.Candidatos.Count == 0 && (
+                    !string.IsNullOrWhiteSpace(ctx.ProdutoTermo)
+                    || ctx.TermosBuscaProduto.Count > 0
+                    || !string.IsNullOrWhiteSpace(ctx.MensagemOriginal)))
                 || ctx.Intencao == IntencaoIA.RecomendarProduto;
 
             if (!precisaRag)
                 return;
 
-            var consulta = ctx.ProdutoTermo ?? ctx.MensagemOriginal;
-            var hits = await _rag.BuscarAuxiliarAsync(consulta, 5, ct);
+            // Híbrido: tenta termo limpo → sinônimos → frase original.
+            var consultas = Vocabulario.VocabularioIA.MontarConsultasRag(ctx.ProdutoTermo, ctx.MensagemOriginal);
+            if (consultas.Count == 0 && ctx.TermosBuscaProduto.Count > 0)
+                consultas = ctx.TermosBuscaProduto;
+
+            IReadOnlyList<RagHitIA> hits = Array.Empty<RagHitIA>();
+            foreach (var consulta in consultas)
+            {
+                hits = await _rag.BuscarAuxiliarAsync(consulta, 5, ct);
+                if (hits.Count > 0)
+                    break;
+            }
+
+            // #region agent log
+            try
+            {
+                var payload = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    sessionId = "6c7c29",
+                    runId = "pre-fix",
+                    hypothesisId = "A,C,D",
+                    location = "MotorIA.cs:TentarRagAsync",
+                    message = "rag-resultado",
+                    data = new
+                    {
+                        precisaRag,
+                        consultas,
+                        hits = hits.Count,
+                        candidatosAntes = ctx.Candidatos.Count,
+                        produto = ctx.ProdutoTermo
+                    },
+                    timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                });
+                System.IO.File.AppendAllText(@"d:\Dev\PrecoCerto\debug-6c7c29.log", payload + "\n");
+            }
+            catch { /* debug */ }
+            // #endregion
+
             if (hits.Count == 0)
             {
                 ctx.FallbacksUsados.Add("sem_rag");
+                // #region agent log
+                try
+                {
+                    var payload = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        sessionId = "6c7c29",
+                        runId = "post-fix",
+                        hypothesisId = "C",
+                        location = "MotorIA.cs:TentarRagAsync:sem_rag",
+                        message = "sem_rag-apos-consultas",
+                        data = new { consultas, produto = ctx.ProdutoTermo, candidatos = ctx.Candidatos.Count },
+                        timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                    });
+                    System.IO.File.AppendAllText(@"d:\Dev\PrecoCerto\debug-6c7c29.log", payload + "\n");
+                }
+                catch { /* debug */ }
+                // #endregion
                 return;
             }
 
             ctx.UsouRag = true;
             ctx.ResultadosRag = hits.Count;
+            ctx.FallbacksUsados.Add("rag_hibrido");
+
+            // Refinamento: se o termo ainda estiver vazio/sujo, aproveita título do hit.
+            if (string.IsNullOrWhiteSpace(ctx.ProdutoTermo)
+                || ctx.ProdutoTermo.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length > 2)
+            {
+                var titulo = hits.FirstOrDefault(h => !string.IsNullOrWhiteSpace(h.Titulo))?.Titulo;
+                if (!string.IsNullOrWhiteSpace(titulo))
+                {
+                    var primeiro = titulo.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+                    if (!string.IsNullOrWhiteSpace(primeiro) && primeiro.Length >= 3)
+                    {
+                        ctx.ProdutoTermo = primeiro;
+                        ctx.TermosBuscaProduto = Vocabulario.VocabularioIA.ExpandirTermosBusca(primeiro).ToList();
+                    }
+                }
+            }
 
             // Enriquecer: se ainda sem candidatos, buscar produtos pelos títulos do RAG
             if (ctx.Candidatos.Count == 0)
@@ -344,6 +457,25 @@ namespace Pc.Servico.Implementacoes.MotorIA
                         Preco = p.Preco > 0 ? p.Preco : null,
                         Disponivel = p.Ativo
                     });
+                }
+
+                // Segunda chance SQL com termos refinados pós-RAG.
+                if (ctx.Candidatos.Count == 0 && ctx.TermosBuscaProduto.Count > 0)
+                {
+                    var produtosRag = await _produtos.BuscarPorTermosAsync(ctx.TermosBuscaProduto);
+                    foreach (var p in produtosRag.Take(10))
+                    {
+                        ctx.Candidatos.Add(new CandidatoIA
+                        {
+                            ProdutoId = p.Id,
+                            LojaId = p.LojaId,
+                            Titulo = p.NomeProduto,
+                            NomeProduto = p.NomeProduto,
+                            NomeLoja = p.Loja?.NomeFantasia,
+                            Preco = p.Preco > 0 ? p.Preco : null,
+                            Disponivel = p.Ativo
+                        });
+                    }
                 }
 
                 if (ctx.Candidatos.Count > 0)

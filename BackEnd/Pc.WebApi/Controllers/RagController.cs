@@ -17,17 +17,20 @@ namespace Pc.WebApi.Controllers
     {
         private readonly IRagServico _ragServico;
         private readonly IRagIndexadorServico _indexador;
+        private readonly IRagIndexDlqServico _dlq;
         private readonly RagSettings _settings;
         private readonly ILogger<RagController> _logger;
 
         public RagController(
             IRagServico ragServico,
             IRagIndexadorServico indexador,
+            IRagIndexDlqServico dlq,
             IOptions<RagSettings> settings,
             ILogger<RagController> logger)
         {
             _ragServico = ragServico;
             _indexador = indexador;
+            _dlq = dlq;
             _settings = settings.Value;
             _logger = logger;
         }
@@ -70,17 +73,29 @@ namespace Pc.WebApi.Controllers
 
         [HttpPost("reindex")]
         [ProducesResponseType(typeof(RagReindexResponseDto), StatusCodes.Status200OK)]
-        public async Task<IActionResult> Reindex(CancellationToken cancellationToken)
+        public async Task<IActionResult> Reindex(
+            [FromQuery] bool somentePendentes = false,
+            CancellationToken cancellationToken = default)
         {
-            _logger.LogInformation("Reindexação RAG completa solicitada por admin.");
-            var resultado = await _indexador.ReindexarAsync(cancellationToken: cancellationToken);
-            return Ok(Mapear(resultado, "Reindexação completa concluída."));
+            _logger.LogInformation(
+                "Reindexação RAG completa solicitada por admin. SomentePendentes={Pend}",
+                somentePendentes);
+            var resultado = await _indexador.ReindexarAsync(
+                apenasTipo: null,
+                somentePendentes: somentePendentes,
+                cancellationToken: cancellationToken);
+            return Ok(Mapear(resultado, somentePendentes
+                ? "Reindexação dos pendentes concluída."
+                : "Reindexação completa concluída."));
         }
 
         [HttpPost("reindex/{tipo}")]
         [ProducesResponseType(typeof(RagReindexResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> ReindexTipo(string tipo, CancellationToken cancellationToken)
+        public async Task<IActionResult> ReindexTipo(
+            string tipo,
+            [FromQuery] bool somentePendentes = false,
+            CancellationToken cancellationToken = default)
         {
             if (!Enum.TryParse<RagDocumentoTipo>(tipo, ignoreCase: true, out var parsed)
                 || parsed == RagDocumentoTipo.Markdown)
@@ -88,9 +103,63 @@ namespace Pc.WebApi.Controllers
                 return BadRequest(new { message = "Tipo inválido. Use Produto, Loja, Oferta ou Avaliacao." });
             }
 
-            _logger.LogInformation("Reindexação RAG parcial. Tipo={Tipo}", parsed);
-            var resultado = await _indexador.ReindexarAsync(parsed, cancellationToken);
-            return Ok(Mapear(resultado, $"Reindexação de {parsed} concluída."));
+            _logger.LogInformation(
+                "Reindexação RAG parcial. Tipo={Tipo} SomentePendentes={Pend}",
+                parsed,
+                somentePendentes);
+            var resultado = await _indexador.ReindexarAsync(parsed, somentePendentes, cancellationToken);
+            return Ok(Mapear(resultado, somentePendentes
+                ? $"Reindexação pendente de {parsed} concluída."
+                : $"Reindexação de {parsed} concluída."));
+        }
+
+        [HttpGet("dlq")]
+        [ProducesResponseType(typeof(RagDlqListResponseDto), StatusCodes.Status200OK)]
+        public async Task<IActionResult> ListarDlq([FromQuery] int limite = 50, CancellationToken cancellationToken = default)
+        {
+            var itens = await _dlq.ListarPendentesAsync(limite, cancellationToken);
+            return Ok(new RagDlqListResponseDto
+            {
+                Sucesso = true,
+                Total = itens.Count,
+                Itens = itens.Select(i => new RagDlqItemResponseDto
+                {
+                    Id = i.Id,
+                    Tipo = i.Tipo,
+                    EntidadeId = i.EntidadeId,
+                    Acao = i.Acao,
+                    Tentativas = i.Tentativas,
+                    UltimoErro = i.UltimoErro,
+                    Status = i.Status,
+                    CriadoEmUtc = i.CriadoEmUtc,
+                    ReprocessadoEmUtc = i.ReprocessadoEmUtc
+                }).ToList()
+            });
+        }
+
+        [HttpPost("dlq/{id:guid}/retry")]
+        public async Task<IActionResult> RetryDlq(Guid id, CancellationToken cancellationToken)
+        {
+            var ok = await _dlq.ReprocessarAsync(id, cancellationToken);
+            if (!ok)
+                return NotFound(new { message = "Item DLQ não encontrado ou já processado." });
+            return Ok(new { sucesso = true, mensagem = "Evento reenfileirado." });
+        }
+
+        [HttpPost("dlq/retry-all")]
+        public async Task<IActionResult> RetryAllDlq([FromQuery] int limite = 20, CancellationToken cancellationToken = default)
+        {
+            var n = await _dlq.ReprocessarPendentesAsync(limite, cancellationToken);
+            return Ok(new { sucesso = true, reprocessados = n });
+        }
+
+        [HttpPost("dlq/{id:guid}/discard")]
+        public async Task<IActionResult> DiscardDlq(Guid id, CancellationToken cancellationToken)
+        {
+            var ok = await _dlq.DescartarAsync(id, cancellationToken);
+            if (!ok)
+                return NotFound(new { message = "Item DLQ não encontrado ou já processado." });
+            return Ok(new { sucesso = true, mensagem = "Item descartado." });
         }
 
         private static RagReindexResponseDto Mapear(RagReindexResultado r, string mensagem) => new()
