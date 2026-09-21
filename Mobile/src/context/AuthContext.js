@@ -169,6 +169,7 @@ export function AuthProvider({ children }) {
         isCliente: emModoCliente,
         isLojista: session?.tipo === 'lojista',
         isVendedor: session?.tipo === 'vendedor',
+        isAdmin: String(session?.tipo ?? '').toLowerCase() === 'admin',
       }}
     >
       {children}

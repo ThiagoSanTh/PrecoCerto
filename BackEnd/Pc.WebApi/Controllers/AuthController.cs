@@ -56,7 +56,9 @@ namespace Pc.WebApi.Controllers
                 if (tipo == "admin")
                     return await LoginAdminAsync(dto);
 
-                return await LoginUsuarioAsync(dto);
+                // Login unificado: se não houver usuário com o e-mail, tenta Admin
+                // (permite o mesmo formulário do app para o admin de testes).
+                return await LoginUsuarioOuAdminAsync(dto);
             }
             catch (Exception ex)
             {
@@ -125,11 +127,15 @@ namespace Pc.WebApi.Controllers
             }
         }
 
-        private async Task<IActionResult> LoginUsuarioAsync(AuthLoginDto dto)
+        private async Task<IActionResult> LoginUsuarioOuAdminAsync(AuthLoginDto dto)
         {
             var result = await _usuarioServico.ValidarLoginDetalhadoAsync(dto.Email, dto.Senha);
             if (result.Erro == LoginErroCodigo.EmailNaoEncontrado)
             {
+                var admin = await _adminServico.ValidarLoginAsync(dto.Email, dto.Senha);
+                if (admin is not null)
+                    return await LoginAdminAsync(dto);
+
                 return Unauthorized(new
                 {
                     code = "EMAIL_NOT_FOUND",

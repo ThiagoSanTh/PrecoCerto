@@ -11,6 +11,7 @@ namespace Pc.Servico.Interfaces
         Task<List<Oferta>> ListarAsync();
         Task<PaginacaoResultado<Oferta>> ListarPaginadoAsync(PaginacaoParametros paginacao);
         Task<List<Oferta>> ObterPorProdutoAsync(Guid produtoId);
+        Task<List<Oferta>> ListarDisponiveisPorProdutosAsync(IEnumerable<Guid> produtoIds);
         Task AtualizarAsync(Oferta oferta);
         Task RemoverAsync(Guid id);
     }

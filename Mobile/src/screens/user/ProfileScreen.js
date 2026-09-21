@@ -59,6 +59,20 @@ export default function ProfileScreen({ navigation }) {
         <SecondaryButton label="Alterar e-mail" onPress={() => navigation.navigate('EditEmail')} />
         <SecondaryButton label="Alterar senha" onPress={() => navigation.navigate('ChangePassword')} />
 
+        {!emModoLoja ? (
+          <PrimaryButton
+            label="Assistente Preço Certo"
+            onPress={() => navigation.navigate('AiChat')}
+            style={{ marginTop: 8 }}
+          />
+        ) : null}
+
+        {String(session?.tipo ?? '').toLowerCase() === 'admin' ? (
+          <Text style={[formStyles.sectionHint, styles.hintCentered, { marginTop: 4 }]}>
+            Conta admin: o assistente mostra detalhes do MotorIA (intenção, score, fallbacks).
+          </Text>
+        ) : null}
+
         {podeCriarLoja(session) ? (
           <PrimaryButton
             label="Criar loja"

@@ -57,8 +57,48 @@ namespace Pc.Repositorio.Implementacoes
             return await _context.Ofertas
                 .Include(o => o.Produto)
                 .Include(o => o.Loja)
+                    .ThenInclude(l => l!.Endereco)
                 .Where(o => o.ProdutoId == produtoId)
                 .AsNoTracking()
+                .ToListAsync();
+        }
+
+        public async Task<List<Guid>> ListarIdsPorProdutoAsync(Guid produtoId, int limite = 200)
+        {
+            limite = Math.Clamp(limite, 1, 2000);
+            return await _context.Ofertas.AsNoTracking()
+                .Where(o => o.ProdutoId == produtoId)
+                .OrderBy(o => o.Id)
+                .Select(o => o.Id)
+                .Take(limite)
+                .ToListAsync();
+        }
+
+        public async Task<List<Guid>> ListarIdsPorLojaAsync(Guid lojaId, int limite = 500)
+        {
+            limite = Math.Clamp(limite, 1, 5000);
+            return await _context.Ofertas.AsNoTracking()
+                .Where(o => o.LojaId == lojaId)
+                .OrderBy(o => o.Id)
+                .Select(o => o.Id)
+                .Take(limite)
+                .ToListAsync();
+        }
+
+        public async Task<List<Oferta>> ListarDisponiveisPorProdutosAsync(IEnumerable<Guid> produtoIds)
+        {
+            var ids = produtoIds.Distinct().Take(20).ToList();
+            if (ids.Count == 0)
+                return new List<Oferta>();
+
+            return await _context.Ofertas
+                .AsNoTracking()
+                .Include(o => o.Produto)
+                .Include(o => o.Loja)
+                    .ThenInclude(l => l!.Endereco)
+                .Where(o => ids.Contains(o.ProdutoId) && o.Disponivel)
+                .OrderBy(o => o.Preco)
+                .Take(100)
                 .ToListAsync();
         }
 
