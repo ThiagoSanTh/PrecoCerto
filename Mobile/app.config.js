@@ -1,5 +1,7 @@
 const base = require('./app.json');
 
+const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+
 module.exports = {
   expo: {
     ...base.expo,
@@ -20,6 +22,14 @@ module.exports = {
         'READ_MEDIA_IMAGES',
         'CAMERA',
       ],
+      ...(googleMapsApiKey
+        ? {
+            config: {
+              ...(base.expo.android?.config || {}),
+              googleMaps: { apiKey: googleMapsApiKey },
+            },
+          }
+        : {}),
     },
     plugins: [
       ...(base.expo.plugins || []),

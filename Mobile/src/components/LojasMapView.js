@@ -1,26 +1,40 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import LeafletMapFrame from './LeafletMapFrame';
+import MapView, { Marker, Polyline, Callout } from 'react-native-maps';
 import { obterLocalizacaoAtual } from '../services/locationService';
+import { normalizarLojaParaMapa } from '../utils/mapaUtils';
 import {
-  buildLojasMapHtml,
-  normalizarLojaParaMapa,
-  prepararDadosMapaLojas,
-  sanitizarLojasParaHtml,
-} from '../utils/leafletMapHtml';
+  MAX_ZOOM_SAQUAREMA,
+  MIN_ZOOM_SAQUAREMA,
+  regiaoParaPontos,
+  regiaoInicialSaquarema,
+  travarCoordenadaEmSaquarema,
+} from '../utils/saquaremaLock';
+import {
+  buscarRota,
+  escolherLojaDestino,
+  distanciaKm,
+  formatarDistanciaKm,
+} from '../utils/rotaUtils';
+import { useMapaSaquarema } from '../hooks/useMapaSaquarema';
 import { styles as appStyles } from '../theme';
 
+const COR_LOJA = '#14B8A6';
+const COR_DESTAQUE = '#F59E0B';
+const COR_DESTINO = '#EA580C';
+const COR_CLIENTE = '#2563EB';
+const COR_ROTA = '#0F766E';
+
 /**
- * Mapa do feed com lojas.
- * Enquanto o usuário busca, pins com resultado ganham destaque.
- * Lojas sem match continuam visíveis; o Card do marker explica o estado.
+ * Mapa do feed com MapView e Marker.
+ * Abre enquadrado em Saquarema/RJ. Durante a busca, desenha a rota
+ * do ponto do cliente até a loja de destino.
  */
 export default function LojasMapView({
   lojas,
   localizacaoCliente: localizacaoExterna,
   lojaIdsDestaque = null,
   produtosPorLoja = {},
-  imagemPinPorLoja = {},
   buscaAtiva = false,
   onProductPress,
   onStorePress,
@@ -28,8 +42,10 @@ export default function LojasMapView({
 }) {
   const [localizacaoInterna, setLocalizacaoInterna] = useState(null);
   const [erroGps, setErroGps] = useState(null);
-  const frameRef = useRef(null);
-  const mapaProntoRef = useRef(false);
+  const [lojaDestinoId, setLojaDestinoId] = useState(null);
+  const [rota, setRota] = useState([]);
+  const { mapRef, aplicarLimites, mostrarRegiao, onRegionChangeComplete, regiaoInicial } =
+    useMapaSaquarema();
   const gpsProprio = localizacaoExterna === undefined;
 
   useEffect(() => {
@@ -44,9 +60,7 @@ export default function LojasMapView({
           setErroGps(null);
         }
       } catch (e) {
-        if (ativo) {
-          setErroGps(e.message || 'GPS indisponível');
-        }
+        if (ativo) setErroGps(e.message || 'GPS indisponível');
       }
     })();
 
@@ -55,7 +69,18 @@ export default function LojasMapView({
     };
   }, [gpsProprio]);
 
-  const localizacaoCliente = gpsProprio ? localizacaoInterna : localizacaoExterna;
+  useEffect(() => {
+    if (!buscaAtiva) setLojaDestinoId(null);
+  }, [buscaAtiva]);
+
+  const localizacaoBruta = gpsProprio ? localizacaoInterna : localizacaoExterna;
+  const cliente = useMemo(() => {
+    if (localizacaoBruta?.latitude == null || localizacaoBruta?.longitude == null) return null;
+    return travarCoordenadaEmSaquarema({
+      latitude: Number(localizacaoBruta.latitude),
+      longitude: Number(localizacaoBruta.longitude),
+    });
+  }, [localizacaoBruta?.latitude, localizacaoBruta?.longitude]);
 
   const lojasNoMapa = useMemo(
     () =>
@@ -70,6 +95,36 @@ export default function LojasMapView({
     [lojas]
   );
 
+  const destino = useMemo(() => {
+    if (!buscaAtiva) return null;
+    return escolherLojaDestino(lojasNoMapa, lojaIdsDestaque, cliente, lojaDestinoId);
+  }, [buscaAtiva, lojasNoMapa, lojaIdsDestaque, cliente, lojaDestinoId]);
+
+  useEffect(() => {
+    if (!buscaAtiva || !cliente || !destino) {
+      setRota([]);
+      return undefined;
+    }
+    let ativo = true;
+    buscarRota(cliente, { latitude: destino.lat, longitude: destino.lng }).then((pontos) => {
+      if (ativo) setRota(pontos);
+    });
+    return () => {
+      ativo = false;
+    };
+  }, [buscaAtiva, cliente, destino]);
+
+  useEffect(() => {
+    if (buscaAtiva && rota.length >= 2) {
+      mostrarRegiao(regiaoParaPontos([rota[0], rota[rota.length - 1], {
+        latitude: destino.lat,
+        longitude: destino.lng,
+      }]));
+      return;
+    }
+    if (!buscaAtiva) mostrarRegiao(regiaoInicialSaquarema());
+  }, [buscaAtiva, rota, destino, mostrarRegiao]);
+
   const semCoordenadas = (lojas || []).length - lojasNoMapa.length;
   const avisoTexto =
     [
@@ -79,92 +134,117 @@ export default function LojasMapView({
       .filter(Boolean)
       .join(' ') || null;
 
-  const mapHtml = useMemo(() => {
-    const dados = prepararDadosMapaLojas(null, lojasNoMapa);
-    dados.marcadores = sanitizarLojasParaHtml(dados.marcadores);
-    return buildLojasMapHtml(dados);
-  }, [lojasNoMapa]);
+  const idsDestaque = useMemo(() => {
+    if (!Array.isArray(lojaIdsDestaque)) return null;
+    return new Set(lojaIdsDestaque.map(String));
+  }, [lojaIdsDestaque]);
 
-  const mapKey = useMemo(() => {
-    const count = lojasNoMapa.length;
-    const hash = lojasNoMapa.slice(0, 5).map((l) => l.id).join('-');
-    return `n${count}-${hash}`;
-  }, [lojasNoMapa]);
+  function abrirLoja(loja) {
+    const produto = (produtosPorLoja?.[loja.id] || produtosPorLoja?.[String(loja.id)] || [])[0];
+    if (produto?.id && onProductPress) onProductPress(produto.id);
+    else if (onStorePress) onStorePress(loja.id);
+  }
 
-  const enviarDestaques = useCallback(() => {
-    if (!mapaProntoRef.current) return;
-    frameRef.current?.enviarMensagem({
-      type: 'destaques',
-      payload: {
-        lojaIds: lojaIdsDestaque,
-        produtosPorLoja,
-        imagemPinPorLoja,
-        buscaAtiva: Boolean(buscaAtiva),
-      },
-    });
-  }, [lojaIdsDestaque, produtosPorLoja, imagemPinPorLoja, buscaAtiva]);
-
-  const enviarCliente = useCallback(() => {
-    if (!mapaProntoRef.current || !localizacaoCliente) return;
-    frameRef.current?.enviarMensagem({
-      type: 'cliente',
-      payload: {
-        lat: Number(localizacaoCliente.latitude),
-        lng: Number(localizacaoCliente.longitude),
-      },
-    });
-  }, [localizacaoCliente]);
-
-  useEffect(() => {
-    enviarDestaques();
-  }, [enviarDestaques]);
-
-  useEffect(() => {
-    enviarCliente();
-  }, [enviarCliente]);
-
-  useEffect(() => {
-    mapaProntoRef.current = false;
-  }, [mapKey]);
-
-  function handleMessage(event) {
-    try {
-      const data = JSON.parse(event.nativeEvent.data);
-      if (data.type === 'ready') {
-        mapaProntoRef.current = true;
-        enviarDestaques();
-        enviarCliente();
-      } else if (data.type === 'product' && data.productId && onProductPress) {
-        onProductPress(data.productId);
-      } else if (data.type === 'store' && data.lojaId && onStorePress) {
-        onStorePress(data.lojaId);
-      }
-    } catch {
-      /* ignore */
+  function descricaoLoja(loja, produto, distancia) {
+    const linhas = [];
+    if (produto) {
+      linhas.push(produto.nome);
+      if (produto.preco) linhas.push(produto.preco);
+    } else if (buscaAtiva) {
+      linhas.push('Esta loja não possui resultado para sua busca.');
+    } else if (loja.endereco) {
+      linhas.push(loja.endereco);
     }
+    if (distancia) linhas.push(distancia);
+    if (destino && String(destino.id) === String(loja.id)) linhas.push('Rota a partir do seu ponto');
+    linhas.push('Toque para abrir');
+    return linhas.join('\n');
   }
 
   return (
     <View style={[styles.container, edgeToEdge && styles.containerEdgeToEdge]}>
+      {destino && buscaAtiva ? (
+        <View style={styles.rotaBanner} pointerEvents="none">
+          <Text style={styles.rotaBannerText}>Rota até {destino.nome}</Text>
+        </View>
+      ) : null}
       {edgeToEdge && avisoTexto ? (
         <View style={styles.bannerOverlay} pointerEvents="none">
           <Text style={styles.bannerText}>{avisoTexto}</Text>
         </View>
       ) : null}
       {!edgeToEdge && semCoordenadas > 0 ? (
-        <Text style={appStyles.hint}>
-          {semCoordenadas} loja(s) sem localização no mapa.
-        </Text>
+        <Text style={appStyles.hint}>{semCoordenadas} loja(s) sem localização no mapa.</Text>
       ) : null}
       {!edgeToEdge && erroGps ? <Text style={appStyles.hint}>{erroGps}</Text> : null}
-      <LeafletMapFrame
-        ref={frameRef}
-        key={mapKey}
-        mapKey={mapKey}
+      <MapView
+        ref={mapRef}
         style={[styles.map, edgeToEdge && styles.mapEdgeToEdge]}
-        html={mapHtml}
-        onMessage={handleMessage}
-      />
+        initialRegion={regiaoInicial}
+        minZoomLevel={MIN_ZOOM_SAQUAREMA}
+        maxZoomLevel={MAX_ZOOM_SAQUAREMA}
+        onMapReady={aplicarLimites}
+        onRegionChangeComplete={onRegionChangeComplete}
+        rotateEnabled={false}
+        pitchEnabled={false}
+        toolbarEnabled={false}
+        moveOnMarkerPress={false}
+      >
+        {rota.length >= 2 ? (
+          <Polyline coordinates={rota} strokeColor={COR_ROTA} strokeWidth={4} />
+        ) : null}
+        {cliente ? (
+          <Marker
+            coordinate={cliente}
+            title="Você"
+            description="Ponto da busca em Saquarema"
+            pinColor={COR_CLIENTE}
+            anchor={{ x: 0.5, y: 1 }}
+          />
+        ) : null}
+        {lojasNoMapa.map((loja) => {
+          const id = String(loja.id);
+          const destaque = idsDestaque?.has(id) === true;
+          const ehDestino = destino && String(destino.id) === id;
+          const produto = (produtosPorLoja?.[loja.id] || produtosPorLoja?.[id] || [])[0];
+          const distancia = cliente
+            ? formatarDistanciaKm(
+                distanciaKm(cliente, { latitude: loja.lat, longitude: loja.lng })
+              )
+            : '';
+          return (
+            <Marker
+              key={id}
+              coordinate={{ latitude: loja.lat, longitude: loja.lng }}
+              title={loja.nome}
+              description={descricaoLoja(loja, produto, distancia)}
+              pinColor={ehDestino ? COR_DESTINO : destaque ? COR_DESTAQUE : COR_LOJA}
+              anchor={{ x: 0.5, y: 1 }}
+              onPress={() => {
+                if (buscaAtiva) setLojaDestinoId(id);
+              }}
+            >
+              <Callout onPress={() => abrirLoja(loja)}>
+                <View style={styles.callout}>
+                  <Text style={styles.calloutTitulo}>{loja.nome}</Text>
+                  {produto ? (
+                    <>
+                      <Text style={styles.calloutProduto}>{produto.nome}</Text>
+                      {produto.preco ? <Text style={styles.calloutPreco}>{produto.preco}</Text> : null}
+                    </>
+                  ) : buscaAtiva ? (
+                    <Text style={styles.calloutMeta}>Esta loja não possui resultado para sua busca.</Text>
+                  ) : loja.endereco ? (
+                    <Text style={styles.calloutMeta}>{loja.endereco}</Text>
+                  ) : null}
+                  {distancia ? <Text style={styles.calloutMeta}>{distancia}</Text> : null}
+                  <Text style={styles.calloutAcao}>Toque para abrir</Text>
+                </View>
+              </Callout>
+            </Marker>
+          );
+        })}
+      </MapView>
     </View>
   );
 }
@@ -186,12 +266,29 @@ const styles = StyleSheet.create({
   mapEdgeToEdge: {
     borderRadius: 0,
   },
+  rotaBanner: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    right: 12,
+    zIndex: 20,
+    backgroundColor: 'rgba(15, 118, 110, 0.92)',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  rotaBannerText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
   bannerOverlay: {
     position: 'absolute',
     bottom: 12,
     left: 12,
     right: 12,
-    zIndex: 5,
+    zIndex: 20,
     backgroundColor: 'rgba(15, 23, 42, 0.75)',
     borderRadius: 8,
     paddingHorizontal: 12,
@@ -201,5 +298,36 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     textAlign: 'center',
+  },
+  callout: {
+    maxWidth: 220,
+    padding: 2,
+  },
+  calloutTitulo: {
+    fontWeight: '700',
+    fontSize: 15,
+    color: '#0f172a',
+  },
+  calloutProduto: {
+    marginTop: 4,
+    fontSize: 13,
+    color: '#334155',
+  },
+  calloutPreco: {
+    marginTop: 2,
+    color: '#0D9488',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  calloutMeta: {
+    marginTop: 4,
+    color: '#64748b',
+    fontSize: 12,
+  },
+  calloutAcao: {
+    marginTop: 6,
+    color: '#0F766E',
+    fontWeight: '600',
+    fontSize: 12,
   },
 });

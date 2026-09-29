@@ -236,8 +236,7 @@ App Expo (React Native) em `Mobile/src/`.
 | `form/` | FormScreen, FormField, FormButton, ListCard — base visual de formulários |
 | `feed/` | ProductGridCard, FavoritoListCard, WeatherCard, MapSearchOverlay |
 | `product/` | Galeria, rating, barra de ações, seletor de categoria |
-| `LojasMapView.js` | Mapa Leaflet com lojas próximas |
-| `LeafletMapFrame.js` | WebView que renderiza o HTML do mapa |
+| `LojasMapView.js` | Mapa (react-native-maps) com lojas, rota e trava em Saquarema |
 | `CustomTabBar.js` | Tab bar customizada do app |
 
 ### `navigation/` — rotas
@@ -264,7 +263,8 @@ App Expo (React Native) em `Mobile/src/`.
 |---------|---------|
 | `produtoUtils.js` | Normalização e filtros de produto |
 | `precoUtils.js` | Formatação e mapa de ofertas por produto |
-| `leafletMapHtml.js` | Gera HTML do mapa (marcadores, clustering >100 pins) |
+| `saquaremaLock.js` | Trava a câmera e os pontos na cidade de Saquarema/RJ |
+| `rotaUtils.js` | Rota do cliente até a loja de destino |
 | `validacaoUtils.js` | Validações no front (CPF, telefone, etc.) |
 | `apiErrorUtils.js` | Traduz erros da API em mensagens amigáveis |
 | `categoriasProduto.js` | Labels das categorias |
