@@ -38,7 +38,12 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.includes('/api/')) return;
 
   // Bundles Expo: sempre rede (hash muda a cada deploy).
-  if (url.pathname.startsWith('/_expo/') || url.pathname.startsWith('/assets/')) {
+  // index.bundle é o bundle do `expo start --web`; se entrar no cache, o mapa fica preso na versão antiga.
+  if (
+    url.pathname.startsWith('/_expo/') ||
+    url.pathname.startsWith('/assets/') ||
+    url.pathname.includes('.bundle')
+  ) {
     event.respondWith(fetch(request));
     return;
   }

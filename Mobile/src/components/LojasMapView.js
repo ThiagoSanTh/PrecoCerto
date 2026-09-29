@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import MapView, { Marker, Polyline, Callout } from 'react-native-maps';
 import { obterLocalizacaoAtual } from '../services/locationService';
@@ -114,16 +114,18 @@ export default function LojasMapView({
     };
   }, [buscaAtiva, cliente, destino]);
 
+  const rotaEnquadradaRef = useRef(false);
   useEffect(() => {
-    if (buscaAtiva && rota.length >= 2) {
-      mostrarRegiao(regiaoParaPontos([rota[0], rota[rota.length - 1], {
-        latitude: destino.lat,
-        longitude: destino.lng,
-      }]));
+    if (!buscaAtiva) {
+      rotaEnquadradaRef.current = false;
+      mostrarRegiao(regiaoInicialSaquarema());
       return;
     }
-    if (!buscaAtiva) mostrarRegiao(regiaoInicialSaquarema());
-  }, [buscaAtiva, rota, destino, mostrarRegiao]);
+    if (rota.length >= 2 && !rotaEnquadradaRef.current) {
+      rotaEnquadradaRef.current = true;
+      mostrarRegiao(regiaoParaPontos([rota[0], rota[rota.length - 1]]));
+    }
+  }, [buscaAtiva, rota, mostrarRegiao]);
 
   const semCoordenadas = (lojas || []).length - lojasNoMapa.length;
   const avisoTexto =

@@ -27,6 +27,12 @@ function ensureLeaflet() {
       link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
       document.head.appendChild(link);
     }
+    if (!document.getElementById('pc-pin-style')) {
+      const style = document.createElement('style');
+      style.id = 'pc-pin-style';
+      style.textContent = '.leaflet-marker-icon.pc-pin{background:transparent;border:none;}';
+      document.head.appendChild(style);
+    }
     const script = document.createElement('script');
     script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
     script.async = true;
@@ -50,13 +56,14 @@ function escapeHtml(text) {
 }
 
 function pinIcon(L, color) {
-  const html = `<div style="width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${color};border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)"></div>`;
+  const safe = /^#[0-9A-Fa-f]{3,8}$/.test(color) ? color : '#14B8A6';
+  const html = `<div style="width:22px;height:22px;margin:3px;border-radius:50%;background:${safe};border:3px solid #fff;box-shadow:0 0 0 2px ${safe}"></div>`;
   return L.divIcon({
-    className: '',
+    className: 'pc-pin',
     html,
     iconSize: [28, 28],
-    iconAnchor: [14, 28],
-    popupAnchor: [0, -28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -16],
   });
 }
 
@@ -265,6 +272,26 @@ export function Marker({
   const callout = acharCallout(children);
   calloutRef.current = callout;
   const temAcao = Boolean(callout?.props?.onPress);
+  const propsRef = useRef({});
+  propsRef.current = { coordinate, title, description, pinColor, draggable, temAcao };
+
+  function aplicarMarcador(marker) {
+    const atual = propsRef.current;
+    if (!marker || !window.L || !atual.coordinate) return;
+    marker.setLatLng([atual.coordinate.latitude, atual.coordinate.longitude]);
+    marker.setIcon(pinIcon(window.L, atual.pinColor || '#14B8A6'));
+    if (atual.draggable) marker.dragging?.enable();
+    else marker.dragging?.disable();
+    const estavaAberto = marker.isPopupOpen();
+    marker.bindPopup(
+      popupHtml({
+        title: atual.title,
+        description: atual.description,
+        comAcao: atual.temAcao,
+      })
+    );
+    if (estavaAberto) marker.openPopup();
+  }
 
   useEffect(() => {
     if (!map || !window.L || !coordinate) return undefined;
@@ -272,11 +299,15 @@ export function Marker({
     const marker = L.marker([coordinate.latitude, coordinate.longitude], {
       icon: pinIcon(L, pinColor),
       draggable: Boolean(draggable),
+      bubblingMouseEvents: false,
+      autoPanOnFocus: false,
     }).addTo(map);
     markerRef.current = marker;
+    aplicarMarcador(marker);
 
     marker.on('click', (evento) => {
-      L.DomEvent.stopPropagation(evento);
+      if (evento?.originalEvent) L.DomEvent.stopPropagation(evento.originalEvent);
+      marker.openPopup();
       const ponto = marker.getLatLng();
       onPressRef.current?.({
         nativeEvent: { coordinate: { latitude: ponto.lat, longitude: ponto.lng } },
@@ -307,19 +338,7 @@ export function Marker({
   }, [map]);
 
   useEffect(() => {
-    const marker = markerRef.current;
-    if (!marker || !window.L || !coordinate) return;
-    marker.setLatLng([coordinate.latitude, coordinate.longitude]);
-    marker.setIcon(pinIcon(window.L, pinColor || '#14B8A6'));
-    if (draggable) marker.dragging?.enable();
-    else marker.dragging?.disable();
-    marker.bindPopup(
-      popupHtml({
-        title,
-        description,
-        comAcao: temAcao,
-      })
-    );
+    aplicarMarcador(markerRef.current);
   }, [coordinate?.latitude, coordinate?.longitude, pinColor, title, description, draggable, temAcao]);
 
   return null;
