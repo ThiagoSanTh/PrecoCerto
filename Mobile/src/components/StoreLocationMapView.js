@@ -1,8 +1,17 @@
-import { useMemo } from 'react';
+import { useEffect, useRef } from 'react';
 import { StyleSheet } from 'react-native';
-import { buildLeafletPickerMapHtml } from '../utils/leafletMapHtml';
-import LeafletMapFrame from './LeafletMapFrame';
+import MapView, { Marker } from 'react-native-maps';
+import {
+  MAX_ZOOM_SAQUAREMA,
+  MIN_ZOOM_SAQUAREMA,
+  regiaoParaPontos,
+  travarCoordenadaEmSaquarema,
+} from '../utils/saquaremaLock';
+import { useMapaSaquarema } from '../hooks/useMapaSaquarema';
 
+/**
+ * Mapa para marcar a loja. Abre em Saquarema e não deixa o pin sair da cidade.
+ */
 export default function StoreLocationMapView({
   latitude,
   longitude,
@@ -10,39 +19,66 @@ export default function StoreLocationMapView({
   onCoordsChange,
   style,
 }) {
-  const mapHtml = useMemo(
-    () =>
-      buildLeafletPickerMapHtml({
-        latitude,
-        longitude,
-        titulo,
-      }),
-    [latitude, longitude, titulo]
-  );
+  const { mapRef, aplicarLimites, mostrarRegiao, onRegionChangeComplete, regiaoInicial } =
+    useMapaSaquarema();
+  const onChangeRef = useRef(onCoordsChange);
+  const semPinNoInicio = useRef(latitude == null || longitude == null);
+  onChangeRef.current = onCoordsChange;
 
-  const mapKey = `${latitude ?? 'x'}-${longitude ?? 'y'}`;
+  const pin =
+    latitude != null && longitude != null
+      ? travarCoordenadaEmSaquarema({ latitude, longitude })
+      : null;
 
-  function handleMessage(event) {
-    try {
-      const msg = JSON.parse(event.nativeEvent.data);
-      if (msg.type === 'coords' && onCoordsChange) {
-        onCoordsChange({
-          latitude: msg.latitude,
-          longitude: msg.longitude,
-        });
-      }
-    } catch {
-      /* ignore */
+  useEffect(() => {
+    if (latitude == null || longitude == null) return;
+    const travada = travarCoordenadaEmSaquarema({ latitude, longitude });
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+    if (Math.abs(travada.latitude - lat) > 0.00001 || Math.abs(travada.longitude - lng) > 0.00001) {
+      onChangeRef.current?.(travada);
     }
+  }, [latitude, longitude]);
+
+  useEffect(() => {
+    if (latitude == null || longitude == null || !semPinNoInicio.current) return;
+    semPinNoInicio.current = false;
+    mostrarRegiao(
+      regiaoParaPontos([travarCoordenadaEmSaquarema({ latitude, longitude })])
+    );
+  }, [latitude, longitude, mostrarRegiao]);
+
+  function publicar(coordenada) {
+    onChangeRef.current?.(travarCoordenadaEmSaquarema(coordenada));
   }
 
   return (
-    <LeafletMapFrame
-      mapKey={mapKey}
+    <MapView
+      ref={mapRef}
       style={[styles.map, style]}
-      html={mapHtml}
-      onMessage={handleMessage}
-    />
+      initialRegion={pin ? regiaoParaPontos([pin]) : regiaoInicial}
+      minZoomLevel={MIN_ZOOM_SAQUAREMA}
+      maxZoomLevel={MAX_ZOOM_SAQUAREMA}
+      onMapReady={aplicarLimites}
+      onRegionChangeComplete={onRegionChangeComplete}
+      onPress={(evento) => publicar(evento.nativeEvent.coordinate)}
+      rotateEnabled={false}
+      pitchEnabled={false}
+      toolbarEnabled={false}
+      moveOnMarkerPress={false}
+    >
+      {pin ? (
+        <Marker
+          coordinate={pin}
+          title={titulo || 'Local da loja'}
+          description="Saquarema, RJ"
+          pinColor="#14B8A6"
+          draggable
+          anchor={{ x: 0.5, y: 1 }}
+          onDragEnd={(evento) => publicar(evento.nativeEvent.coordinate)}
+        />
+      ) : null}
+    </MapView>
   );
 }
 
