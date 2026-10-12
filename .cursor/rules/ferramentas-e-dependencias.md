@@ -110,7 +110,7 @@ Instaladas automaticamente pelo `npm ci` / `npm install` em `Mobile\`:
 | `expo-image-picker` | Foto do produto |
 | `expo-location` | GPS do cliente |
 | `expo-secure-store` | Token JWT |
-| `react-native-webview` | Mapa Leaflet |
+| `react-native-maps` | Mapa (MapView e Marker) no mobile; no web o Metro usa o mesmo API via shim |
 
 Não é necessário instalar `expo` globalmente (`npm install -g expo`). Use sempre `npm start` ou `npx expo` dentro de `Mobile\`.
 

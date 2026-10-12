@@ -99,3 +99,30 @@ export function inicialPlaceholder(nome) {
   const letra = (nome || '?').trim().charAt(0).toUpperCase();
   return letra || '?';
 }
+
+/** Normaliza loja da API para o marcador do mapa. */
+export function normalizarLojaParaMapa(loja) {
+  const lat =
+    loja?.latitude ??
+    loja?.Latitude ??
+    loja?.endereco?.latitude ??
+    loja?.Endereco?.Latitude;
+  const lng =
+    loja?.longitude ??
+    loja?.Longitude ??
+    loja?.endereco?.longitude ??
+    loja?.Endereco?.Longitude;
+  const nome = loja?.nomeFantasia ?? loja?.NomeFantasia ?? 'Loja';
+  const logradouro = loja?.endereco?.logradouro ?? loja?.Endereco?.Logradouro ?? '';
+  const cidade = loja?.endereco?.cidade ?? loja?.Endereco?.Cidade ?? '';
+
+  return {
+    id: loja?.id ?? loja?.Id,
+    lat: lat != null && lat !== '' ? Number(lat) : null,
+    lng: lng != null && lng !== '' ? Number(lng) : null,
+    nome,
+    endereco: [logradouro, cidade].filter(Boolean).join(' — '),
+    media: loja?.mediaAvaliacoes ?? loja?.MediaAvaliacoes ?? null,
+    inicial: inicialPlaceholder(nome),
+  };
+}
