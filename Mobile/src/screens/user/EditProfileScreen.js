@@ -1,5 +1,5 @@
 import { Alert } from 'react-native';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { atualizarCliente } from '../../services/clienteService';
 import { isTelefoneValido } from '../../utils/validacaoUtils';
@@ -10,8 +10,10 @@ export default function EditProfileScreen({ navigation }) {
   const [nomeUsuario, setNomeUsuario] = useState(session?.perfil?.nomeUsuario || '');
   const [telefone, setTelefone] = useState(session?.perfil?.telefone || '');
   const [loading, setLoading] = useState(false);
+  const telefoneRef = useRef(null);
 
   async function handleSalvar() {
+    if (loading) return;
     if (!nomeUsuario.trim()) {
       Alert.alert('Erro', 'Informe o nome de usuário.');
       return;
@@ -44,8 +46,22 @@ export default function EditProfileScreen({ navigation }) {
       onBack={() => navigation.goBack()}
       footer={<PrimaryButton label="Salvar" onPress={handleSalvar} loading={loading} />}
     >
-      <FormField label="Nome de usuário" value={nomeUsuario} onChangeText={setNomeUsuario} />
-      <FormField label="Telefone" value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" />
+      <FormField
+        label="Nome de usuário"
+        value={nomeUsuario}
+        onChangeText={setNomeUsuario}
+        returnKeyType="next"
+        onSubmitEditing={() => telefoneRef.current?.focus()}
+      />
+      <FormField
+        ref={telefoneRef}
+        label="Telefone"
+        value={telefone}
+        onChangeText={setTelefone}
+        keyboardType="phone-pad"
+        returnKeyType="done"
+        onSubmitEditing={handleSalvar}
+      />
     </FormScreen>
   );
 }

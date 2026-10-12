@@ -1,5 +1,5 @@
 import { View, Text, Pressable, Alert, Image, StyleSheet } from 'react-native';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { listarProdutosParaFeed } from '../../services/productService';
 import { nomeProduto, filtrarProdutosPorTermo } from '../../utils/produtoUtils';
 import { criarOferta } from '../../services/ofertaService';
@@ -56,6 +56,7 @@ export default function CreateOfertaScreen({ navigation }) {
   const [preco, setPreco] = useState('');
   const [quantidadeEstoque, setQuantidadeEstoque] = useState('');
   const [loading, setLoading] = useState(false);
+  const quantidadeEstoqueRef = useRef(null);
 
   useEffect(() => {
     if (!lojaId) return;
@@ -188,13 +189,18 @@ export default function CreateOfertaScreen({ navigation }) {
         value={preco}
         onChangeText={setPreco}
         keyboardType="decimal-pad"
+        returnKeyType="next"
+        onSubmitEditing={() => quantidadeEstoqueRef.current?.focus()}
       />
       <FormField
+        ref={quantidadeEstoqueRef}
         label="Quantidade em estoque"
         value={quantidadeEstoque}
         onChangeText={setQuantidadeEstoque}
         keyboardType="number-pad"
         placeholder="opcional"
+        returnKeyType="go"
+        onSubmitEditing={handleSalvar}
       />
     </FormScreen>
   );

@@ -1,4 +1,10 @@
-import { formatarPrecoBrl, inicialPlaceholder } from './mapaUtils';
+import {
+  formatarPrecoBrl,
+  inicialPlaceholder,
+  COORDENADAS_SAQUAREMA,
+  SAQUAREMA_CENTER,
+  SAQUAREMA_ZOOM,
+} from './mapaUtils';
 import { nomeProduto } from './produtoUtils';
 
 function escapeHtml(text) {
@@ -37,7 +43,7 @@ export function prepararDadosMapaLeaflet(localizacaoCliente, produtos) {
     ]);
   }
 
-  let view = { center: [-23.5505, -46.6333], zoom: 12, bounds: null };
+  let view = { center: SAQUAREMA_CENTER, zoom: SAQUAREMA_ZOOM, bounds: null };
 
   if (pontos.length === 1) {
     view = { center: pontos[0], zoom: 14, bounds: null };
@@ -156,7 +162,16 @@ export function buildLeafletMapHtml(dadosMapa) {
       }
     }
 
-    const map = L.map('map', { zoomControl: true });
+    const map = L.map('map', {
+      zoomControl: false,
+      dragging: true,
+      touchZoom: true,
+      scrollWheelZoom: true,
+      doubleClickZoom: true,
+      boxZoom: true,
+      keyboard: true,
+    });
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
@@ -262,42 +277,9 @@ export function prepararDadosMapaLojas(localizacaoCliente, lojas) {
       Number.isFinite(l.lat) && Number.isFinite(l.lng) && !(l.lat === 0 && l.lng === 0)
   );
 
-  const pontos = marcadores.map((m) => [m.lat, m.lng]);
-
-  if (
-    localizacaoCliente?.latitude != null &&
-    localizacaoCliente?.longitude != null
-  ) {
-    pontos.push([
-      Number(localizacaoCliente.latitude),
-      Number(localizacaoCliente.longitude),
-    ]);
-  }
-
-  let view = { center: [-23.5505, -46.6333], zoom: 12, bounds: null };
-
-  if (pontos.length === 1) {
-    view = { center: pontos[0], zoom: 14, bounds: null };
-  } else if (pontos.length > 1) {
-    let minLat = pontos[0][0];
-    let maxLat = pontos[0][0];
-    let minLng = pontos[0][1];
-    let maxLng = pontos[0][1];
-    pontos.forEach(([lat, lng]) => {
-      minLat = Math.min(minLat, lat);
-      maxLat = Math.max(maxLat, lat);
-      minLng = Math.min(minLng, lng);
-      maxLng = Math.max(maxLng, lng);
-    });
-    view = {
-      center: [(minLat + maxLat) / 2, (minLng + maxLng) / 2],
-      zoom: 12,
-      bounds: [
-        [minLat, minLng],
-        [maxLat, maxLng],
-      ],
-    };
-  }
+  // Inicialização padrão: foca na cidade de Saquarema (RJ) com zoom aberto,
+  // permitindo que o usuário navegue, dê zoom in, zoom out e mova o mapa livremente.
+  const view = { center: SAQUAREMA_CENTER, zoom: SAQUAREMA_ZOOM, bounds: null };
 
   const cliente =
     localizacaoCliente?.latitude != null &&
@@ -441,7 +423,16 @@ export function buildLojasMapHtml(dadosMapa) {
       }
     }
 
-    const map = L.map('map', { zoomControl: true });
+    const map = L.map('map', {
+      zoomControl: false,
+      dragging: true,
+      touchZoom: true,
+      scrollWheelZoom: true,
+      doubleClickZoom: true,
+      boxZoom: true,
+      keyboard: true,
+    });
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
@@ -669,7 +660,12 @@ const LEAFLET_ASSETS = `
 
 const LEAFLET_BASE_CSS = `
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body, #map { width: 100%; height: 100%; }
+  html, body, #map {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    touch-action: pan-x pan-y pinch-zoom;
+  }
 `;
 
 /**
@@ -684,8 +680,8 @@ export function buildLeafletPickerMapHtml({ latitude, longitude, titulo }) {
     view: {
       center: hasPin
         ? [Number(latitude), Number(longitude)]
-        : [-23.5505, -46.6333],
-      zoom: hasPin ? 16 : 12,
+        : SAQUAREMA_CENTER,
+      zoom: hasPin ? 16 : SAQUAREMA_ZOOM,
     },
     titulo: escapeHtml(titulo || 'Local da loja'),
   };
@@ -725,7 +721,16 @@ export function buildLeafletPickerMapHtml({ latitude, longitude, titulo }) {
       }
     }
 
-    const map = L.map('map', { zoomControl: true });
+    const map = L.map('map', {
+      zoomControl: false,
+      dragging: true,
+      touchZoom: true,
+      scrollWheelZoom: true,
+      doubleClickZoom: true,
+      boxZoom: true,
+      keyboard: true,
+    });
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,

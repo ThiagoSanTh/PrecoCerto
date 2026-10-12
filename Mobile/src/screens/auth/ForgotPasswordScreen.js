@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 import { solicitarRecuperacaoSenha, redefinirSenha } from '../../services/authService';
 
@@ -21,6 +21,8 @@ export default function ForgotPasswordScreen({ navigation }) {
   const [modoToken, setModoToken] = useState(false);
 
   const [loading, setLoading] = useState(false);
+
+  const novaSenhaRef = useRef(null);
 
   const [error, setError] = useState(null);
 
@@ -166,15 +168,34 @@ export default function ForgotPasswordScreen({ navigation }) {
 
           keyboardType="email-address"
 
+          returnKeyType="go"
+
+          onSubmitEditing={handleSolicitar}
+
         />
 
       ) : (
 
         <>
 
-          <FormField label="Token" value={token} onChangeText={setToken} autoCapitalize="none" />
+          <FormField
+            label="Token"
+            value={token}
+            onChangeText={setToken}
+            autoCapitalize="none"
+            returnKeyType="next"
+            onSubmitEditing={() => novaSenhaRef.current?.focus()}
+          />
 
-          <FormField label="Nova senha" value={novaSenha} onChangeText={setNovaSenha} secureTextEntry />
+          <FormField
+            ref={novaSenhaRef}
+            label="Nova senha"
+            value={novaSenha}
+            onChangeText={setNovaSenha}
+            secureTextEntry
+            returnKeyType="go"
+            onSubmitEditing={handleRedefinir}
+          />
 
         </>
 

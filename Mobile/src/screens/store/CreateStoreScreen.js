@@ -309,6 +309,7 @@ export default function CreateStoreScreen({ navigation }) {
             value={nomeFantasia}
             onChangeText={setNomeFantasia}
             autoFocus
+            returnKeyType="next"
           />
           <FormField
             label="CNPJ"
@@ -318,6 +319,7 @@ export default function CreateStoreScreen({ navigation }) {
               setCnpjVerificado(false);
             }}
             onBlur={buscarDadosCnpj}
+            returnKeyType="next"
           />
           {loadingCnpj ? <ActivityIndicator color={colors.primary} style={{ marginBottom: 8 }} /> : null}
           <FormField
@@ -325,6 +327,7 @@ export default function CreateStoreScreen({ navigation }) {
             value={telefone}
             onChangeText={setTelefone}
             keyboardType="phone-pad"
+            returnKeyType="next"
           />
           <FormField
             label="E-mail da loja"
@@ -333,6 +336,8 @@ export default function CreateStoreScreen({ navigation }) {
             autoCapitalize="none"
             keyboardType="email-address"
             placeholder={session?.perfil?.email || 'opcional'}
+            returnKeyType="next"
+            onSubmitEditing={avancar}
           />
         </View>
       )}
@@ -348,12 +353,16 @@ export default function CreateStoreScreen({ navigation }) {
                 onChangeText={setCep}
                 keyboardType="number-pad"
                 compact
+                returnKeyType="search"
+                onSubmitEditing={handleBuscarCep}
               />
             </View>
             <Pressable
               style={[formStyles.cepButton, loadingCep && formStyles.buttonDisabled]}
               onPress={handleBuscarCep}
               disabled={loadingCep}
+              accessibilityRole="button"
+              accessibilityLabel="Buscar CEP"
             >
               {loadingCep ? (
                 <ActivityIndicator color="#fff" size="small" />
@@ -362,12 +371,33 @@ export default function CreateStoreScreen({ navigation }) {
               )}
             </Pressable>
           </View>
-          <FormField label="Logradouro *" value={logradouro} onChangeText={setLogradouro} />
-          <FormField label="Número *" value={numero} onChangeText={setNumero} />
-          <FormField label="Bairro" value={bairro} onChangeText={setBairro} />
+          <FormField
+            label="Logradouro *"
+            value={logradouro}
+            onChangeText={setLogradouro}
+            returnKeyType="next"
+          />
+          <FormField
+            label="Número *"
+            value={numero}
+            onChangeText={setNumero}
+            returnKeyType="next"
+          />
+          <FormField
+            label="Bairro"
+            value={bairro}
+            onChangeText={setBairro}
+            returnKeyType="next"
+          />
           <View style={formStyles.row}>
             <View style={formStyles.rowItemLarge}>
-              <FormField label="Cidade *" value={cidade} onChangeText={setCidade} compact />
+              <FormField
+                label="Cidade *"
+                value={cidade}
+                onChangeText={setCidade}
+                compact
+                returnKeyType="next"
+              />
             </View>
             <View style={formStyles.rowItemSmall}>
               <FormField
@@ -377,6 +407,8 @@ export default function CreateStoreScreen({ navigation }) {
                 maxLength={2}
                 autoCapitalize="characters"
                 compact
+                returnKeyType="next"
+                onSubmitEditing={avancar}
               />
             </View>
           </View>

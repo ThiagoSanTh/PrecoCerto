@@ -4,5 +4,6 @@
   <Project Path="Pc.Repositorio/Pc.Repositorio.csproj" />
   <Project Path="Pc.Servico/Pc.Servico.csproj" />
   <Project Path="Pc.Servico.Tests/Pc.Servico.Tests.csproj" />
+  <Project Path="Pc.RagReindexCli/Pc.RagReindexCli.csproj" />
   <Project Path="Pc.WebApi/Pc.WebApi.csproj" />
 </Solution>

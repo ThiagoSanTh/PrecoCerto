@@ -1,5 +1,5 @@
 import { Text } from 'react-native';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { alterarSenha } from '../../services/clienteService';
 import { alterarSenhaLojista } from '../../services/lojistaService';
@@ -18,9 +18,12 @@ export default function ChangePasswordScreen({ navigation }) {
   const [confirmarSenha, setConfirmarSenha] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const novaSenhaRef = useRef(null);
+  const confirmarSenhaRef = useRef(null);
   const formStyles = useFormStyles();
 
   async function handleAlterarSenha() {
+    if (loading) return;
     if (!senhaAtual || !novaSenha || !confirmarSenha) {
       setError({ title: 'Campos obrigatórios', message: 'Preencha todos os campos.' });
       return;
@@ -72,18 +75,26 @@ export default function ChangePasswordScreen({ navigation }) {
         value={senhaAtual}
         onChangeText={setSenhaAtual}
         secureTextEntry
+        returnKeyType="next"
+        onSubmitEditing={() => novaSenhaRef.current?.focus()}
       />
       <FormField
+        ref={novaSenhaRef}
         label="Nova senha"
         value={novaSenha}
         onChangeText={setNovaSenha}
         secureTextEntry
+        returnKeyType="next"
+        onSubmitEditing={() => confirmarSenhaRef.current?.focus()}
       />
       <FormField
+        ref={confirmarSenhaRef}
         label="Confirmar nova senha"
         value={confirmarSenha}
         onChangeText={setConfirmarSenha}
         secureTextEntry
+        returnKeyType="go"
+        onSubmitEditing={handleAlterarSenha}
       />
     </FormScreen>
   );

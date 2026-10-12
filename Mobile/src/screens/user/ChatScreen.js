@@ -147,6 +147,13 @@ export default function ChatScreen({ route, navigation }) {
     }
   }
 
+  const handleKeyPress = (e) => {
+    if (Platform.OS === 'web' && e.nativeEvent?.key === 'Enter' && !e.nativeEvent?.shiftKey) {
+      e.preventDefault?.();
+      handleEnviar();
+    }
+  };
+
   return (
     <FormScreen title={titulo || 'Chat'} onBack={() => navigation.goBack()} scrollable={false}>
       <FlatList
@@ -180,6 +187,11 @@ export default function ChatScreen({ route, navigation }) {
             onChangeText={setTexto}
             placeholder="Digite sua mensagem..."
             placeholderTextColor={colors.textMuted}
+            returnKeyType="send"
+            onSubmitEditing={handleEnviar}
+            onKeyPress={handleKeyPress}
+            blurOnSubmit={false}
+            accessibilityLabel="Digite sua mensagem"
             style={{
               flex: 1,
               borderWidth: 1,
@@ -193,12 +205,16 @@ export default function ChatScreen({ route, navigation }) {
           />
           <Pressable
             onPress={handleEnviar}
-            disabled={enviando}
+            disabled={enviando || !texto.trim()}
+            accessibilityRole="button"
+            accessibilityLabel="Enviar mensagem"
+            accessibilityState={{ disabled: enviando || !texto.trim() }}
             style={{
               backgroundColor: colors.primary,
               paddingHorizontal: 16,
               paddingVertical: 12,
               borderRadius: 10,
+              opacity: enviando || !texto.trim() ? 0.6 : 1,
             }}
           >
             <Text style={{ color: '#fff', fontWeight: '700' }}>Enviar</Text>

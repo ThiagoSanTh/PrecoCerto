@@ -20,7 +20,6 @@ using Pc.Servico.Interfaces.MotorIA;
 using Pc.Servico.Modelos.Rag;
 using Pc.WebApi.Authorization;
 using Pc.WebApi.Configuration;
-using Pc.WebApi.Diagnostics;
 using Pc.WebApi.Hubs;
 using Pc.WebApi.Services;
 
@@ -470,14 +469,7 @@ builder.Services.AddHostedService<RagInitialIndexHostedService>();
 builder.Services.AddHostedService<MigracaoStartupHostedService>();
 builder.Services.AddHostedService<AdminSeedHostedService>();
 
-if (BenchmarkMode.Enabled)
-{
-    builder.Services.AddSingleton<EfQueryInterceptor>();
-    builder.Services.AddHostedService<ProcessSamplerHostedService>();
-    Console.Error.WriteLine("WARN PRECOCERTO_BENCHMARK=1: métricas ativas e rate limiter desligado.");
-}
-
-builder.Services.AddDbContext<AppDbContext>((sp, options) =>
+builder.Services.AddDbContext<AppDbContext>(options =>
 {
     options.UseNpgsql(
         connectionString,
@@ -486,8 +478,6 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
             npgsql.EnableRetryOnFailure(maxRetryCount: 3);
             npgsql.UseVector();
         });
-    if (BenchmarkMode.Enabled)
-        options.AddInterceptors(sp.GetRequiredService<EfQueryInterceptor>());
 });
 
 var app = builder.Build();
@@ -498,8 +488,6 @@ app.UseForwardedHeaders();
 app.UseCors("AppPolicy");
 
 app.UseResponseCompression();
-if (BenchmarkMode.Enabled)
-    app.UseMiddleware<BenchmarkMiddleware>();
 app.UseSerilogRequestLogging();
 
 if (app.Environment.IsDevelopment())
@@ -508,8 +496,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-if (!BenchmarkMode.Enabled)
-    app.UseRateLimiter();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }))

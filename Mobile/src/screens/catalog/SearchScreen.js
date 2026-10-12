@@ -31,6 +31,7 @@ import {
   FormTabs,
 } from '../../components/form';
 import { montarMapaBuscaPorLoja } from '../../utils/mapaPinUtils';
+import { COORDENADAS_SAQUAREMA } from '../../utils/mapaUtils';
 
 const DEBOUNCE_BUSCA_MS = 400;
 const DEBOUNCE_HISTORICO_MS = 1200;
@@ -202,8 +203,12 @@ export default function SearchScreen() {
   const coordsClima = useMemo(
     () =>
       normalizarCoordenadasClima(
-        localizacaoCliente?.latitude ?? session?.perfil?.latitudeAtual,
-        localizacaoCliente?.longitude ?? session?.perfil?.longitudeAtual
+        localizacaoCliente?.latitude ??
+          session?.perfil?.latitudeAtual ??
+          COORDENADAS_SAQUAREMA.latitude,
+        localizacaoCliente?.longitude ??
+          session?.perfil?.longitudeAtual ??
+          COORDENADAS_SAQUAREMA.longitude
       ),
     [
       localizacaoCliente?.latitude,

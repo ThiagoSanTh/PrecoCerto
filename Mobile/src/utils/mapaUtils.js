@@ -25,6 +25,16 @@ export function formatarPrecoBrl(valor) {
 }
 
 /**
+ * Coordenadas de referência padrão: Saquarema, RJ
+ */
+export const COORDENADAS_SAQUAREMA = {
+  latitude: -22.9329,
+  longitude: -42.5114,
+};
+export const SAQUAREMA_CENTER = [-22.9329, -42.5114];
+export const SAQUAREMA_ZOOM = 13;
+
+/**
  * Calcula região do mapa incluindo cliente e pins dos produtos.
  */
 export function calcularRegiaoMapa(localizacaoCliente, produtosComCoordenadas) {
@@ -49,8 +59,8 @@ export function calcularRegiaoMapa(localizacaoCliente, produtosComCoordenadas) {
 
   if (pontos.length === 0) {
     return {
-      latitude: -23.5505,
-      longitude: -46.6333,
+      latitude: COORDENADAS_SAQUAREMA.latitude,
+      longitude: COORDENADAS_SAQUAREMA.longitude,
       latitudeDelta: 0.15,
       longitudeDelta: 0.15,
     };

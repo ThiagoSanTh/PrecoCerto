@@ -1,5 +1,5 @@
 import { Alert, Image, Pressable, Text, StyleSheet, View } from 'react-native';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { criarProduto } from '../../services/productService';
 import { invalidarFeedCache } from '../../services/feedService';
@@ -21,6 +21,10 @@ export default function CreateProductScreen({ navigation }) {
   const [imagemUri, setImagemUri] = useState(null);
   const [imagemMime, setImagemMime] = useState('image/jpeg');
   const [loading, setLoading] = useState(false);
+  const descricaoRef = useRef(null);
+  const marcaRef = useRef(null);
+  const codigoBarrasRef = useRef(null);
+  const precoRef = useRef(null);
 
   async function handleEscolherFoto() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -116,16 +120,47 @@ export default function CreateProductScreen({ navigation }) {
         <SecondaryButton label="Adicionar foto *" onPress={handleEscolherFoto} />
       </View>
 
-      <FormField label="Nome *" value={nomeProduto} onChangeText={setNomeProduto} autoFocus />
-      <FormField label="Descrição" value={descricao} onChangeText={setDescricao} />
-      <FormField label="Marca *" value={marca} onChangeText={setMarca} />
-      <FormField label="Código de barras *" value={codigoBarras} onChangeText={setCodigoBarras} />
+      <FormField
+        label="Nome *"
+        value={nomeProduto}
+        onChangeText={setNomeProduto}
+        autoFocus
+        returnKeyType="next"
+        onSubmitEditing={() => descricaoRef.current?.focus()}
+      />
+      <FormField
+        ref={descricaoRef}
+        label="Descrição"
+        value={descricao}
+        onChangeText={setDescricao}
+        returnKeyType="next"
+        onSubmitEditing={() => marcaRef.current?.focus()}
+      />
+      <FormField
+        ref={marcaRef}
+        label="Marca *"
+        value={marca}
+        onChangeText={setMarca}
+        returnKeyType="next"
+        onSubmitEditing={() => codigoBarrasRef.current?.focus()}
+      />
+      <FormField
+        ref={codigoBarrasRef}
+        label="Código de barras *"
+        value={codigoBarras}
+        onChangeText={setCodigoBarras}
+        returnKeyType="next"
+        onSubmitEditing={() => precoRef.current?.focus()}
+      />
       <CategoriaPicker value={categoria} onChange={setCategoria} />
       <FormField
+        ref={precoRef}
         label="Preço *"
         value={preco}
         onChangeText={setPreco}
         keyboardType="decimal-pad"
+        returnKeyType="go"
+        onSubmitEditing={handleCreateProduct}
       />
     </FormScreen>
   );

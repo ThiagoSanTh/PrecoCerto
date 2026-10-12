@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import { View, Text, Pressable } from 'react-native';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { login as authLogin } from '../../services/authService';
 import { mapApiError } from '../../utils/apiErrorUtils';
 import { useAuth, podeUsarModoLoja } from '../../context/AuthContext';
@@ -16,10 +16,12 @@ export default function LoginScreen({ navigation }) {
   const [senha, setSenha] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const senhaRef = useRef(null);
   const { salvarSessao, sincronizarGpsCliente } = useAuth();
   const formStyles = useFormStyles();
 
   async function handleLogin() {
+    if (loading) return;
     if (!email || !senha) {
       setError({ title: 'Campos obrigatórios', message: 'Preencha todos os campos.' });
       return;
@@ -65,8 +67,12 @@ export default function LoginScreen({ navigation }) {
         }}
         autoCapitalize="none"
         keyboardType="email-address"
+        returnKeyType="next"
+        onSubmitEditing={() => senhaRef.current?.focus()}
+        accessibilityLabel="Campo de e-mail"
       />
       <FormField
+        ref={senhaRef}
         label="Senha"
         value={senha}
         onChangeText={(v) => {
@@ -74,18 +80,25 @@ export default function LoginScreen({ navigation }) {
           if (error) setError(null);
         }}
         secureTextEntry
+        returnKeyType="go"
+        onSubmitEditing={handleLogin}
+        accessibilityLabel="Campo de senha"
       />
 
       <View style={formStyles.row}>
         <Pressable
           onPress={() => navigation.navigate('EsqueciSenha')}
           style={{ flex: 1, paddingVertical: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="Esqueci a senha"
         >
           <Text style={formStyles.linkText}>Esqueci a senha</Text>
         </Pressable>
         <Pressable
           onPress={() => navigation.navigate('Cadastro')}
           style={{ flex: 1, paddingVertical: 8, alignItems: 'flex-end' }}
+          accessibilityRole="button"
+          accessibilityLabel="Criar nova conta"
         >
           <Text style={formStyles.linkText}>Novo usuário</Text>
         </Pressable>

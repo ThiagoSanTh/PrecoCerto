@@ -63,7 +63,7 @@ const LeafletMapFrame = forwardRef(function LeafletMapFrame(
       source={{ html }}
       javaScriptEnabled
       domStorageEnabled
-      scrollEnabled={false}
+      scrollEnabled={true}
       setSupportMultipleWindows={false}
       onMessage={onMessage}
     />
@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#e2e8f0',
   },
   iframe: {
-    border: 'none',
+    borderWidth: 0,
     width: '100%',
     height: '100%',
     minHeight: 260,

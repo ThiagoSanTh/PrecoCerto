@@ -113,6 +113,13 @@ export default function AiChatScreen({ navigation }) {
     }
   }
 
+  const handleKeyPress = (e) => {
+    if (Platform.OS === 'web' && e.nativeEvent?.key === 'Enter' && !e.nativeEvent?.shiftKey) {
+      e.preventDefault?.();
+      handleEnviar();
+    }
+  };
+
   return (
     <FormScreen
       title={isAdmin ? 'Assistente Preço Certo (admin)' : 'Assistente Preço Certo'}
@@ -172,6 +179,11 @@ export default function AiChatScreen({ navigation }) {
             placeholderTextColor={colors.textMuted}
             editable={!enviando}
             maxLength={500}
+            returnKeyType="send"
+            onSubmitEditing={handleEnviar}
+            onKeyPress={handleKeyPress}
+            blurOnSubmit={false}
+            accessibilityLabel="Digite sua pergunta para o assistente"
             style={{
               flex: 1,
               borderWidth: 1,
@@ -186,6 +198,9 @@ export default function AiChatScreen({ navigation }) {
           <Pressable
             onPress={handleEnviar}
             disabled={enviando || !texto.trim()}
+            accessibilityRole="button"
+            accessibilityLabel="Enviar pergunta"
+            accessibilityState={{ disabled: enviando || !texto.trim() }}
             style={{
               backgroundColor: colors.primary,
               paddingHorizontal: 16,

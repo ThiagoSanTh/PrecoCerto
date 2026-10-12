@@ -15,7 +15,6 @@ Cada camada tem uma responsabilidade clara: a API recebe HTTP, os serviços apli
 | Arquivo / pasta | O que é |
 |-----------------|---------|
 | `README.md` | Resumo do produto e como executar |
-| `docs/ESTRUTURA.md` | Índice rápido das pastas principais |
 | `render.yaml` | Configuração de deploy da API no Render |
 | `.cursor/rules/` | Regras e diretrizes para o Cursor (arquitetura, planos, ferramentas) |
 | `.cursor/PROJETO.md` | Este arquivo — mapa detalhado do código |
@@ -104,9 +103,12 @@ Orquestra repositórios, validações e exceções de domínio.
 | `Implementacoes/ValidadorEmailServico.cs` | Valida formato e disponibilidade de e-mail |
 | `Implementacoes/IdCodificadorServico.cs` | Codifica/decodifica IDs públicos (Sqids) nas URLs |
 | `Implementacoes/BcryptPasswordHasher.cs` | Hash e verificação de senhas |
+| `Implementacoes/MotorIA/` | **MotorIA v2**: regras, pontuação, vocabulário e recomendação |
+| `Implementacoes/Rag/` | Indexação vetorial e embeddings (Gemini/OpenAI) via pgvector |
 | `Excecoes/` | Exceções de negócio (`EmailJaRegistradoException`, etc.) |
 | `Modelos/FeedItem.cs` | Modelo interno usado pelo serviço de feed |
 | `Modelos/ClimaResposta.cs` | Clima normalizado (localidade, atual, horária, diária) |
+| `Modelos/MotorIA/` e `Modelos/Rag/` | Modelos de contexto e configurações do assistente |
 
 ---
 
@@ -132,6 +134,8 @@ Expõe endpoints REST e SignalR. Traduz HTTP ↔ serviços ↔ DTOs.
 | `PreferenciasClienteController` | Preferências do usuário |
 | `ConsultasController` | Consulta de CNPJ |
 | `WeatherController` | `GET /api/Weather` — clima normalizado por lat/lng (Open-Meteo, cache) |
+| `IAController` | `POST /api/IA/analisar` — MotorIA v2 (assistente inteligente determinístico) |
+| `RagController` | Endpoints de status e reindexação RAG |
 | `AdminsController` | Gestão de administradores |
 | `HealthController` | Health check leve (`/api/Health`) |
 
@@ -164,16 +168,11 @@ DTOs (**Data Transfer Objects**) definem o formato exato do JSON que entra e sai
 
 ---
 
-### `BackEnd/scripts/` — utilitários SQL e benchmark
+### `BackEnd/scripts/` — utilitários SQL
 
 | Arquivo | O que é |
 |---------|---------|
-| `seed-performance.sql` | Popula lojas/produtos/ofertas para teste de carga (só dev) |
-| `perf-load-test.mjs` | Benchmark HTTP da API (Feed, paginação, concorrência) |
-| `perf-microbench/` | Microbenchmark de validadores e BCrypt |
 | `limpar-usuarios-nao-confirmados.sql` | Remove contas sem e-mail confirmado |
-| `preflight-unificar-usuarios.sql` | Script de migração manual de usuários |
-| `remover-carrinho.sql` | Remove tabelas legadas de carrinho |
 | `setup-produtos-imagens-storage.sql` | Configuração de storage de imagens no Supabase |
 
 ### `BackEnd/docs/`
@@ -181,14 +180,17 @@ DTOs (**Data Transfer Objects**) definem o formato exato do JSON que entra e sai
 | Arquivo | O que é |
 |---------|---------|
 | `SECRETS.md` | Connection strings, User Secrets, pool Supabase, deploy |
+| `CLIMA.md` | Arquitetura da integração de clima (Open-Meteo, cache, DTOs) |
+| `MotorIA-v2.md` | Especificação completa do MotorIA v2 determinístico |
 
 ### Outros arquivos do BackEnd
 
 | Arquivo | O que é |
 |---------|----------|
-| `PrecoCerto.slnx` | Solution .NET que agrupa todos os projetos |
-| `Dockerfile` | Imagem Docker multi-stage para deploy |
-| `entrypoint.sh` | Script de inicialização do container |
+| `PrecoCerto.slnx` | Solution .NET que agrupa todos os projetos (incluindo CLI e testes) |
+| `Pc.RagReindexCli/` | CLI de reindexação em lote do banco vetorial RAG |
+| `Dockerfile` (raiz) | Imagem Docker multi-stage para deploy no Railway |
+| `entrypoint.sh` | Script de inicialização do container da API |
 
 ---
 
@@ -203,7 +205,7 @@ App Expo (React Native) em `Mobile/src/`.
 | `auth/` | Login, Register, ForgotPassword | Autenticação e recuperação de senha |
 | `catalog/` | SearchScreen, ProductDetailScreen | Feed/busca e detalhe do produto |
 | `store/` | StoreScreen, ProductsScreen, CreateProductScreen, CreateOfertaScreen, CreateStoreScreen, VendedoresScreen | Gestão da loja (lojista) |
-| `user/` | ProfileScreen, FavoritosScreen, HistoricoScreen, ConversasScreen, ChatScreen, EditProfileScreen, EditEmailScreen, ChangePasswordScreen | Área do cliente |
+| `user/` | ProfileScreen, FavoritosScreen, HistoricoScreen, ConversasScreen, ChatScreen, AiChatScreen, EditProfileScreen, EditEmailScreen, ChangePasswordScreen | Área do cliente e assistente IA |
 
 ### `services/` — comunicação com API e infra
 
@@ -223,10 +225,10 @@ App Expo (React Native) em `Mobile/src/`.
 | `avaliacaoService.js` | Avaliações |
 | `consultaService.js` | Consulta de CNPJ |
 | `weatherService.js` | `GET /Weather` com cache 15 min (não chama o provedor meteorológico) |
+| `iaService.js` | Consome `POST /IA/analisar` (MotorIA v2) |
 | `locationService.js` | GPS do dispositivo |
 | `storageService.js` | Upload de imagens (Supabase Storage) |
 | `tokenStorage.js` | Persistência segura do JWT |
-| `preferenciaService.js` | Preferências do usuário |
 | `supabaseClient.js` | Cliente Supabase (storage/realtime auxiliar) |
 
 ### `components/` — UI reutilizável
@@ -316,5 +318,4 @@ Após abrir loja, o usuário precisa **fazer login novamente** para obter JWT co
 - **IDs públicos** na API usam códigos Sqids (`codigoPublico`), não GUIDs expostos
 - **Paginação**: `page`, `pageSize` (máx. 100) → resposta `{ items, page, pageSize, total, hasNext }`
 - **Migrations** aplicam automaticamente no startup da API
-- **Rate limit**: login (10/min), catálogo anônimo (120/min), autenticado (300/min)
-- **Testes unitários** ficam na lógica de domínio/serviço; não há projeto `Pc.Tests` separado
+- **Testes unitários**: projeto dedicado `Pc.Servico.Tests` cobrindo regras de negócio, MotorIA v2, RAG, clima e autenticação (executar via `dotnet test`)

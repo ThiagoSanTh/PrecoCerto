@@ -1,5 +1,5 @@
 import { Alert } from 'react-native';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { alterarEmailCliente } from '../../services/clienteService';
 import { isEmailValido } from '../../utils/validacaoUtils';
@@ -11,8 +11,10 @@ export default function EditEmailScreen({ navigation }) {
   const [senhaAtual, setSenhaAtual] = useState('');
   const [novoEmail, setNovoEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const novoEmailRef = useRef(null);
 
   async function handleSalvar() {
+    if (loading) return;
     if (!senhaAtual || !novoEmail) {
       Alert.alert('Erro', 'Preencha todos os campos.');
       return;
@@ -47,13 +49,23 @@ export default function EditEmailScreen({ navigation }) {
       onBack={() => navigation.goBack()}
       footer={<PrimaryButton label="Salvar novo e-mail" onPress={handleSalvar} loading={loading} />}
     >
-      <FormField label="Senha atual" value={senhaAtual} onChangeText={setSenhaAtual} secureTextEntry />
       <FormField
+        label="Senha atual"
+        value={senhaAtual}
+        onChangeText={setSenhaAtual}
+        secureTextEntry
+        returnKeyType="next"
+        onSubmitEditing={() => novoEmailRef.current?.focus()}
+      />
+      <FormField
+        ref={novoEmailRef}
         label="Novo e-mail"
         value={novoEmail}
         onChangeText={setNovoEmail}
         autoCapitalize="none"
         keyboardType="email-address"
+        returnKeyType="done"
+        onSubmitEditing={handleSalvar}
       />
     </FormScreen>
   );

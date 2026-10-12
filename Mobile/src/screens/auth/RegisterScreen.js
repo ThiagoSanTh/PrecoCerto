@@ -1,6 +1,6 @@
 import { Text } from 'react-native';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 import { registrarCliente } from '../../services/clienteService';
 
@@ -87,6 +87,11 @@ export default function RegisterScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
 
   const [error, setError] = useState(null);
+
+  const emailRef = useRef(null);
+  const telefoneRef = useRef(null);
+  const senhaRef = useRef(null);
+  const confirmarSenhaRef = useRef(null);
 
   const { salvarSessao, sincronizarGpsCliente } = useAuth();
 
@@ -337,50 +342,54 @@ export default function RegisterScreen({ navigation }) {
 
 
 
-      <FormField label="Nome de usuário *" value={nomeUsuario} onChangeText={setNomeUsuario} />
+      <FormField
+        label="Nome de usuário *"
+        value={nomeUsuario}
+        onChangeText={setNomeUsuario}
+        returnKeyType="next"
+        onSubmitEditing={() => emailRef.current?.focus()}
+      />
 
       <FormField
-
+        ref={emailRef}
         label="E-mail *"
-
         value={email}
-
         onChangeText={setEmail}
-
         autoCapitalize="none"
-
         keyboardType="email-address"
-
+        returnKeyType="next"
+        onSubmitEditing={() => telefoneRef.current?.focus()}
       />
 
       <FormField
-
+        ref={telefoneRef}
         label="Telefone"
-
         value={telefone}
-
         onChangeText={setTelefone}
-
         keyboardType="phone-pad"
-
         placeholder="opcional"
-
+        returnKeyType="next"
+        onSubmitEditing={() => senhaRef.current?.focus()}
       />
 
-
-
-      <FormField label="Senha *" value={senha} onChangeText={setSenha} secureTextEntry />
+      <FormField
+        ref={senhaRef}
+        label="Senha *"
+        value={senha}
+        onChangeText={setSenha}
+        secureTextEntry
+        returnKeyType="next"
+        onSubmitEditing={() => confirmarSenhaRef.current?.focus()}
+      />
 
       <FormField
-
+        ref={confirmarSenhaRef}
         label="Confirmar senha *"
-
         value={confirmarSenha}
-
         onChangeText={setConfirmarSenha}
-
         secureTextEntry
-
+        returnKeyType="go"
+        onSubmitEditing={handleRegister}
       />
 
     </FormScreen>
