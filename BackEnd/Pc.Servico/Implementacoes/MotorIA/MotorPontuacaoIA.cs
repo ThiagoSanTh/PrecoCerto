@@ -80,7 +80,7 @@ namespace Pc.Servico.Implementacoes.MotorIA
 
         private static List<string> MontarMotivos(CandidatoIA c, ContextoIA ctx)
         {
-            var motivos = new List<string>();
+            var motivos = new List<string>(c.Motivos);
             if (c.Preco.HasValue)
                 motivos.Add($"preço R$ {c.Preco.Value:0.00}");
             if (c.DistanciaKm.HasValue)

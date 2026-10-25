@@ -48,6 +48,34 @@ namespace Pc.Servico.Implementacoes.MotorIA
             var loja = melhor.NomeLoja ?? "a loja";
             var qtd = contexto.Candidatos.Count;
 
+            if (contexto.Intencao == IntencaoIA.MontarCesta)
+            {
+                var resumo = melhor.Motivos.FirstOrDefault() ?? "";
+                var totalTxt = melhor.Preco is decimal pt ? $" por {FormatPreco(pt)} no total" : "";
+                return $"Montei a comparação de cesta básica em {qtd} loja(s). A melhor opção é {loja}{totalTxt}. {resumo}.";
+            }
+
+            if (contexto.Intencao == IntencaoIA.ProdutosDaLoja)
+            {
+                var exemplos = string.Join(", ", contexto.Decisao.Ranking.Take(4)
+                    .Select(c => c.Preco is decimal pc ? $"{c.NomeProduto} ({FormatPreco(pc)})" : c.NomeProduto));
+                return $"A loja {loja} possui {qtd} produto(s) ativo(s) no catálogo, incluindo: {exemplos}.";
+            }
+
+            if (contexto.Intencao == IntencaoIA.RecomendarPorOcasiao)
+            {
+                var exemplos = string.Join(", ", contexto.Decisao.Ranking.Take(4)
+                    .Select(c => c.Preco is decimal pc ? $"{c.NomeProduto} em {c.NomeLoja} ({FormatPreco(pc)})" : c.Titulo));
+                return $"Separei {qtd} sugestão(ões) disponíveis no catálogo para sua ocasião: {exemplos}.";
+            }
+
+            if (contexto.Intencao == IntencaoIA.AnalisarConcorrenciaLojista)
+            {
+                var resumo = string.Join("; ", contexto.Decisao.Ranking.Take(3)
+                    .Select(c => $"{c.NomeProduto}: {c.Motivos.FirstOrDefault()}"));
+                return $"Analisei {qtd} produto(s) da sua loja frente à concorrência: {resumo}.";
+            }
+
             if (contexto.Intencao is IntencaoIA.CompararPrecos && contexto.Decisao.Ranking.Count >= 2)
             {
                 var a = contexto.Decisao.Ranking[0];

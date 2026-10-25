@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using Pc.Dominio.Entities.Catalogo;
+using Pc.Dominio.Entities.Estabelecimentos;
 using Pc.Dominio.Enums.MotorIA;
 using Pc.Servico.Implementacoes.IA;
 using Pc.Servico.Implementacoes.MotorIA;
@@ -365,6 +367,173 @@ namespace Pc.Servico.Tests.MotorIA
             var hits = await sut.BuscarAuxiliarAsync("arroz");
             Assert.Empty(hits);
             rag.Verify(r => r.BuscarAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+    }
+
+    public class MotorIAOrquestracaoV3Tests
+    {
+        private readonly Mock<IProdutoServico> _produtos = new();
+        private readonly Mock<IOfertaServico> _ofertas = new();
+        private readonly Mock<ILojaServico> _lojas = new();
+        private readonly Mock<IAvaliacaoServico> _avaliacoes = new();
+        private readonly Mock<IClimaServico> _clima = new();
+        private readonly Mock<IRagConhecimentoIA> _rag = new();
+        private readonly Mock<ILlmRouterService> _llm = new();
+
+        public MotorIAOrquestracaoV3Tests()
+        {
+            _avaliacoes.Setup(a => a.ObterResumosPorLojasAsync(It.IsAny<IEnumerable<Guid>>()))
+                .ReturnsAsync(new Dictionary<Guid, (double Media, int Quantidade)>());
+            _rag.Setup(r => r.BuscarAuxiliarAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Array.Empty<RagHitIA>());
+        }
+
+        private Pc.Servico.Implementacoes.MotorIA.MotorIA CriarMotor()
+        {
+            var interpretador = new InterpretadorIA(new ClassificadorIntencaoIA(), new ExtratorEntidadesIA());
+            var regras = new MotorRegrasIA(new IRegraIA[]
+            {
+                new RegraEconomizar(),
+                new RegraUrgencia(),
+                new RegraChuva(),
+                new RegraEntrega(),
+                new RegraProximidade(),
+                new RegraPromocao(),
+                new RegraQualidade()
+            });
+            var recomendacao = new MotorRecomendacaoIA(new MotorPontuacaoIA());
+            var gerador = new GeradorRespostaIA();
+
+            return new Pc.Servico.Implementacoes.MotorIA.MotorIA(
+                interpretador,
+                regras,
+                recomendacao,
+                gerador,
+                _rag.Object,
+                _produtos.Object,
+                _ofertas.Object,
+                _lojas.Object,
+                _avaliacoes.Object,
+                _clima.Object,
+                NullLogger<Pc.Servico.Implementacoes.MotorIA.MotorIA>.Instance,
+                _llm.Object);
+        }
+
+        [Fact]
+        public async Task AnalisarAsync_MontarCesta_agrupa_ofertas_por_loja_e_soma_total()
+        {
+            var lojaAId = Guid.NewGuid();
+            var lojaBId = Guid.NewGuid();
+            var lojaA = new Loja { Id = lojaAId, NomeFantasia = "Mercado Economia", Ativo = true };
+            var lojaB = new Loja { Id = lojaBId, NomeFantasia = "Super Caro", Ativo = true };
+
+            var prodArrozA = new Produto { Id = Guid.NewGuid(), LojaId = lojaAId, Loja = lojaA, NomeProduto = "Arroz 5kg", Preco = 20m, Ativo = true };
+            var prodFeijaoA = new Produto { Id = Guid.NewGuid(), LojaId = lojaAId, Loja = lojaA, NomeProduto = "Feijão 1kg", Preco = 8m, Ativo = true };
+            var prodArrozB = new Produto { Id = Guid.NewGuid(), LojaId = lojaBId, Loja = lojaB, NomeProduto = "Arroz 5kg", Preco = 28m, Ativo = true };
+            var prodFeijaoB = new Produto { Id = Guid.NewGuid(), LojaId = lojaBId, Loja = lojaB, NomeProduto = "Feijão 1kg", Preco = 12m, Ativo = true };
+
+            _produtos.Setup(p => p.BuscarPorNomeAsync(It.Is<string>(s => s.Contains("arroz")), null))
+                .ReturnsAsync(new List<Produto> { prodArrozA, prodArrozB });
+            _produtos.Setup(p => p.BuscarPorNomeAsync(It.Is<string>(s => s.Contains("feijao") || s.Contains("feijão")), null))
+                .ReturnsAsync(new List<Produto> { prodFeijaoA, prodFeijaoB });
+            _ofertas.Setup(o => o.ListarDisponiveisPorProdutosAsync(It.IsAny<IEnumerable<Guid>>()))
+                .ReturnsAsync(new List<Oferta>());
+
+            var sut = CriarMotor();
+            var res = await sut.AnalisarAsync(new PedidoAnaliseIA
+            {
+                Mensagem = "Quero montar uma cesta com arroz e feijão"
+            });
+
+            Assert.True(res.Sucesso);
+            Assert.Equal(IntencaoIA.MontarCesta, res.Intencao);
+            Assert.NotEmpty(res.Resultados);
+            var melhor = res.Resultados[0];
+            Assert.Equal(lojaAId, melhor.LojaId);
+            Assert.Equal(28m, melhor.Preco);
+            Assert.Contains(melhor.Motivos, m => m.Contains("2/2 itens", StringComparison.OrdinalIgnoreCase));
+        }
+
+        [Fact]
+        public async Task AnalisarAsync_ProdutosDaLoja_lista_catalogo_da_loja_especifica()
+        {
+            var lojaId = Guid.NewGuid();
+            var loja = new Loja { Id = lojaId, NomeFantasia = "Bink", Ativo = true };
+            var prod1 = new Produto { Id = Guid.NewGuid(), LojaId = lojaId, Loja = loja, NomeProduto = "Café Torrado", Preco = 14.90m, Ativo = true };
+            var prod2 = new Produto { Id = Guid.NewGuid(), LojaId = lojaId, Loja = loja, NomeProduto = "Açúcar Cristal", Preco = 5.50m, Ativo = true };
+
+            _lojas.Setup(l => l.BuscarPorNomeAsync("bink"))
+                .ReturnsAsync(new List<Loja> { loja });
+            _produtos.Setup(p => p.ListarProdutosAsync(lojaId))
+                .ReturnsAsync(new List<Produto> { prod1, prod2 });
+            _ofertas.Setup(o => o.ListarDisponiveisPorProdutosAsync(It.IsAny<IEnumerable<Guid>>()))
+                .ReturnsAsync(new List<Oferta>());
+
+            var sut = CriarMotor();
+            var res = await sut.AnalisarAsync(new PedidoAnaliseIA
+            {
+                Mensagem = "Quais produtos a loja Bink vende?"
+            });
+
+            Assert.True(res.Sucesso);
+            Assert.Equal(IntencaoIA.ProdutosDaLoja, res.Intencao);
+            Assert.Equal(2, res.Resultados.Count);
+            Assert.All(res.Resultados, r => Assert.Equal(lojaId, r.LojaId));
+            Assert.Contains(res.Resultados, r => r.ProdutoId == prod1.Id);
+            Assert.Contains("Bink", res.Resposta);
+        }
+
+        [Fact]
+        public async Task AnalisarAsync_AnalisarConcorrenciaLojista_compara_precos_da_loja_do_usuario_com_concorrentes()
+        {
+            var minhaLojaId = Guid.NewGuid();
+            var concorrenteId = Guid.NewGuid();
+            var minhaLoja = new Loja { Id = minhaLojaId, NomeFantasia = "Minha Loja", Ativo = true };
+            var concorrente = new Loja { Id = concorrenteId, NomeFantasia = "Concorrente", Ativo = true };
+
+            var meuProd = new Produto { Id = Guid.NewGuid(), LojaId = minhaLojaId, Loja = minhaLoja, NomeProduto = "Arroz Branco", Preco = 25m, Ativo = true };
+            var concProd = new Produto { Id = Guid.NewGuid(), LojaId = concorrenteId, Loja = concorrente, NomeProduto = "Arroz Branco", Preco = 20m, Ativo = true };
+
+            _produtos.Setup(p => p.ListarProdutosAsync(minhaLojaId))
+                .ReturnsAsync(new List<Produto> { meuProd });
+            _produtos.Setup(p => p.BuscarPorNomeAsync("Arroz Branco", null))
+                .ReturnsAsync(new List<Produto> { meuProd, concProd });
+            _ofertas.Setup(o => o.ListarDisponiveisPorProdutosAsync(It.IsAny<IEnumerable<Guid>>()))
+                .ReturnsAsync(new List<Oferta>());
+
+            var sut = CriarMotor();
+            var res = await sut.AnalisarAsync(new PedidoAnaliseIA
+            {
+                Mensagem = "Quais produtos meus estão mais caros que a concorrência?",
+                LojaIdUsuario = minhaLojaId,
+                ModoOperacional = "loja"
+            });
+
+            Assert.True(res.Sucesso);
+            Assert.Equal(IntencaoIA.AnalisarConcorrenciaLojista, res.Intencao);
+            Assert.NotEmpty(res.Resultados);
+            Assert.Contains(res.Resultados[0].Motivos, m => m.Contains("mais caro", StringComparison.OrdinalIgnoreCase) || m.Contains("concorrência", StringComparison.OrdinalIgnoreCase));
+        }
+
+        [Fact]
+        public async Task AnalisarAsync_retorna_ProdutoId_e_LojaId_nos_resultados()
+        {
+            var lojaId = Guid.NewGuid();
+            var prodId = Guid.NewGuid();
+            var loja = new Loja { Id = lojaId, NomeFantasia = "Bink", Ativo = true };
+            var prod = new Produto { Id = prodId, LojaId = lojaId, Loja = loja, NomeProduto = "Arroz Tipo 1", Preco = 19.90m, Ativo = true };
+
+            _produtos.Setup(p => p.BuscarPorTermosAsync(It.IsAny<IEnumerable<string>>(), null))
+                .ReturnsAsync(new List<Produto> { prod });
+            _ofertas.Setup(o => o.ListarDisponiveisPorProdutosAsync(It.IsAny<IEnumerable<Guid>>()))
+                .ReturnsAsync(new List<Oferta>());
+
+            var sut = CriarMotor();
+            var res = await sut.AnalisarAsync(new PedidoAnaliseIA { Mensagem = "Quero arroz" });
+
+            Assert.NotEmpty(res.Resultados);
+            Assert.Equal(prodId, res.Resultados[0].ProdutoId);
+            Assert.Equal(lojaId, res.Resultados[0].LojaId);
         }
     }
 }

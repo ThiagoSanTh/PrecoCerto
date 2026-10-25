@@ -109,15 +109,23 @@ namespace Pc.WebApi.Controllers
                 Mensagem = mensagem,
                 Latitude = request.Latitude,
                 Longitude = request.Longitude,
-                UsuarioId = request.UsuarioId ?? User.GetUserId()
+                UsuarioId = request.UsuarioId ?? User.GetUserId(),
+                LojaIdUsuario = request.LojaIdUsuario,
+                ModoOperacional = request.ModoOperacional,
+                Historico = request.Historico?.Select(h => new MensagemHistoricoIA
+                {
+                    Papel = h.Papel,
+                    Texto = h.Texto
+                }).ToList() ?? new List<MensagemHistoricoIA>()
             }, cancellationToken);
             sw.Stop();
 
             _logger.LogInformation(
-                "MotorIA analisar: Intencao={Intencao} Confianca={Conf} Resultados={Qtd} TempoMs={Ms}",
+                "MotorIA analisar: Intencao={Intencao} Confianca={Conf} Resultados={Qtd} Provedor={Prov} TempoMs={Ms}",
                 resultado.Intencao,
                 resultado.Confianca,
                 resultado.Resultados.Count,
+                resultado.ProvedorLlm,
                 sw.ElapsedMilliseconds);
 
             return Ok(new IAAnalisarResponseDto
@@ -127,12 +135,16 @@ namespace Pc.WebApi.Controllers
                 Intencao = resultado.Intencao.ToString(),
                 Objetivo = resultado.Objetivo?.ToString(),
                 Confianca = resultado.Confianca,
+                ProvedorLlm = resultado.ProvedorLlm,
                 Resultados = resultado.Resultados.Select(r => new IAAnalisarItemDto
                 {
                     Tipo = r.Tipo,
                     Titulo = r.Titulo,
+                    ProdutoId = r.ProdutoId,
+                    LojaId = r.LojaId,
                     Score = r.Score,
                     Preco = r.Preco,
+                    EmPromocao = r.EmPromocao,
                     DistanciaKm = r.DistanciaKm,
                     Loja = r.Loja,
                     Produto = r.Produto,
