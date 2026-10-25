@@ -1,3 +1,5 @@
+using System.Net;
+using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -103,7 +105,7 @@ namespace Pc.Servico.Tests
                 });
             _docs.Setup(d => d.ObterGlobalAsync(RagDocumentoTipo.Produto, id, It.IsAny<CancellationToken>()))
                 .ReturnsAsync((DocumentoRag?)null);
-            _embeddings.Setup(e => e.GerarEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            _embeddings.Setup(e => e.GerarEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>(), It.IsAny<bool>()))
                 .ReturnsAsync(VetorFake());
 
             var sut = CriarSut();
@@ -114,7 +116,7 @@ namespace Pc.Servico.Tests
                 Acao = RagIndexAcao.Indexar
             });
 
-            _embeddings.Verify(e => e.GerarEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+            _embeddings.Verify(e => e.GerarEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>(), It.IsAny<bool>()), Times.Once);
             _docs.Verify(d => d.UpsertAsync(It.IsAny<DocumentoRag>(), It.IsAny<CancellationToken>()), Times.Once);
         }
 
@@ -152,7 +154,7 @@ namespace Pc.Servico.Tests
                 Acao = RagIndexAcao.Indexar
             });
 
-            _embeddings.Verify(e => e.GerarEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+            _embeddings.Verify(e => e.GerarEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>(), It.IsAny<bool>()), Times.Never);
             _docs.Verify(d => d.UpsertAsync(It.IsAny<DocumentoRag>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
@@ -178,7 +180,7 @@ namespace Pc.Servico.Tests
                     Ativo = true,
                     Embedding = new Vector(VetorFake())
                 });
-            _embeddings.Setup(e => e.GerarEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            _embeddings.Setup(e => e.GerarEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>(), It.IsAny<bool>()))
                 .ReturnsAsync(VetorFake());
 
             var sut = CriarSut();
@@ -189,7 +191,7 @@ namespace Pc.Servico.Tests
                 Acao = RagIndexAcao.Indexar
             });
 
-            _embeddings.Verify(e => e.GerarEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+            _embeddings.Verify(e => e.GerarEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>(), It.IsAny<bool>()), Times.Once);
             _docs.Verify(d => d.UpsertAsync(It.IsAny<DocumentoRag>(), It.IsAny<CancellationToken>()), Times.Once);
         }
 
@@ -206,7 +208,7 @@ namespace Pc.Servico.Tests
             });
 
             _docs.Verify(d => d.SoftDeleteAsync(RagDocumentoTipo.Produto, id, It.IsAny<CancellationToken>()), Times.Once);
-            _embeddings.Verify(e => e.GerarEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+            _embeddings.Verify(e => e.GerarEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>(), It.IsAny<bool>()), Times.Never);
         }
     }
 
@@ -227,7 +229,7 @@ namespace Pc.Servico.Tests
             };
 
             var vetor = new float[1536];
-            embeddings.Setup(e => e.GerarEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            embeddings.Setup(e => e.GerarEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>(), It.IsAny<bool>()))
                 .ReturnsAsync(vetor);
 
             docs.Setup(d => d.BuscarPorSimilaridadeAsync(
@@ -242,8 +244,54 @@ namespace Pc.Servico.Tests
 
             Assert.Single(results);
             Assert.True(results[0].Score >= 0.70);
+            embeddings.Verify(e => e.GerarEmbeddingAsync("arroz integral", It.IsAny<CancellationToken>(), true), Times.Once);
             docs.Verify(d => d.BuscarPorSimilaridadeAsync(
                 It.IsAny<Vector>(), 3, It.Is<double>(x => Math.Abs(x - 0.30) < 0.001), It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task GeminiEmbedding_isQuery_envia_RETRIEVAL_QUERY_e_falha_rapido_em_429()
+        {
+            string? capturedBody = null;
+            var attempts = 0;
+            var handler = new FakeEmbedHttpHandler(async req =>
+            {
+                attempts++;
+                capturedBody = await req.Content!.ReadAsStringAsync();
+                return new HttpResponseMessage((HttpStatusCode)429)
+                {
+                    Content = new StringContent("rate limit", Encoding.UTF8, "text/plain")
+                };
+            });
+
+            var http = new HttpClient(handler) { BaseAddress = new Uri("https://generativelanguage.googleapis.com/v1beta/") };
+            var settings = Options.Create(new RagSettings
+            {
+                Enabled = true,
+                ApiKey = "test-key",
+                EmbeddingDimension = 4,
+                MaxRetries = 5
+            });
+
+            var sut = new GeminiEmbeddingService(http, settings, NullLogger<GeminiEmbeddingService>.Instance);
+
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            await Assert.ThrowsAsync<HttpRequestException>(() =>
+                sut.GerarEmbeddingAsync("arroz", CancellationToken.None, isQuery: true));
+            sw.Stop();
+
+            Assert.Equal(1, attempts);
+            Assert.True(sw.Elapsed < TimeSpan.FromSeconds(5));
+            Assert.NotNull(capturedBody);
+            Assert.Contains("RETRIEVAL_QUERY", capturedBody);
+        }
+
+        private sealed class FakeEmbedHttpHandler : HttpMessageHandler
+        {
+            private readonly Func<HttpRequestMessage, Task<HttpResponseMessage>> _responder;
+            public FakeEmbedHttpHandler(Func<HttpRequestMessage, Task<HttpResponseMessage>> responder) => _responder = responder;
+            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+                => _responder(request);
         }
 
         [Fact]

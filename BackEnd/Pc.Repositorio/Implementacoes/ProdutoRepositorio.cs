@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Pc.Dominio.Comum;
 using Pc.Dominio.Entities.Catalogo;
 using Pc.Dominio.Enums;
@@ -66,6 +66,16 @@ namespace Pc.Repositorio.Implementacoes
                 "feijao" => "feijão",
                 "promocao" => "promoção",
                 "preco" => "preço",
+                "acucar" => "açúcar",
+                "oleo" => "óleo",
+                "macarrao" => "macarrão",
+                "linguica" => "linguiça",
+                "agua" => "água",
+                "sabao" => "sabão",
+                "limao" => "limão",
+                "remedio" => "remédio",
+                "analgesico" => "analgésico",
+                "laticinios" => "laticínios",
                 _ => null
             };
         }

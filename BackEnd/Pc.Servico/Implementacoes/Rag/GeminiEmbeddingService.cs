@@ -26,7 +26,7 @@ namespace Pc.Servico.Implementacoes.Rag
             _logger = logger;
         }
 
-        public async Task<float[]> GerarEmbeddingAsync(string texto, CancellationToken cancellationToken = default)
+        public async Task<float[]> GerarEmbeddingAsync(string texto, CancellationToken cancellationToken = default, bool isQuery = false)
         {
             if (string.IsNullOrWhiteSpace(_settings.ApiKey))
                 throw new InvalidOperationException("Rag:ApiKey não configurada (Gemini).");
@@ -47,11 +47,11 @@ namespace Pc.Servico.Implementacoes.Rag
                 {
                     parts = new[] { new { text = texto.Length > 8000 ? texto[..8000] : texto } }
                 },
-                taskType = "RETRIEVAL_DOCUMENT",
+                taskType = isQuery ? "RETRIEVAL_QUERY" : "RETRIEVAL_DOCUMENT",
                 outputDimensionality = _settings.EmbeddingDimension
             };
 
-            var maxAttempts = Math.Clamp(_settings.MaxRetries, 1, 8);
+            var maxAttempts = isQuery ? 1 : Math.Clamp(_settings.MaxRetries, 1, 8);
             HttpResponseMessage? lastResponse = null;
 
             for (var attempt = 1; attempt <= maxAttempts; attempt++)

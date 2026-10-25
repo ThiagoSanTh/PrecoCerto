@@ -78,6 +78,14 @@ namespace Pc.Servico.Implementacoes
             return await _avaliacaoRepositorio.ObterResumoPorLojaAsync(lojaId);
         }
 
+        public async Task<Dictionary<Guid, (double Media, int Quantidade)>> ObterResumosPorLojasAsync(IEnumerable<Guid> lojaIds)
+        {
+            if (lojaIds is null)
+                return new Dictionary<Guid, (double Media, int Quantidade)>();
+
+            return await _avaliacaoRepositorio.ObterResumosPorLojasAsync(lojaIds);
+        }
+
         public async Task AtualizarAsync(Avaliacao avaliacao)
         {
             if (avaliacao.Id == Guid.Empty)

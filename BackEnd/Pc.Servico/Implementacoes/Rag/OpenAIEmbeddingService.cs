@@ -24,7 +24,7 @@ namespace Pc.Servico.Implementacoes.Rag
             _logger = logger;
         }
 
-        public async Task<float[]> GerarEmbeddingAsync(string texto, CancellationToken cancellationToken = default)
+        public async Task<float[]> GerarEmbeddingAsync(string texto, CancellationToken cancellationToken = default, bool isQuery = false)
         {
             if (string.IsNullOrWhiteSpace(_settings.ApiKey))
                 throw new InvalidOperationException("Rag:ApiKey não configurada.");

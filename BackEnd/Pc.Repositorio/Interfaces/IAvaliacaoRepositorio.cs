@@ -46,5 +46,10 @@ namespace Pc.Repositorio.Interfaces
         /// Média e quantidade de avaliações da loja em uma única consulta.
         /// </summary>
         Task<(double Media, int Quantidade)> ObterResumoPorLojaAsync(Guid lojaId);
+
+        /// <summary>
+        /// Média e quantidade de avaliações para múltiplas lojas em uma única consulta batch.
+        /// </summary>
+        Task<Dictionary<Guid, (double Media, int Quantidade)>> ObterResumosPorLojasAsync(IEnumerable<Guid> lojaIds);
     }
 }

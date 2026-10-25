@@ -57,6 +57,22 @@ namespace Pc.Repositorio.Implementacoes
             return resumo is null ? (0, 0) : (resumo.Media, resumo.Quantidade);
         }
 
+        public async Task<Dictionary<Guid, (double Media, int Quantidade)>> ObterResumosPorLojasAsync(IEnumerable<Guid> lojaIds)
+        {
+            var ids = lojaIds.Where(id => id != Guid.Empty).Distinct().ToList();
+            if (ids.Count == 0)
+                return new Dictionary<Guid, (double Media, int Quantidade)>();
+
+            var resumos = await _context.Avaliacoes
+                .AsNoTracking()
+                .Where(a => ids.Contains(a.LojaId))
+                .GroupBy(a => a.LojaId)
+                .Select(g => new { LojaId = g.Key, Media = g.Average(a => (double)a.Nota), Quantidade = g.Count() })
+                .ToListAsync();
+
+            return resumos.ToDictionary(r => r.LojaId, r => (r.Media, r.Quantidade));
+        }
+
         public async Task<List<Avaliacao>> ObterPorClienteAsync(Guid clienteId)
         {
             return await _context.Avaliacoes

@@ -41,7 +41,7 @@ namespace Pc.Servico.Implementacoes.Rag
                 return Array.Empty<RagSearchResult>();
 
             var top = Math.Clamp(limite ?? _settings.MaxResults, 1, 20);
-            var embedding = await _embeddings.GerarEmbeddingAsync(consulta.Trim(), cancellationToken);
+            var embedding = await _embeddings.GerarEmbeddingAsync(consulta.Trim(), cancellationToken, isQuery: true);
             // cosine distance = 1 - similarity; threshold 0.70 => max distance 0.30
             var maxDist = Math.Clamp(1.0 - _settings.SimilarityThreshold, 0.01, 1.0);
 

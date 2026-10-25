@@ -41,6 +41,11 @@ namespace Pc.Servico.Interfaces
         Task<(double Media, int Quantidade)> ObterResumoAvaliacaoAsync(Guid lojaId);
 
         /// <summary>
+        /// Média e quantidade de avaliações de várias lojas em batch.
+        /// </summary>
+        Task<Dictionary<Guid, (double Media, int Quantidade)>> ObterResumosPorLojasAsync(IEnumerable<Guid> lojaIds);
+
+        /// <summary>
         /// Atualiza uma avaliação existente
         /// Valida que cliente tem permissão para atualizar
         /// </summary>
