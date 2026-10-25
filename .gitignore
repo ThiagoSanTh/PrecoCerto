@@ -109,3 +109,5 @@ docker-compose.override.yml
 
 # --- Cursor / ferramentas locais (opcional — evita ruído em PRs) -------------
 .cursor/plans/
+
+.vercel
