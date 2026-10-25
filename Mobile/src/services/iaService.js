@@ -2,17 +2,41 @@ import api from './api';
 import { obterLocalizacaoAtual } from './locationService';
 
 /**
- * Assistente Preço Certo — MotorIA v2 (`POST /IA/analisar`).
+ * Assistente Preço Certo — MotorIA v3 (`POST /IA/analisar`).
  * Histórico fica só na sessão do app.
  */
 export async function enviarPerguntaIA(
   mensagem,
-  { incluirLocalizacao = true, usuarioId = null } = {}
+  {
+    incluirLocalizacao = true,
+    usuarioId = null,
+    lojaId = null,
+    modoOperacional = null,
+    historico = [],
+  } = {}
 ) {
   const body = { mensagem: String(mensagem || '').trim() };
 
   if (usuarioId) {
     body.usuarioId = usuarioId;
+  }
+
+  if (lojaId) {
+    body.lojaIdUsuario = lojaId;
+  }
+
+  if (modoOperacional) {
+    body.modoOperacional = modoOperacional;
+  }
+
+  if (Array.isArray(historico) && historico.length > 0) {
+    body.historico = historico
+      .filter((m) => m && m.id !== 'welcome' && m.texto)
+      .slice(-6)
+      .map((m) => ({
+        papel: m.papel === 'user' ? 'user' : 'ia',
+        texto: String(m.texto).slice(0, 500),
+      }));
   }
 
   if (incluirLocalizacao) {
