@@ -27,11 +27,33 @@ namespace Pc.Servico.Implementacoes.MotorIA
                 Latitude = pedido.Latitude,
                 Longitude = pedido.Longitude,
                 UsuarioId = pedido.UsuarioId,
+                LojaIdUsuario = pedido.LojaIdUsuario,
+                ModoOperacional = pedido.ModoOperacional,
+                Historico = pedido.Historico ?? new List<MensagemHistoricoIA>(),
                 Pesos = PesosIA.Padrao()
             };
 
             _classificador.Classificar(ctx);
             _extrator.Extrair(ctx);
+
+            // Multi-turn: herda loja ou produto do histórico recente se a pergunta atual for continuação ("e feijao?", "nessa loja").
+            if (ctx.Historico.Count > 0)
+            {
+                if (string.IsNullOrWhiteSpace(ctx.LojaTermo) &&
+                    (ctx.MensagemNormalizada.Contains("nessa loja") || ctx.MensagemNormalizada.Contains("nesse mercado") || ctx.MensagemNormalizada.Contains("la tem")))
+                {
+                    foreach (var h in ctx.Historico.AsEnumerable().Reverse())
+                    {
+                        var hCtx = new ContextoIA { MensagemOriginal = h.Texto, MensagemNormalizada = TextoNormalizador.Normalizar(h.Texto) };
+                        _extrator.Extrair(hCtx);
+                        if (!string.IsNullOrWhiteSpace(hCtx.LojaTermo))
+                        {
+                            ctx.LojaTermo = hCtx.LojaTermo;
+                            break;
+                        }
+                    }
+                }
+            }
 
             // Nome de produto isolado ("coca", "camera") → busca, não "não entendi".
             if (ctx.Intencao is IntencaoIA.NaoEntendida

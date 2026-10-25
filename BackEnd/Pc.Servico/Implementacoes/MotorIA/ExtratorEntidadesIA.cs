@@ -27,7 +27,12 @@ namespace Pc.Servico.Implementacoes.MotorIA
             "vendo", "vende", "vendem", "vendendo", "venda", "vendas", "disponivel", "disponível",
             "favor", "pf", "pfv", "quando", "como", "aqui", "la", "lá", "ainda",
             "esse", "essa", "este", "esta", "isso", "isto", "aquele", "aquela",
-            "alguma", "algum", "cidade", "redondezas"
+            "alguma", "algum", "cidade", "redondezas",
+            "caro", "cara", "conta", "reais", "real", "km", "kg", "quilometros",
+            "saquarema", "bacaxa", "itauna", "jacone", "sampaio", "correia",
+            "cesta", "basica", "montar", "lista", "compras", "compare", "comparar",
+            "precos", "preco", "valor", "valores", "meus", "minha", "concorrencia",
+            "recomenda", "recomende", "sugere", "indica"
         };
 
         public void Extrair(ContextoIA contexto)
@@ -79,9 +84,15 @@ namespace Pc.Servico.Implementacoes.MotorIA
             ExtrairPeso(contexto, original);
             ExtrairCategoria(contexto, t);
             ExtrairLoja(contexto, original);
+            ExtrairItensMultiplosOuOcasiao(contexto, t);
             ExtrairProduto(contexto, t);
 
-            if (contexto.Objetivo is null && contexto.Intencao is IntencaoIA.BuscarProdutoMaisBarato)
+            if (contexto.ItensBusca.Count == 0 && !string.IsNullOrWhiteSpace(contexto.ProdutoTermo))
+                contexto.ItensBusca.Add(contexto.ProdutoTermo);
+            else if (string.IsNullOrWhiteSpace(contexto.ProdutoTermo) && contexto.ItensBusca.Count > 0)
+                contexto.ProdutoTermo = contexto.ItensBusca[0];
+
+            if (contexto.Objetivo is null && contexto.Intencao is IntencaoIA.BuscarProdutoMaisBarato or IntencaoIA.MontarCesta)
                 contexto.Objetivo = ObjetivoIA.Economizar;
             if (contexto.Objetivo is null && contexto.Intencao is IntencaoIA.BuscarLojaMaisProxima)
                 contexto.Objetivo = ObjetivoIA.Proximidade;
@@ -135,6 +146,7 @@ namespace Pc.Servico.Implementacoes.MotorIA
                 return;
             var nome = m.Groups[1].Value.Trim();
             nome = Regex.Replace(nome, @"[?\.,!;:].*$", "").Trim();
+            nome = Regex.Replace(nome, @"\b(?:vende|vendem|tem|fica|possui|esta|está|na|no|em)\b.*$", "", RegexOptions.IgnoreCase).Trim();
             nome = Limpar(TextoNormalizador.Normalizar(nome));
             if (nome.Length >= 2
                 && !VocabularioIA.DistanciaBaixa.Any(s => TextoNormalizador.Normalizar(s).Contains(nome) || nome.Contains(TextoNormalizador.Normalizar(s)))
@@ -144,19 +156,61 @@ namespace Pc.Servico.Implementacoes.MotorIA
             }
         }
 
+        private static void ExtrairItensMultiplosOuOcasiao(ContextoIA ctx, string t)
+        {
+            foreach (var kv in VocabularioIA.ItensPorOcasiao)
+            {
+                var chaveNorm = TextoNormalizador.Normalizar(kv.Key);
+                if (t.Contains(chaveNorm, StringComparison.Ordinal))
+                {
+                    foreach (var item in kv.Value)
+                    {
+                        var norm = TextoNormalizador.Normalizar(item);
+                        if (!ctx.ItensBusca.Contains(norm, StringComparer.OrdinalIgnoreCase))
+                            ctx.ItensBusca.Add(norm);
+                    }
+                }
+            }
+
+            if (ctx.Intencao == IntencaoIA.MontarCesta || t.Contains(','))
+            {
+                var tSemValores = RemoverValoresNumericos(t);
+                var tokens = TokensSignificativos(tSemValores);
+                if (tokens.Count >= 2)
+                {
+                    ctx.ItensBusca.Clear();
+                    foreach (var tok in tokens.Distinct(StringComparer.OrdinalIgnoreCase).Take(8))
+                        ctx.ItensBusca.Add(tok);
+                }
+            }
+        }
+
+        private static string RemoverValoresNumericos(string t)
+        {
+            var limpo = Regex.Replace(t, @"\bate\s+\d+(?:[.,]\d+)?\s*(?:reais|real|r\$|km|quilometros)?\b", " ", RegexOptions.IgnoreCase);
+            limpo = Regex.Replace(limpo, @"r\$\s*\d+(?:[.,]\d+)?", " ", RegexOptions.IgnoreCase);
+            limpo = Regex.Replace(limpo, @"\b\d+(?:[.,]\d+)?\s*(?:kg|g|l|ml|km|reais|real)\b", " ", RegexOptions.IgnoreCase);
+            return limpo;
+        }
+
         private static void ExtrairProduto(ContextoIA ctx, string t)
         {
+            if (ctx.Intencao is IntencaoIA.ProdutosDaLoja or IntencaoIA.AnalisarConcorrenciaLojista)
+                return;
+
+            var tLimpo = RemoverValoresNumericos(t);
+
             var padroes = new[]
             {
                 @"\b(?:promocao(?:\s+de)?|oferta(?:\s+de)?)\s+([a-z][\w\s\-]{1,40}?)(?:\s|$|\?|,)",
                 @"\b(?:estou\s+)?(?:procurando|buscando|procuro|busco)\s+(?:por\s+)?(?:de\s+|um\s+|uma\s+|o\s+|a\s+)?([a-z][\w\s\-]{1,40}?)(?:\s*[,.]|\s+(?:aonde|onde|mais|barato|perto|agora|com|sem|ate|na|no|em|da|do|promocao|oferta|vendendo|vendo|\?|$))",
-                @"\b(?:quero|preciso|buscar|encontrar|achar|comprar|tem|vende|vendem)\s+(?:de\s+|um\s+|uma\s+|o\s+|a\s+)?([a-z][\w\s\-]{1,40}?)(?:\s+(?:barato|perto|agora|com|sem|ate|na|no|em|da|do|promocao|oferta|vendendo|vendo|vende|aonde|onde|\?|$|,))",
-                @"\b(?:aonde|onde)\s+(?:eu\s+)?(?:posso|pode|podem)\s+(?:achar|encontrar|comprar)\s+(?:um\s+|uma\s+|o\s+|a\s+)?([a-z][\w\s\-]{1,40}?)(?:\s+(?:barato|perto|agora|vendendo|vendo|\?|$|,))"
+                @"\b(?:quero|preciso|buscar|encontrar|achar|comprar|tem|vende|vendem|encontro)\s+(?:de\s+|um\s+|uma\s+|o\s+|a\s+)?([a-z][\w\s\-]{1,40}?)(?:\s+(?:barato|barata|caro|cara|perto|agora|com|sem|ate|na|no|em|da|do|promocao|oferta|vendendo|vendo|vende|aonde|onde|\?|$|,))",
+                @"\b(?:aonde|onde)\s+(?:eu\s+)?(?:posso|pode|podem)?\s*(?:achar|encontrar|comprar|encontro|tem|vende)\s+(?:um\s+|uma\s+|o\s+|a\s+)?([a-z][\w\s\-]{1,40}?)(?:\s+(?:barato|perto|agora|vendendo|vendo|\?|$|,))"
             };
 
             foreach (var p in padroes)
             {
-                var m = Regex.Match(t, p, RegexOptions.IgnoreCase);
+                var m = Regex.Match(tLimpo, p, RegexOptions.IgnoreCase);
                 if (!m.Success) continue;
                 var cand = Limpar(m.Groups[1].Value);
                 if (string.IsNullOrWhiteSpace(cand)) continue;
@@ -166,19 +220,18 @@ namespace Pc.Servico.Implementacoes.MotorIA
                 return;
             }
 
-            var tokens = TokensSignificativos(t);
+            var tokens = TokensSignificativos(tLimpo);
             if (tokens.Count == 0)
                 return;
 
-            // Preferência: 1 substantivo (último token útil). Multi-palavra só se parecer marca+produto curto.
-            ctx.ProdutoTermo = tokens.Count == 1
-                ? tokens[0]
-                : tokens[^1];
+            // Se algum token for um produto conhecido no vocabulário, prioriza ele.
+            var conhecido = tokens.FirstOrDefault(tok => VocabularioIA.SinonimosProduto.ContainsKey(tok));
+            ctx.ProdutoTermo = conhecido ?? tokens[0];
         }
 
         private static List<string> TokensSignificativos(string t) =>
             Regex.Split(t, @"[^\p{L}\p{N}]+")
-                .Where(x => x.Length >= 3)
+                .Where(x => x.Length >= 3 && !Regex.IsMatch(x, @"^\d+$"))
                 .Select(TextoNormalizador.Normalizar)
                 .Where(x => !Stopwords.Contains(x))
                 .Where(x => !VocabularioIA.PrecoBaixo.Any(s => TextoNormalizador.Normalizar(s) == x))

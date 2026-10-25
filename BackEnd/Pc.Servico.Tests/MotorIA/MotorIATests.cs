@@ -155,6 +155,64 @@ namespace Pc.Servico.Tests.MotorIA
             Assert.NotNull(ctx.ProdutoTermo);
             Assert.Contains("feijao", TextoNormalizador.Normalizar(ctx.ProdutoTermo!), StringComparison.Ordinal);
         }
+
+        [Theory]
+        [InlineData("Quero comprar arroz até 15 reais até 5 km", IntencaoIA.BuscarProduto, "arroz")]
+        [InlineData("Não quero arroz caro, quero o mais em conta em Saquarema", IntencaoIA.BuscarProduto, "arroz")]
+        [InlineData("Onde encontro açúcar cristal?", IntencaoIA.BuscarProduto, "acucar")]
+        public void Extrai_produto_correto_com_numeros_negacao_e_cidade(string msg, IntencaoIA intencaoEsperada, string termoEsperado)
+        {
+            var ctx = _sut.Interpretar(new PedidoAnaliseIA { Mensagem = msg });
+            Assert.Equal(intencaoEsperada, ctx.Intencao);
+            Assert.NotNull(ctx.ProdutoTermo);
+            Assert.Contains(termoEsperado, TextoNormalizador.Normalizar(ctx.ProdutoTermo!), StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void Classifica_produtos_da_loja_e_limpa_verbo_vende()
+        {
+            var ctx = _sut.Interpretar(new PedidoAnaliseIA { Mensagem = "Quais produtos a loja Bink vende?" });
+            Assert.Equal(IntencaoIA.ProdutosDaLoja, ctx.Intencao);
+            Assert.Equal("bink", ctx.LojaTermo);
+        }
+
+        [Fact]
+        public void Classifica_copa_do_mundo_como_fora_do_dominio()
+        {
+            var ctx = _sut.Interpretar(new PedidoAnaliseIA { Mensagem = "Quem ganhou a copa do mundo?" });
+            Assert.Equal(IntencaoIA.ForaDoDominio, ctx.Intencao);
+        }
+
+        [Fact]
+        public void Extrai_multiplos_itens_na_cesta_basica()
+        {
+            var ctx = _sut.Interpretar(new PedidoAnaliseIA { Mensagem = "Quero montar uma cesta básica com arroz, feijão e óleo" });
+            Assert.Equal(IntencaoIA.MontarCesta, ctx.Intencao);
+            Assert.Contains("arroz", ctx.ItensBusca);
+            Assert.Contains("feijao", ctx.ItensBusca);
+            Assert.Contains("oleo", ctx.ItensBusca);
+        }
+
+        [Fact]
+        public void Classifica_ocasiao_churrasco_e_expande_itens()
+        {
+            var ctx = _sut.Interpretar(new PedidoAnaliseIA { Mensagem = "Recomenda algo para churrasco" });
+            Assert.Equal(IntencaoIA.RecomendarPorOcasiao, ctx.Intencao);
+            Assert.NotEmpty(ctx.ItensBusca);
+            Assert.Contains("carne", ctx.ItensBusca);
+        }
+
+        [Fact]
+        public void Classifica_analise_concorrencia_lojista_quando_em_modo_loja()
+        {
+            var ctx = _sut.Interpretar(new PedidoAnaliseIA
+            {
+                Mensagem = "Quais produtos meus estão mais caros que a concorrência?",
+                LojaIdUsuario = Guid.NewGuid(),
+                ModoOperacional = "loja"
+            });
+            Assert.Equal(IntencaoIA.AnalisarConcorrenciaLojista, ctx.Intencao);
+        }
     }
 
     public class MotorIARegrasPontuacaoTests

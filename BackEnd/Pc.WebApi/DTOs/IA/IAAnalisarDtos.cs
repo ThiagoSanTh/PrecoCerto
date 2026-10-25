@@ -2,6 +2,12 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Pc.WebApi.DTOs.IA
 {
+    public class IAMensagemHistoricoDto
+    {
+        public string Papel { get; set; } = "user";
+        public string Texto { get; set; } = string.Empty;
+    }
+
     public class IAAnalisarRequestDto
     {
         [Required]
@@ -15,6 +21,12 @@ namespace Pc.WebApi.DTOs.IA
         public double? Longitude { get; set; }
 
         public Guid? UsuarioId { get; set; }
+
+        public Guid? LojaIdUsuario { get; set; }
+
+        public string? ModoOperacional { get; set; }
+
+        public List<IAMensagemHistoricoDto>? Historico { get; set; }
     }
 
     public class IAAnalisarItemDto
@@ -26,6 +38,9 @@ namespace Pc.WebApi.DTOs.IA
         public double? DistanciaKm { get; set; }
         public string? Loja { get; set; }
         public string? Produto { get; set; }
+        public Guid? ProdutoId { get; set; }
+        public Guid? LojaId { get; set; }
+        public bool EmPromocao { get; set; }
         public List<string> Motivos { get; set; } = new();
     }
 
@@ -36,6 +51,7 @@ namespace Pc.WebApi.DTOs.IA
         public string Intencao { get; set; } = string.Empty;
         public string? Objetivo { get; set; }
         public double Confianca { get; set; }
+        public string ProvedorLlm { get; set; } = "Deterministico";
         public List<IAAnalisarItemDto> Resultados { get; set; } = new();
         public List<string> Motivos { get; set; } = new();
         public List<string> Fallbacks { get; set; } = new();

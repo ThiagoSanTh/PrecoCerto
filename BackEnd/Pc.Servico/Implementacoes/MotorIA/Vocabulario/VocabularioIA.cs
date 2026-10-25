@@ -46,10 +46,25 @@ namespace Pc.Servico.Implementacoes.MotorIA.Vocabulario
 
         public static readonly string[] ForaDominio =
         {
-            "presidente", "neymar", "piada", "receita", "como fazer", "capital da",
+            "presidente", "neymar", "piada", "capital da",
             "capital do", "previsao do tempo", "previsão do tempo", "futebol", "chatgpt",
-            "conte uma historia", "conte uma história", "traduza", "poema"
+            "conte uma historia", "conte uma história", "traduza", "poema",
+            "copa do mundo", "quem ganhou", "politica", "política", "religiao", "religião",
+            "programacao", "programação"
         };
+
+        public static readonly Dictionary<string, string[]> ItensPorOcasiao =
+            new(StringComparer.OrdinalIgnoreCase)
+            {
+                ["churrasco"] = new[] { "carne", "linguica", "frango", "refrigerante", "cerveja", "pao" },
+                ["cesta"] = new[] { "arroz", "feijao", "oleo", "acucar", "cafe", "leite", "macarrao" },
+                ["cesta basica"] = new[] { "arroz", "feijao", "oleo", "acucar", "cafe", "leite", "macarrao" },
+                ["cafe da manha"] = new[] { "cafe", "leite", "pao", "manteiga", "queijo" },
+                ["almoco"] = new[] { "arroz", "feijao", "carne", "frango", "macarrao", "oleo" },
+                ["dor de cabeca"] = new[] { "dipirona", "paracetamol", "analgesico", "remedio" },
+                ["remedio"] = new[] { "dipirona", "paracetamol", "analgesico", "vitamina" },
+                ["festa"] = new[] { "refrigerante", "cerveja", "bolo", "biscoito", "suco" }
+            };
 
         public static readonly string[] Saudacoes =
         {
@@ -74,7 +89,14 @@ namespace Pc.Servico.Implementacoes.MotorIA.Vocabulario
                 ["sabonete"] = new[] { "sabonete" },
                 ["cafe"] = new[] { "cafe", "café" },
                 ["pao"] = new[] { "pao", "pão" },
-                ["refrigerante"] = new[] { "refrigerante", "refri", "coca", "cola" }
+                ["refrigerante"] = new[] { "refrigerante", "refri", "coca", "cola" },
+                ["acucar"] = new[] { "acucar", "açúcar", "cristal" },
+                ["oleo"] = new[] { "oleo", "óleo", "soja" },
+                ["macarrao"] = new[] { "macarrao", "macarrão", "massa" },
+                ["linguica"] = new[] { "linguica", "linguiça", "toscana", "calabresa" },
+                ["carne"] = new[] { "carne", "bovino", "picanha", "alcatra", "contrafile" },
+                ["frango"] = new[] { "frango", "peito de frango", "coxa" },
+                ["cerveja"] = new[] { "cerveja", "lata", "long neck" }
             };
 
         public static readonly Dictionary<string, string> SinonimosCategoria = new(StringComparer.OrdinalIgnoreCase)

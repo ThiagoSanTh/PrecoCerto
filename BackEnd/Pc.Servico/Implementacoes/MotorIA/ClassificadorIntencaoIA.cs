@@ -35,6 +35,24 @@ namespace Pc.Servico.Implementacoes.MotorIA
                 return;
             }
 
+            if ((contexto.LojaIdUsuario.HasValue || string.Equals(contexto.ModoOperacional, "loja", StringComparison.OrdinalIgnoreCase))
+                && (t.Contains("meus produtos") || t.Contains("meus precos") || t.Contains("concorrencia")
+                    || t.Contains("mais caros que") || t.Contains("mais barato que a concorrencia")
+                    || t.Contains("competitividade")))
+            {
+                contexto.Intencao = IntencaoIA.AnalisarConcorrenciaLojista;
+                return;
+            }
+
+            if (t.Contains("quais produtos") || t.Contains("que produtos")
+                || t.Contains("o que a loja") || t.Contains("o que o mercado")
+                || t.Contains("produtos da loja") || t.Contains("catalogo da loja")
+                || (Regex.IsMatch(t, @"\b(?:loja|mercado|supermercado)\s+[a-z0-9]+.*\b(?:vende|vendem|tem)\b") && !ContemProdutoHint(t)))
+            {
+                contexto.Intencao = IntencaoIA.ProdutosDaLoja;
+                return;
+            }
+
             if (VocabularioIA.ContemAlgum(t, VocabularioIA.Entrega) &&
                 (t.Contains("entrega") || t.Contains("delivery") || t.Contains("entregar")
                  || t.Contains("nao quero sair") || t.Contains("não quero sair")))
@@ -46,6 +64,13 @@ namespace Pc.Servico.Implementacoes.MotorIA
             if (t.Contains("cesta") || t.Contains("lista de compra") || t.Contains("montar compra"))
             {
                 contexto.Intencao = IntencaoIA.MontarCesta;
+                return;
+            }
+
+            if (t.Contains("churrasco") || t.Contains("cafe da manha") || t.Contains("dor de cabeca")
+                || t.Contains("fazer pro almoco") || t.Contains("receita") || t.Contains("para festa"))
+            {
+                contexto.Intencao = IntencaoIA.RecomendarPorOcasiao;
                 return;
             }
 
@@ -168,6 +193,9 @@ namespace Pc.Servico.Implementacoes.MotorIA
             t.Contains("sabonete") || t.Contains("cafe") || t.Contains("café") ||
             t.Contains("leite") || t.Contains("pao") || t.Contains("pão") ||
             t.Contains("camera") || t.Contains("câmera") || t.Contains("brinco") ||
-            t.Contains("coca") || t.Contains("produto");
+            t.Contains("coca") || t.Contains("acucar") || t.Contains("açúcar") ||
+            t.Contains("oleo") || t.Contains("óleo") || t.Contains("macarrao") ||
+            t.Contains("carne") || t.Contains("frango") || t.Contains("cerveja") ||
+            t.Contains("produto");
     }
 }

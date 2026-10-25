@@ -17,7 +17,10 @@ namespace Pc.Dominio.Enums.MotorIA
         MontarCesta = 12,
         ForaDoDominio = 13,
         NaoEntendida = 14,
-        Saudacao = 15
+        Saudacao = 15,
+        ProdutosDaLoja = 16,
+        RecomendarPorOcasiao = 17,
+        AnalisarConcorrenciaLojista = 18
     }
 
     public enum ObjetivoIA

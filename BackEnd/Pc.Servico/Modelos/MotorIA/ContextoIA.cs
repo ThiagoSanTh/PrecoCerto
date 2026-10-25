@@ -77,6 +77,8 @@ namespace Pc.Servico.Modelos.MotorIA
         public string? ProdutoTermo { get; set; }
         /// <summary>Tokens/sinônimos derivados de <see cref="ProdutoTermo"/> para busca SQL/RAG.</summary>
         public List<string> TermosBuscaProduto { get; set; } = new();
+        /// <summary>Lista de itens quando o usuário pede cesta básica ou ocasião com vários produtos.</summary>
+        public List<string> ItensBusca { get; set; } = new();
         public string? LojaTermo { get; set; }
         public CategoriaProduto? Categoria { get; set; }
         public string? Caracteristica { get; set; }
@@ -93,6 +95,10 @@ namespace Pc.Servico.Modelos.MotorIA
         public double? Latitude { get; set; }
         public double? Longitude { get; set; }
         public Guid? UsuarioId { get; set; }
+        public Guid? LojaIdUsuario { get; set; }
+        public string? ModoOperacional { get; set; }
+        public List<MensagemHistoricoIA> Historico { get; set; } = new();
+        public string ProvedorLlm { get; set; } = "Deterministico";
 
         public bool? Chuva { get; set; }
         public string? ClimaDescricao { get; set; }
@@ -109,12 +115,21 @@ namespace Pc.Servico.Modelos.MotorIA
         public int ResultadosRag { get; set; }
     }
 
+    public class MensagemHistoricoIA
+    {
+        public string Papel { get; set; } = "user";
+        public string Texto { get; set; } = string.Empty;
+    }
+
     public class PedidoAnaliseIA
     {
         public string Mensagem { get; set; } = string.Empty;
         public double? Latitude { get; set; }
         public double? Longitude { get; set; }
         public Guid? UsuarioId { get; set; }
+        public Guid? LojaIdUsuario { get; set; }
+        public string? ModoOperacional { get; set; }
+        public List<MensagemHistoricoIA> Historico { get; set; } = new();
     }
 
     public class ResultadoItemAnaliseIA
@@ -126,6 +141,9 @@ namespace Pc.Servico.Modelos.MotorIA
         public double? DistanciaKm { get; set; }
         public string? Loja { get; set; }
         public string? Produto { get; set; }
+        public Guid? ProdutoId { get; set; }
+        public Guid? LojaId { get; set; }
+        public bool EmPromocao { get; set; }
         public List<string> Motivos { get; set; } = new();
     }
 
@@ -136,6 +154,7 @@ namespace Pc.Servico.Modelos.MotorIA
         public IntencaoIA Intencao { get; set; }
         public ObjetivoIA? Objetivo { get; set; }
         public double Confianca { get; set; }
+        public string ProvedorLlm { get; set; } = "Deterministico";
         public List<ResultadoItemAnaliseIA> Resultados { get; set; } = new();
         public List<string> Motivos { get; set; } = new();
         public List<string> Fallbacks { get; set; } = new();
