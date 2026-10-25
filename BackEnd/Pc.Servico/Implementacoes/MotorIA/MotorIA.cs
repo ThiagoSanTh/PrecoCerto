@@ -69,30 +69,6 @@ namespace Pc.Servico.Implementacoes.MotorIA
             await CarregarCandidatosAsync(ctx, cancellationToken);
             swDados.Stop();
 
-            // #region agent log
-            try
-            {
-                var payload = System.Text.Json.JsonSerializer.Serialize(new
-                {
-                    sessionId = "6c7c29",
-                    runId = "pre-fix",
-                    hypothesisId = "E",
-                    location = "MotorIA.cs:apos-SQL",
-                    message = "candidatos-apos-sql",
-                    data = new
-                    {
-                        produto = ctx.ProdutoTermo,
-                        termos = ctx.TermosBuscaProduto,
-                        candidatos = ctx.Candidatos.Count,
-                        intencao = ctx.Intencao.ToString()
-                    },
-                    timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-                });
-                System.IO.File.AppendAllText(@"d:\Dev\PrecoCerto\debug-6c7c29.log", payload + "\n");
-            }
-            catch { /* debug */ }
-            // #endregion
-
             var swRag = Stopwatch.StartNew();
             await TentarRagAsync(ctx, cancellationToken);
             swRag.Stop();
@@ -372,51 +348,9 @@ namespace Pc.Servico.Implementacoes.MotorIA
                     break;
             }
 
-            // #region agent log
-            try
-            {
-                var payload = System.Text.Json.JsonSerializer.Serialize(new
-                {
-                    sessionId = "6c7c29",
-                    runId = "pre-fix",
-                    hypothesisId = "A,C,D",
-                    location = "MotorIA.cs:TentarRagAsync",
-                    message = "rag-resultado",
-                    data = new
-                    {
-                        precisaRag,
-                        consultas,
-                        hits = hits.Count,
-                        candidatosAntes = ctx.Candidatos.Count,
-                        produto = ctx.ProdutoTermo
-                    },
-                    timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-                });
-                System.IO.File.AppendAllText(@"d:\Dev\PrecoCerto\debug-6c7c29.log", payload + "\n");
-            }
-            catch { /* debug */ }
-            // #endregion
-
             if (hits.Count == 0)
             {
                 ctx.FallbacksUsados.Add("sem_rag");
-                // #region agent log
-                try
-                {
-                    var payload = System.Text.Json.JsonSerializer.Serialize(new
-                    {
-                        sessionId = "6c7c29",
-                        runId = "post-fix",
-                        hypothesisId = "C",
-                        location = "MotorIA.cs:TentarRagAsync:sem_rag",
-                        message = "sem_rag-apos-consultas",
-                        data = new { consultas, produto = ctx.ProdutoTermo, candidatos = ctx.Candidatos.Count },
-                        timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-                    });
-                    System.IO.File.AppendAllText(@"d:\Dev\PrecoCerto\debug-6c7c29.log", payload + "\n");
-                }
-                catch { /* debug */ }
-                // #endregion
                 return;
             }
 

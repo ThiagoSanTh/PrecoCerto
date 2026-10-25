@@ -2,9 +2,7 @@ using System.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Pc.Servico.Interfaces;
 using Pc.Servico.Interfaces.MotorIA;
-using Pc.Servico.Modelos.IA;
 using Pc.Servico.Modelos.MotorIA;
 using Pc.WebApi.DTOs.IA;
 using Pc.WebApi.Extensions;
@@ -12,7 +10,7 @@ using Pc.WebApi.Extensions;
 namespace Pc.WebApi.Controllers
 {
     /// <summary>
-    /// Assistente Preço Certo: chat protótipo + MotorIA v2.
+    /// Assistente Preço Certo: MotorIA.
     /// Isolado do chat cliente↔loja.
     /// </summary>
     [ApiController]
@@ -21,13 +19,11 @@ namespace Pc.WebApi.Controllers
     [EnableRateLimiting("ia")]
     public class IAController : ControllerBase
     {
-        private readonly IIAServico _iaServico;
         private readonly IMotorIA _motorIA;
         private readonly ILogger<IAController> _logger;
 
-        public IAController(IIAServico iaServico, IMotorIA motorIA, ILogger<IAController> logger)
+        public IAController(IMotorIA motorIA, ILogger<IAController> logger)
         {
-            _iaServico = iaServico;
             _motorIA = motorIA;
             _logger = logger;
         }
@@ -58,7 +54,7 @@ namespace Pc.WebApi.Controllers
             }
 
             var sw = Stopwatch.StartNew();
-            var resultado = await _iaServico.ProcessarAsync(new IAChatPedido
+            var resultado = await _motorIA.AnalisarAsync(new PedidoAnaliseIA
             {
                 Mensagem = mensagem,
                 Latitude = request.Latitude,
@@ -78,7 +74,7 @@ namespace Pc.WebApi.Controllers
                 Sucesso = resultado.Sucesso,
                 Intencao = resultado.Intencao.ToString(),
                 Resposta = resultado.Resposta,
-                Dados = resultado.Dados
+                Dados = resultado.Resultados
             });
         }
 

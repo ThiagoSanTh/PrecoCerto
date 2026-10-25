@@ -44,30 +44,6 @@ namespace Pc.Servico.Implementacoes.MotorIA
             if (ctx.TermosBuscaProduto.Count == 0 && !string.IsNullOrWhiteSpace(ctx.ProdutoTermo))
                 ctx.TermosBuscaProduto.Add(ctx.ProdutoTermo.Trim());
 
-            // #region agent log
-            try
-            {
-                var payload = System.Text.Json.JsonSerializer.Serialize(new
-                {
-                    sessionId = "6c7c29",
-                    runId = "pre-fix",
-                    hypothesisId = "A",
-                    location = "InterpretadorIA.cs:Interpretar",
-                    message = "pos-interpretacao",
-                    data = new
-                    {
-                        msg = ctx.MensagemOriginal,
-                        intencao = ctx.Intencao.ToString(),
-                        produto = ctx.ProdutoTermo,
-                        termos = ctx.TermosBuscaProduto
-                    },
-                    timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-                });
-                System.IO.File.AppendAllText(@"d:\Dev\PrecoCerto\debug-6c7c29.log", payload + "\n");
-            }
-            catch { /* debug */ }
-            // #endregion
-
             return ctx;
         }
     }

@@ -6,7 +6,6 @@ using Pc.Repositorio.Interfaces;
 using Pc.Servico.Implementacoes.Rag;
 using Pc.Servico.Interfaces;
 using Pc.Servico.Interfaces.MotorIA;
-using Pc.Servico.Modelos.IA;
 using Pc.Servico.Modelos.MotorIA;
 using Pc.Servico.Modelos.Rag;
 using Pc.WebApi.Controllers;
@@ -103,20 +102,19 @@ namespace Pc.Servico.Tests.Rag
     public class IaChatLegadoFacadeTests
     {
         [Fact]
-        public async Task Chat_legado_usa_IAServico()
+        public async Task Chat_legado_delega_para_IMotorIA()
         {
-            var ia = new Mock<IIAServico>();
-            ia.Setup(s => s.ProcessarAsync(It.IsAny<IAChatPedido>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new IAChatResultado
+            var motor = new Mock<IMotorIA>();
+            motor.Setup(m => m.AnalisarAsync(It.IsAny<PedidoAnaliseIA>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new ResultadoAnaliseIA
                 {
                     Sucesso = true,
-                    Intencao = Pc.Dominio.Enums.IAIntencao.PrecoProduto,
+                    Intencao = IntencaoIA.BuscarProduto,
                     Resposta = "Encontrei opções."
                 });
 
             var controller = new IAController(
-                ia.Object,
-                Mock.Of<IMotorIA>(),
+                motor.Object,
                 NullLogger<IAController>.Instance);
             controller.ControllerContext = new ControllerContext
             {
@@ -130,10 +128,10 @@ namespace Pc.Servico.Tests.Rag
             var ok = Assert.IsType<OkObjectResult>(result);
             var dto = Assert.IsType<IAChatResponseDto>(ok.Value);
             Assert.True(dto.Sucesso);
-            Assert.Equal("PrecoProduto", dto.Intencao);
+            Assert.Equal("BuscarProduto", dto.Intencao);
             Assert.Equal("Encontrei opções.", dto.Resposta);
-            ia.Verify(s => s.ProcessarAsync(
-                It.Is<IAChatPedido>(p => p.Mensagem == "quero arroz"),
+            motor.Verify(m => m.AnalisarAsync(
+                It.Is<PedidoAnaliseIA>(p => p.Mensagem == "quero arroz"),
                 It.IsAny<CancellationToken>()), Times.Once);
         }
     }

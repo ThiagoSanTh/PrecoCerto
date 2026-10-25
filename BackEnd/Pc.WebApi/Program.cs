@@ -436,8 +436,6 @@ builder.Services.AddScoped<IAvaliacaoServico, AvaliacaoServico>();
 builder.Services.AddScoped<IPreferenciaClienteServico, PreferenciaClienteServico>();
 builder.Services.AddScoped<IConversaServico, ConversaServico>();
 builder.Services.AddScoped<ChatNotificacaoHelper>();
-builder.Services.AddScoped<IRespostaIAServico, RespostaDeterministicaServico>();
-builder.Services.AddScoped<IIAServico, IAServico>();
 
 // MotorIA v2
 builder.Services.AddScoped<IClassificadorIntencaoIA, ClassificadorIntencaoIA>();
