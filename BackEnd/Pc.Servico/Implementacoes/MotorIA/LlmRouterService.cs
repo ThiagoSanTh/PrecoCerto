@@ -89,7 +89,7 @@ namespace Pc.Servico.Implementacoes.MotorIA
                     return (res, "Gemini");
             }
 
-            if (ProvedorDisponivel("NvidiaNim", _settings.NvidiaApiKey))
+            if ( !ct.IsCancellationRequested && ProvedorDisponivel("NvidiaNim", _settings.NvidiaApiKey))
             {
                 var res = await TentarNvidiaAsync(prompt, jsonMode, ct);
                 if (!string.IsNullOrWhiteSpace(res))
@@ -162,7 +162,8 @@ namespace Pc.Servico.Implementacoes.MotorIA
             }
             catch (Exception ex)
             {
-                MarcarCooldown("Gemini", ex.GetType().Name);
+                if (!ct.IsCancellationRequested)
+                    MarcarCooldown("Gemini", ex.GetType().Name);
                 return null;
             }
         }
@@ -214,7 +215,8 @@ namespace Pc.Servico.Implementacoes.MotorIA
             }
             catch (Exception ex)
             {
-                MarcarCooldown("NvidiaNim", ex.GetType().Name);
+                if (!ct.IsCancellationRequested)
+                    MarcarCooldown("NvidiaNim", ex.GetType().Name);
                 return null;
             }
         }

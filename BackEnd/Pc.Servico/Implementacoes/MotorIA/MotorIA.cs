@@ -511,14 +511,22 @@ namespace Pc.Servico.Implementacoes.MotorIA
 
         private async Task CarregarProdutosDaLojaAsync(ContextoIA ctx, CancellationToken ct)
         {
-            if (string.IsNullOrWhiteSpace(ctx.LojaTermo))
+            Loja? loja = null;
+            if (!string.IsNullOrWhiteSpace(ctx.LojaTermo))
+            {
+                var lojas = await _lojas.BuscarPorNomeAsync(ctx.LojaTermo) ?? new List<Loja>();
+                loja = lojas.FirstOrDefault();
+            }
+            else if (ctx.LojaIdUsuario.HasValue && ctx.LojaIdUsuario.Value != Guid.Empty)
+            {
+                loja = await _lojas.ObterPorIdAsync(ctx.LojaIdUsuario.Value);
+            }
+            else
             {
                 await CarregarLojasAsync(ctx, ct);
                 return;
             }
 
-            var lojas = await _lojas.BuscarPorNomeAsync(ctx.LojaTermo) ?? new List<Loja>();
-            var loja = lojas.FirstOrDefault();
             if (loja is null) return;
 
             var produtos = await _produtos.ListarProdutosAsync(loja.Id) ?? new List<Produto>();
