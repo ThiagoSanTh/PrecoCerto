@@ -308,6 +308,48 @@ builder.Services.Configure<ConsultaCnpjSettings>(builder.Configuration.GetSectio
 builder.Services.Configure<ClimaSettings>(builder.Configuration.GetSection(ClimaSettings.SectionName));
 builder.Services.Configure<IdEncodingSettings>(builder.Configuration.GetSection(IdEncodingSettings.SectionName));
 builder.Services.Configure<RagSettings>(builder.Configuration.GetSection(RagSettings.SectionName));
+builder.Services.Configure<Pc.Servico.Modelos.MotorIA.LlmSettings>(builder.Configuration.GetSection(Pc.Servico.Modelos.MotorIA.LlmSettings.SectionName));
+builder.Services.PostConfigure<Pc.Servico.Modelos.MotorIA.LlmSettings>(llm =>
+{
+    if (string.IsNullOrWhiteSpace(llm.GeminiApiKey))
+    {
+        llm.GeminiApiKey = builder.Configuration["Llm:GeminiApiKey"]
+            ?? builder.Configuration["Rag:ApiKey"]
+            ?? Environment.GetEnvironmentVariable("Llm__GeminiApiKey")
+            ?? Environment.GetEnvironmentVariable("Rag__ApiKey")
+            ?? Environment.GetEnvironmentVariable("GEMINI_API_KEY")
+            ?? Environment.GetEnvironmentVariable("GOOGLE_API_KEY")
+            ?? string.Empty;
+    }
+
+    if (string.IsNullOrWhiteSpace(llm.NvidiaApiKey))
+    {
+        llm.NvidiaApiKey = builder.Configuration["Llm:NvidiaApiKey"]
+            ?? Environment.GetEnvironmentVariable("Llm__NvidiaApiKey")
+            ?? Environment.GetEnvironmentVariable("NVIDIA_API_KEY")
+            ?? string.Empty;
+    }
+});
+builder.Services.AddHttpClient("GeminiLlm", (sp, client) =>
+{
+    var llm = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Pc.Servico.Modelos.MotorIA.LlmSettings>>().Value;
+    var baseUrl = string.IsNullOrWhiteSpace(llm.GeminiBaseUrl)
+        ? "https://generativelanguage.googleapis.com/v1beta/"
+        : llm.GeminiBaseUrl.TrimEnd('/') + "/";
+    client.BaseAddress = new Uri(baseUrl);
+    client.Timeout = TimeSpan.FromMilliseconds(Math.Clamp(llm.TimeoutMs + 500, 1500, 12000));
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+});
+builder.Services.AddHttpClient("NvidiaLlm", (sp, client) =>
+{
+    var llm = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Pc.Servico.Modelos.MotorIA.LlmSettings>>().Value;
+    var baseUrl = string.IsNullOrWhiteSpace(llm.NvidiaBaseUrl)
+        ? "https://integrate.api.nvidia.com/v1/"
+        : llm.NvidiaBaseUrl.TrimEnd('/') + "/";
+    client.BaseAddress = new Uri(baseUrl);
+    client.Timeout = TimeSpan.FromMilliseconds(Math.Clamp(llm.TimeoutMs + 500, 1500, 12000));
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+});
 builder.Services.PostConfigure<RagSettings>(rag =>
 {
     if (string.IsNullOrWhiteSpace(rag.ApiKey))
@@ -438,6 +480,7 @@ builder.Services.AddScoped<IConversaServico, ConversaServico>();
 builder.Services.AddScoped<ChatNotificacaoHelper>();
 
 // MotorIA v2
+builder.Services.AddSingleton<ILlmRouterService, LlmRouterService>();
 builder.Services.AddScoped<IClassificadorIntencaoIA, ClassificadorIntencaoIA>();
 builder.Services.AddScoped<IExtratorEntidadesIA, ExtratorEntidadesIA>();
 builder.Services.AddScoped<IInterpretadorIA, InterpretadorIA>();
