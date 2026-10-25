@@ -9,7 +9,7 @@ namespace Pc.Servico.Modelos.MotorIA
         public string GeminiBaseUrl { get; set; } = "https://generativelanguage.googleapis.com/v1beta";
 
         public string NvidiaApiKey { get; set; } = string.Empty;
-        public string NvidiaModel { get; set; } = "meta/llama-3.3-70b-instruct";
+        public string NvidiaModel { get; set; } = "stepfun-ai/step-5-preview";
         public string NvidiaBaseUrl { get; set; } = "https://integrate.api.nvidia.com/v1";
 
         public int TimeoutMs { get; set; } = 3500;

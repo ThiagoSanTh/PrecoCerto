@@ -152,7 +152,7 @@ namespace Pc.Servico.Implementacoes.MotorIA
                 if (!response.IsSuccessStatusCode)
                 {
                     var code = (int)response.StatusCode;
-                    if (code is 429 or 401 or 403 or >= 500)
+                    if (code is 400 or 401 or 403 or 404 or 410 or 429 or >= 500)
                         MarcarCooldown("Gemini", $"HTTP {code}");
                     return null;
                 }
@@ -180,7 +180,7 @@ namespace Pc.Servico.Implementacoes.MotorIA
                 req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _settings.NvidiaApiKey);
 
                 var model = string.IsNullOrWhiteSpace(_settings.NvidiaModel)
-                    ? "meta/llama-3.3-70b-instruct"
+                    ? "stepfun-ai/step-5-preview"
                     : _settings.NvidiaModel.Trim();
 
                 req.Content = JsonContent.Create(new
@@ -205,7 +205,7 @@ namespace Pc.Servico.Implementacoes.MotorIA
                 if (!response.IsSuccessStatusCode)
                 {
                     var code = (int)response.StatusCode;
-                    if (code is 429 or 401 or 403 or >= 500)
+                    if (code is 400 or 401 or 403 or 404 or 410 or 429 or >= 500)
                         MarcarCooldown("NvidiaNim", $"HTTP {code}");
                     return null;
                 }
