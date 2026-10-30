@@ -7,20 +7,26 @@ export default function FormTabs({ options, value, onChange }) {
   const { colors } = useTheme();
 
   return (
-    <View style={s.tabRow}>
+    <View style={[s.tabRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       {options.map((opt) => {
         const active = value === opt.value;
         return (
           <Pressable
             key={opt.value}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
             style={[
               s.tabButton,
-              { borderColor: colors.primary },
-              active && { backgroundColor: colors.primary },
+              active && { backgroundColor: colors.ink },
             ]}
             onPress={() => onChange(opt.value)}
           >
-            <Text style={[s.tabText, { color: colors.primary }, active && s.tabTextActive]}>
+            <Text
+              style={[
+                s.tabText,
+                { color: active ? colors.inkForeground : colors.textMuted },
+              ]}
+            >
               {opt.label}
             </Text>
           </Pressable>

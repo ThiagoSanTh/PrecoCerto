@@ -1,15 +1,14 @@
 import { StatusBar } from 'expo-status-bar';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useState, useRef } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import { login as authLogin } from '../../services/authService';
 import { mapApiError } from '../../utils/apiErrorUtils';
 import { useAuth, podeUsarModoLoja } from '../../context/AuthContext';
-import { useFormStyles } from '../../hooks/useFormStyles';
-import {
-  FormScreen,
-  FormField,
-  PrimaryButton,
-} from '../../components/form';
+import { useTheme } from '../../context/ThemeContext';
+import { FormField, PrimaryButton } from '../../components/form';
+import AuthSplitLayout from '../../components/ui/AuthSplitLayout';
+import { fonts } from '../../theme';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -18,7 +17,7 @@ export default function LoginScreen({ navigation }) {
   const [error, setError] = useState(null);
   const senhaRef = useRef(null);
   const { salvarSessao, sincronizarGpsCliente } = useAuth();
-  const formStyles = useFormStyles();
+  const { colors } = useTheme();
 
   async function handleLogin() {
     if (loading) return;
@@ -47,19 +46,14 @@ export default function LoginScreen({ navigation }) {
   }
 
   return (
-    <FormScreen
-      title="Preço Certo"
-      subtitle="Entre com sua conta"
-      webVariant="auth"
+    <AuthSplitLayout
+      title="Bem-vindo de volta"
+      subtitle="Após entrar, sua localização é obtida pelo GPS para mostrar as lojas próximas."
       error={error}
-      footer={<PrimaryButton label="Entrar" onPress={handleLogin} loading={loading} />}
     >
-      <Text style={formStyles.sectionHint}>
-        Após o login, sua localização é obtida automaticamente pelo GPS.
-      </Text>
-
       <FormField
         label="E-mail"
+        placeholder="voce@email.com"
         value={email}
         onChangeText={(v) => {
           setEmail(v);
@@ -70,10 +64,13 @@ export default function LoginScreen({ navigation }) {
         returnKeyType="next"
         onSubmitEditing={() => senhaRef.current?.focus()}
         accessibilityLabel="Campo de e-mail"
+        icon={<Ionicons name="mail-outline" size={17} color={colors.textMuted} />}
       />
+
       <FormField
         ref={senhaRef}
         label="Senha"
+        placeholder="••••••••"
         value={senha}
         onChangeText={(v) => {
           setSenha(v);
@@ -83,28 +80,76 @@ export default function LoginScreen({ navigation }) {
         returnKeyType="go"
         onSubmitEditing={handleLogin}
         accessibilityLabel="Campo de senha"
+        icon={<Ionicons name="lock-closed-outline" size={17} color={colors.textMuted} />}
       />
 
-      <View style={formStyles.row}>
+      <View style={styles.forgotRow}>
         <Pressable
           onPress={() => navigation.navigate('EsqueciSenha')}
-          style={{ flex: 1, paddingVertical: 8 }}
           accessibilityRole="button"
           accessibilityLabel="Esqueci a senha"
+          hitSlop={8}
         >
-          <Text style={formStyles.linkText}>Esqueci a senha</Text>
+          <Text style={[styles.forgotLink, { color: colors.primary }]}>
+            Esqueci a senha
+          </Text>
         </Pressable>
+      </View>
+
+      <PrimaryButton
+        label="Entrar"
+        onPress={handleLogin}
+        loading={loading}
+        style={styles.submitBtn}
+      />
+
+      <View style={styles.switchRow}>
+        <Text style={[styles.switchMuted, { color: colors.textMuted }]}>
+          Novo por aqui?{' '}
+        </Text>
         <Pressable
           onPress={() => navigation.navigate('Cadastro')}
-          style={{ flex: 1, paddingVertical: 8, alignItems: 'flex-end' }}
           accessibilityRole="button"
           accessibilityLabel="Criar nova conta"
         >
-          <Text style={formStyles.linkText}>Novo usuário</Text>
+          <Text style={[styles.switchLink, { color: colors.primary }]}>
+            Criar conta
+          </Text>
         </Pressable>
       </View>
 
       <StatusBar style="auto" />
-    </FormScreen>
+    </AuthSplitLayout>
   );
 }
+
+const styles = StyleSheet.create({
+  forgotRow: {
+    alignItems: 'flex-end',
+    marginTop: -2,
+    marginBottom: 14,
+  },
+  forgotLink: {
+    fontFamily: fonts.sans,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  submitBtn: {
+    marginTop: 4,
+  },
+  switchRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 22,
+  },
+  switchMuted: {
+    fontFamily: fonts.sans,
+    fontSize: 14,
+  },
+  switchLink: {
+    fontFamily: fonts.sans,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+});

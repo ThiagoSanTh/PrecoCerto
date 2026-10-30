@@ -6,6 +6,7 @@ namespace Pc.WebApi.DTOs.Interacoes
         public string CodigoLoja { get; set; } = string.Empty;
         public string CodigoCliente { get; set; } = string.Empty;
         public string? NomeContato { get; set; }
+        public string? UltimaMensagemTexto { get; set; }
         public DateTime? UltimaMensagemEm { get; set; }
         public int NaoLidas { get; set; }
     }

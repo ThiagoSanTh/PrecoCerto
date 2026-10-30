@@ -118,6 +118,28 @@ namespace Pc.Repositorio.Implementacoes
             return rows.ToDictionary(r => r.ConversaId, r => r.Total);
         }
 
+        public async Task<Dictionary<Guid, string>> ObterUltimasMensagensTextoAsync(IEnumerable<Guid> conversaIds)
+        {
+            var ids = conversaIds?.Distinct().ToList() ?? new List<Guid>();
+            if (ids.Count == 0)
+                return new Dictionary<Guid, string>();
+
+            var mensagens = await _context.Mensagens
+                .AsNoTracking()
+                .Where(m => ids.Contains(m.ConversaId))
+                .OrderByDescending(m => m.EnviadaEm)
+                .Select(m => new { m.ConversaId, m.Texto })
+                .ToListAsync();
+
+            var resultado = new Dictionary<Guid, string>();
+            foreach (var msg in mensagens)
+            {
+                if (!resultado.ContainsKey(msg.ConversaId))
+                    resultado[msg.ConversaId] = msg.Texto;
+            }
+            return resultado;
+        }
+
         public async Task<Mensagem> AdicionarMensagemAsync(Mensagem mensagem)
         {
             _context.Mensagens.Add(mensagem);

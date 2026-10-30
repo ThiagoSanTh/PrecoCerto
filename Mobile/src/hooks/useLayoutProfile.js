@@ -51,7 +51,7 @@ export function useLayoutProfile() {
     contentWidth,
     contentMaxWidth: isDesktopWeb ? 960 : isPhone ? Math.round(width * CONTENT_WIDTH_PERCENT) : 720,
     authCardMaxWidth: 440,
-    sidebarWidth: 220,
+    sidebarWidth: 256,
     gridColumns: width >= DESKTOP_MIN ? 4 : width >= PHONE_MAX ? 3 : 2,
     useSidebarNav,
     contentFullWidth,

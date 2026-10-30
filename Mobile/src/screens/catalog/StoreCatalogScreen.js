@@ -1,12 +1,23 @@
-import { FlatList, ActivityIndicator, StyleSheet, Alert } from 'react-native';
+import {
+  FlatList,
+  ActivityIndicator,
+  StyleSheet,
+  Alert,
+  Pressable,
+  View,
+  Text,
+} from 'react-native';
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { listarFeed } from '../../services/feedService';
 import { obterLoja } from '../../services/lojaService';
 import {
   adicionarFavorito,
   listarFavoritosCliente,
+  removerFavoritoLoja,
   removerFavoritoProduto,
+  verificarFavorito,
 } from '../../services/favoritoService';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -14,6 +25,7 @@ import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import { mapApiError } from '../../utils/apiErrorUtils';
 import ProductGridCard from '../../components/feed/ProductGridCard';
 import { FormScreen, ListCardText } from '../../components/form';
+import { fonts, radii } from '../../theme';
 
 const PAGE_SIZE = 20;
 const GRID_PADDING_H = 8;
@@ -29,6 +41,7 @@ export default function StoreCatalogScreen({ route, navigation }) {
   const [lojaNome, setLojaNome] = useState(route.params?.lojaNome || 'Loja');
   const [produtos, setProdutos] = useState([]);
   const [favoritosIds, setFavoritosIds] = useState(() => new Set());
+  const [lojaFavorita, setLojaFavorita] = useState(false);
   const [loading, setLoading] = useState(true);
   const [carregandoMais, setCarregandoMais] = useState(false);
   const [page, setPage] = useState(1);
@@ -38,18 +51,27 @@ export default function StoreCatalogScreen({ route, navigation }) {
   const carregarFavoritos = useCallback(async () => {
     if (!clienteId) {
       setFavoritosIds(new Set());
+      setLojaFavorita(false);
       return;
     }
     try {
-      const res = await listarFavoritosCliente(clienteId, 1, 200);
+      const [res, ehFavLoja] = await Promise.all([
+        listarFavoritosCliente(clienteId, 1, 200),
+        lojaId
+          ? verificarFavorito(clienteId, null, lojaId).catch(() => false)
+          : Promise.resolve(false),
+      ]);
       const ids = new Set(
-        (res.items || []).map((f) => String(f.produtoId)).filter((id) => id && id !== 'undefined')
+        (res.items || [])
+          .map((f) => String(f.produtoId))
+          .filter((id) => id && id !== 'undefined')
       );
       setFavoritosIds(ids);
+      setLojaFavorita(Boolean(ehFavLoja));
     } catch {
       /* catálogo continua sem estado de favorito */
     }
-  }, [clienteId]);
+  }, [clienteId, lojaId]);
 
   const carregar = useCallback(
     async (pagina = 1, append = false) => {
@@ -70,7 +92,9 @@ export default function StoreCatalogScreen({ route, navigation }) {
         });
         setPage(resultado.page);
         setHasNext(resultado.hasNext);
-        setProdutos((prev) => (append ? [...prev, ...resultado.items] : resultado.items));
+        setProdutos((prev) =>
+          append ? [...prev, ...resultado.items] : resultado.items
+        );
         setError(null);
       } catch (err) {
         if (pagina === 1 && !append) setError(mapApiError(err));
@@ -94,6 +118,22 @@ export default function StoreCatalogScreen({ route, navigation }) {
       }
     }, [carregar, carregarFavoritos, lojaId, route.params?.lojaNome])
   );
+
+  async function handleToggleFavoritoLoja() {
+    if (!clienteId || !lojaId) return;
+    const anterior = lojaFavorita;
+    setLojaFavorita(!anterior);
+    try {
+      if (anterior) {
+        await removerFavoritoLoja(clienteId, lojaId);
+      } else {
+        await adicionarFavorito({ clienteId, lojaId });
+      }
+    } catch {
+      setLojaFavorita(anterior);
+      Alert.alert('Favoritos', 'Não foi possível atualizar a loja favorita.');
+    }
+  }
 
   async function handleFavorito(item) {
     if (!clienteId || !item?.id) return;
@@ -145,8 +185,44 @@ export default function StoreCatalogScreen({ route, navigation }) {
       scrollable={false}
       error={error}
     >
+      {clienteId && lojaId ? (
+        <View style={styles.storeFavBar}>
+          <Pressable
+            onPress={handleToggleFavoritoLoja}
+            style={[
+              styles.storeFavBtn,
+              {
+                backgroundColor: lojaFavorita
+                  ? colors.primarySoft
+                  : colors.card,
+                borderColor: lojaFavorita ? colors.primary : colors.border,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={
+              lojaFavorita
+                ? 'Remover loja dos favoritos'
+                : 'Salvar loja nos favoritos'
+            }
+          >
+            <Ionicons
+              name={lojaFavorita ? 'heart' : 'heart-outline'}
+              size={16}
+              color={lojaFavorita ? colors.danger : colors.text}
+            />
+            <Text style={[styles.storeFavText, { color: colors.text }]}>
+              {lojaFavorita ? 'Loja favorita' : 'Favoritar loja'}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
+
       {loading ? (
-        <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 24 }} />
+        <ActivityIndicator
+          size="large"
+          color={colors.primary}
+          style={{ marginTop: 24 }}
+        />
       ) : (
         <FlatList
           data={produtos}
@@ -185,7 +261,11 @@ export default function StoreCatalogScreen({ route, navigation }) {
           )}
           ListFooterComponent={
             carregandoMais ? (
-              <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 12 }} />
+              <ActivityIndicator
+                size="small"
+                color={colors.primary}
+                style={{ marginVertical: 12 }}
+              />
             ) : null
           }
           ListEmptyComponent={
@@ -200,7 +280,30 @@ export default function StoreCatalogScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  gridContent: { paddingHorizontal: GRID_PADDING_H, paddingTop: 8, paddingBottom: 16 },
+  storeFavBar: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 10,
+  },
+  storeFavBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: radii.full,
+    borderWidth: 1,
+  },
+  storeFavText: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 12.5,
+    fontWeight: '600',
+  },
+  gridContent: {
+    paddingHorizontal: GRID_PADDING_H,
+    paddingTop: 8,
+    paddingBottom: 16,
+  },
   gridRow: { gap: GRID_GAP },
   empty: { textAlign: 'center', marginTop: 24 },
 });

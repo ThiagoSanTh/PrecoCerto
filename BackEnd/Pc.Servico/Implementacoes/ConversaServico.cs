@@ -79,6 +79,9 @@ namespace Pc.Servico.Implementacoes
             return _repo.ContarNaoLidasPorConversasAsync(usuarioId, ehLojista, lojaId);
         }
 
+        public Task<Dictionary<Guid, string>> ObterUltimasMensagensTextoAsync(IEnumerable<Guid> conversaIds) =>
+            _repo.ObterUltimasMensagensTextoAsync(conversaIds);
+
         public async Task<Mensagem> EnviarMensagemAsync(
             Guid conversaId, Guid remetenteId, PapelUsuario remetentePapel, string texto)
         {

@@ -40,6 +40,8 @@ namespace Pc.WebApi.Controllers
             var conversas = await _conversaServico.ListarDoUsuarioAsync(userId.Value, papel, lojaId);
             var naoLidasPorConversa = await _conversaServico.ContarNaoLidasPorConversasAsync(
                 userId.Value, papel, lojaId);
+            var ultimasMensagens = await _conversaServico.ObterUltimasMensagensTextoAsync(
+                conversas.Select(c => c.Id));
 
             var resposta = conversas.Select(c => new ConversaRespostaDto
             {
@@ -49,6 +51,7 @@ namespace Pc.WebApi.Controllers
                 NomeContato = papel == PapelUsuario.Cliente
                     ? c.Loja?.NomeFantasia
                     : c.Cliente?.NomeUsuario,
+                UltimaMensagemTexto = ultimasMensagens.GetValueOrDefault(c.Id),
                 UltimaMensagemEm = c.UltimaMensagemEm,
                 NaoLidas = naoLidasPorConversa.GetValueOrDefault(c.Id, 0)
             }).ToList();

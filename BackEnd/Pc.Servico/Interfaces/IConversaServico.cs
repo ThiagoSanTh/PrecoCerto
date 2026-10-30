@@ -18,6 +18,7 @@ namespace Pc.Servico.Interfaces
         Task<int> ContarNaoLidasAsync(Guid usuarioId, PapelUsuario papel, Guid? lojaId);
         Task<bool> TemNaoLidasAsync(Guid usuarioId, PapelUsuario papel, Guid? lojaId, DateTime? desde = null);
         Task<Dictionary<Guid, int>> ContarNaoLidasPorConversasAsync(Guid usuarioId, PapelUsuario papel, Guid? lojaId);
+        Task<Dictionary<Guid, string>> ObterUltimasMensagensTextoAsync(IEnumerable<Guid> conversaIds);
         Task<bool> UsuarioPodeAcessarAsync(Guid conversaId, Guid usuarioId, PapelUsuario papel, Guid? lojaId);
     }
 }

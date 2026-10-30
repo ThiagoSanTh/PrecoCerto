@@ -27,6 +27,12 @@
    - Habilitadas todas as interações e controles: zoom in/out (scroll do mouse, gestos de pinça, botões `+`/`-`), arrastar e mover livremente para qualquer outra cidade.
    - Controles de zoom do Leaflet reposicionados para `bottomright` para evitar sobreposição pelos cabeçalhos/buscas do feed.
    - Corrigido `scrollEnabled={true}` no `WebView` nativo em `LeafletMapFrame.js` para garantir recepção de gestos de toque no iOS/Android.
+7. Integração do Novo Design System e Experiência Funcional:
+   - Tokens visuais atualizados em `Mobile/src/theme/index.js` (`primary: #0E7C66`, `highlight: #B6F035`, `ink: #0F1D22`, `primarySoft: #E2F5EE`, `radii`, `shadows`) e tipografia `Sora` + `Manrope` em `Mobile/App.js`.
+   - AppShell redesenhado em `CustomTabBar.js` com sidebar escura (`ink`) no desktop (seções `CLIENTE` e `LOJISTA` com alternância real via `setAppMode`, badge `Novo` na IA, badge de não lidas em Mensagens e cartão do usuário) e barra inferior flutuante em pílula no mobile.
+   - Utilitários puros testados (`Mobile/src/utils/geo.js` e `Mobile/src/utils/insights.js` + suíte `node --test` com 11 testes automatizados).
+   - Telas integradas ao novo design com dados 100% reais: `LoginScreen`, `RegisterScreen` (split layout), `SearchScreen` (split `440px + 1fr` com mapa Leaflet real, distância Haversine, banner de economia, filtros e card flutuante com rota Google Maps, favoritar e chat), `AiChatScreen` (tabela estruturada do `MotorIA`), `FavoritosScreen` (abas Produtos/Lojas e promoções), `HistoricoScreen` (KPIs reais, agrupamento por data e exclusão individual), `ConversasScreen` & `ChatScreen` (mestre-detalhe com `UltimaMensagemTexto` via SignalR/API), `ProfileScreen`, `MerchantDashboardScreen` (Painel BI real do lojista) e `ProductsScreen` (tabela/cards com estoque, posição de preço e edição).
+   - Incrementos seguros no Backend `.NET 8`: `UltimaMensagemTexto` adicionado em `ConversaRespostaDto` e verificação de propriedade (`Authz.IsSelfOrAdmin`) em `DELETE /api/HistoricoPesquisa/{id}`.
 
 ## Próximos Passos
 - Conforme demanda do usuário para novas telas, componentes ou integrações.

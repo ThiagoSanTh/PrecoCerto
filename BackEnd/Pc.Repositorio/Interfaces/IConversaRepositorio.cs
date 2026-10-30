@@ -12,6 +12,7 @@ namespace Pc.Repositorio.Interfaces
         Task AtualizarAsync(Conversa conversa);
         Task<List<Mensagem>> ListarMensagensAsync(Guid conversaId, DateTime? apos, DateTime? antes = null, int pageSize = 50);
         Task<Dictionary<Guid, int>> ContarNaoLidasPorConversasAsync(Guid usuarioId, bool ehLojista, Guid? lojaId);
+        Task<Dictionary<Guid, string>> ObterUltimasMensagensTextoAsync(IEnumerable<Guid> conversaIds);
         Task<Mensagem> AdicionarMensagemAsync(Mensagem mensagem);
         Task MarcarMensagensComoLidasAsync(Guid conversaId, Guid leitorId);
         Task MarcarMensagensComoRecebidasAsync(Guid conversaId, Guid leitorId);

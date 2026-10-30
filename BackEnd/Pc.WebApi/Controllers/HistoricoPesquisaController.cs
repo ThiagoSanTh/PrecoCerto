@@ -157,8 +157,16 @@ namespace Pc.WebApi.Controllers
         /// Remove um registro específico
         /// </summary>
         [HttpDelete("{id:guid}")]
+        [Authorize(Policy = AuthPolicies.CapacidadeClienteOuAdmin)]
         public async Task<IActionResult> Remover(Guid id)
         {
+            var historico = await _historicoPesquisaServico.ObterPorIdAsync(id);
+            if (historico == null)
+                return NotFound("Histórico não encontrado.");
+
+            if (!Authz.IsSelfOrAdmin(this, historico.ClienteId))
+                return Forbid();
+
             await _historicoPesquisaServico.RemoverAsync(id);
             return NoContent();
         }

@@ -1,35 +1,60 @@
-import { Alert, Image, Pressable, Text, StyleSheet, View } from 'react-native';
+import { Alert, Image, Text, StyleSheet, View } from 'react-native';
 import { useState, useRef } from 'react';
 import * as ImagePicker from 'expo-image-picker';
-import { criarProduto } from '../../services/productService';
+import { criarProduto, atualizarProduto } from '../../services/productService';
 import { invalidarFeedCache } from '../../services/feedService';
 import { uploadImagemProduto } from '../../services/storageService';
 import { useAuth } from '../../context/AuthContext';
-import { FormScreen, FormField, PrimaryButton, SecondaryButton } from '../../components/form';
+import { useTheme } from '../../context/ThemeContext';
+import {
+  FormScreen,
+  FormField,
+  PrimaryButton,
+  SecondaryButton,
+} from '../../components/form';
 import CategoriaPicker from '../../components/product/CategoriaPicker';
-import { colors } from '../../theme';
+import { fonts, radii } from '../../theme';
 
-export default function CreateProductScreen({ navigation }) {
+export default function CreateProductScreen({ navigation, route }) {
   const { session } = useAuth();
+  const { colors } = useTheme();
   const lojaId = session?.perfil?.lojaId;
-  const [nomeProduto, setNomeProduto] = useState('');
-  const [descricao, setDescricao] = useState('');
-  const [marca, setMarca] = useState('');
-  const [codigoBarras, setCodigoBarras] = useState('');
-  const [preco, setPreco] = useState('');
-  const [categoria, setCategoria] = useState(0);
+  const produtoEditando = route?.params?.produto || null;
+  const isEdicao = Boolean(produtoEditando?.id);
+
+  const [nomeProduto, setNomeProduto] = useState(
+    produtoEditando?.nomeProduto || produtoEditando?.nome || ''
+  );
+  const [descricao, setDescricao] = useState(produtoEditando?.descricao || '');
+  const [marca, setMarca] = useState(produtoEditando?.marca || '');
+  const [codigoBarras, setCodigoBarras] = useState(
+    produtoEditando?.codigoBarras || ''
+  );
+  const [preco, setPreco] = useState(
+    produtoEditando?.preco != null
+      ? String(produtoEditando.preco).replace('.', ',')
+      : ''
+  );
+  const [categoria, setCategoria] = useState(produtoEditando?.categoria ?? 0);
+  const [imagemUrlAtual] = useState(produtoEditando?.imagemUrl || null);
   const [imagemUri, setImagemUri] = useState(null);
   const [imagemMime, setImagemMime] = useState('image/jpeg');
   const [loading, setLoading] = useState(false);
+
   const descricaoRef = useRef(null);
   const marcaRef = useRef(null);
   const codigoBarrasRef = useRef(null);
   const precoRef = useRef(null);
 
+  const imagemExibida = imagemUri || imagemUrlAtual;
+
   async function handleEscolherFoto() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permissão', 'Permita o acesso à galeria para adicionar a foto do produto.');
+      Alert.alert(
+        'Permissão',
+        'Permita o acesso à galeria para adicionar a foto do produto.'
+      );
       return;
     }
 
@@ -47,7 +72,7 @@ export default function CreateProductScreen({ navigation }) {
     }
   }
 
-  async function handleCreateProduct() {
+  async function handleSaveProduct() {
     try {
       const precoConvertido = Number(preco.replace(',', '.'));
 
@@ -62,24 +87,30 @@ export default function CreateProductScreen({ navigation }) {
       }
 
       if (!lojaId) {
-        Alert.alert('Erro', 'Cadastre sua loja antes de criar produtos');
+        Alert.alert('Erro', 'Cadastre sua loja antes de gerenciar produtos');
         return;
       }
 
-      if (!imagemUri) {
-        Alert.alert('Foto obrigatória', 'Adicione uma foto do produto para exibir no mapa.');
+      if (!imagemExibida) {
+        Alert.alert(
+          'Foto obrigatória',
+          'Adicione uma foto do produto para exibir no mapa.'
+        );
         return;
       }
 
       setLoading(true);
 
-      const imagemUrl = await uploadImagemProduto({
-        uri: imagemUri,
-        lojaId,
-        mimeType: imagemMime,
-      });
+      let imagemUrl = imagemUrlAtual;
+      if (imagemUri) {
+        imagemUrl = await uploadImagemProduto({
+          uri: imagemUri,
+          lojaId,
+          mimeType: imagemMime,
+        });
+      }
 
-      await criarProduto({
+      const payload = {
         nomeProduto,
         descricao,
         marca,
@@ -88,14 +119,29 @@ export default function CreateProductScreen({ navigation }) {
         categoria,
         lojaId,
         imagemUrl,
-      });
+      };
+
+      if (isEdicao) {
+        await atualizarProduto(produtoEditando.id, payload);
+      } else {
+        await criarProduto(payload);
+      }
 
       invalidarFeedCache('feed');
-      Alert.alert('Sucesso', 'Produto criado com sucesso');
+      Alert.alert(
+        'Sucesso',
+        isEdicao ? 'Produto atualizado com sucesso' : 'Produto criado com sucesso'
+      );
       navigation.goBack();
     } catch (error) {
       console.error(error?.response?.data || error.message);
-      Alert.alert('Erro', error.message || 'Não foi possível criar o produto');
+      Alert.alert(
+        'Erro',
+        error.message ||
+          (isEdicao
+            ? 'Não foi possível atualizar o produto'
+            : 'Não foi possível criar o produto')
+      );
     } finally {
       setLoading(false);
     }
@@ -103,28 +149,56 @@ export default function CreateProductScreen({ navigation }) {
 
   return (
     <FormScreen
-      title="Novo produto"
-      subtitle="Produto vinculado à sua loja"
+      title={isEdicao ? 'Editar produto' : 'Novo produto'}
+      subtitle={
+        isEdicao
+          ? 'Atualize os dados do produto no catálogo'
+          : 'Produto vinculado à sua loja'
+      }
       onBack={() => navigation.goBack()}
       narrowContent
-      footer={<PrimaryButton label="Salvar produto" onPress={handleCreateProduct} loading={loading} />}
+      footer={
+        <PrimaryButton
+          label={isEdicao ? 'Salvar alterações' : 'Salvar produto'}
+          onPress={handleSaveProduct}
+          loading={loading}
+        />
+      }
     >
       <View style={styles.fotoSection}>
-        {imagemUri ? (
-          <Image source={{ uri: imagemUri }} style={styles.preview} />
+        {imagemExibida ? (
+          <Image
+            source={{ uri: imagemExibida }}
+            style={[styles.preview, { borderColor: colors.primary }]}
+          />
         ) : (
-          <View style={styles.previewPlaceholder}>
-            <Text style={styles.previewPlaceholderText}>Sem foto</Text>
+          <View
+            style={[
+              styles.previewPlaceholder,
+              { backgroundColor: colors.surfaceSubtle },
+            ]}
+          >
+            <Text
+              style={[
+                styles.previewPlaceholderText,
+                { color: colors.textMuted },
+              ]}
+            >
+              Sem foto
+            </Text>
           </View>
         )}
-        <SecondaryButton label="Adicionar foto *" onPress={handleEscolherFoto} />
+        <SecondaryButton
+          label={imagemExibida ? 'Alterar foto' : 'Adicionar foto *'}
+          onPress={handleEscolherFoto}
+        />
       </View>
 
       <FormField
         label="Nome *"
         value={nomeProduto}
         onChangeText={setNomeProduto}
-        autoFocus
+        autoFocus={!isEdicao}
         returnKeyType="next"
         onSubmitEditing={() => descricaoRef.current?.focus()}
       />
@@ -160,7 +234,7 @@ export default function CreateProductScreen({ navigation }) {
         onChangeText={setPreco}
         keyboardType="decimal-pad"
         returnKeyType="go"
-        onSubmitEditing={handleCreateProduct}
+        onSubmitEditing={handleSaveProduct}
       />
     </FormScreen>
   );
@@ -175,19 +249,18 @@ const styles = StyleSheet.create({
   preview: {
     width: 120,
     height: 120,
-    borderRadius: 12,
+    borderRadius: radii.md,
     borderWidth: 2,
-    borderColor: colors.primary,
   },
   previewPlaceholder: {
     width: 120,
     height: 120,
-    borderRadius: 12,
-    backgroundColor: '#e2e8f0',
+    borderRadius: radii.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   previewPlaceholderText: {
-    color: '#64748b',
+    fontFamily: fonts.sans,
+    fontSize: 13,
   },
 });

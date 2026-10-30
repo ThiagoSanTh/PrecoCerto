@@ -67,6 +67,10 @@ export async function removerFavoritoProduto(clienteId, produtoId) {
   await api.delete(`/Favoritos/cliente/${clienteId}/produto/${produtoId}`);
 }
 
+export async function removerFavoritoLoja(clienteId, lojaId) {
+  await api.delete(`/Favoritos/cliente/${clienteId}/loja/${lojaId}`);
+}
+
 export async function verificarFavorito(clienteId, produtoId = null, lojaId = null) {
   const params = new URLSearchParams();
   if (produtoId) params.append('produtoId', produtoId);

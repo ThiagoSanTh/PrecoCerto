@@ -19,3 +19,19 @@ export async function listarHistoricoCliente(clienteId) {
 export async function limparHistoricoCliente(clienteId) {
   await api.delete(`/HistoricoPesquisa/cliente/${clienteId}/limpar`);
 }
+
+export async function removerItemHistorico(id) {
+  await api.delete(`/HistoricoPesquisa/${id}`);
+}
+
+export async function listarUltimosTermosCliente(clienteId, quantidade = 6) {
+  const { data } = await api.get(`/HistoricoPesquisa/cliente/${clienteId}/ultimos`, {
+    params: { quantidade },
+  });
+  return Array.isArray(data) ? data : [];
+}
+
+export async function obterRelatorioPesquisasLoja(lojaId) {
+  const { data } = await api.get(`/HistoricoPesquisa/loja/${lojaId}/relatorio`);
+  return Array.isArray(data) ? data : [];
+}
