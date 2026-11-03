@@ -9,6 +9,18 @@ export const fonts = {
     web: '"Manrope", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
     default: 'System',
   }),
+  sansMedium: Platform.select({
+    web: '"Manrope", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+    default: 'System',
+  }),
+  sansSemiBold: Platform.select({
+    web: '"Manrope", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+    default: 'System',
+  }),
+  sansBold: Platform.select({
+    web: '"Manrope", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+    default: 'System',
+  }),
 };
 
 export const radii = {

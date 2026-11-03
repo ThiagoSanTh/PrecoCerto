@@ -37,6 +37,7 @@ export function calcularEconomiaBusca(itens) {
     maiorPreco: maior.preco,
     melhorLojaId: menor.item.lojaId ?? null,
     melhorLojaNome: menor.item.lojaNome || menor.item.lojaNomeFantasia || 'loja mais barata',
+    melhorCaminhada: menor.item.caminhadaFormatada || null,
     melhorItem: menor.item,
   };
 }
@@ -116,6 +117,8 @@ export function enriquecerEOrdenarResultadosBusca(
         item?.lojaCodigoPublico || loja?.codigoPublico || loja?.CodigoPublico || null,
       latitudeLoja: latLoja != null ? Number(latLoja) : null,
       longitudeLoja: lngLoja != null ? Number(lngLoja) : null,
+      lojaLat: latLoja != null ? Number(latLoja) : null,
+      lojaLng: lngLoja != null ? Number(lngLoja) : null,
       distanciaKm,
       distanciaFormatada: formatarDistancia(distanciaKm),
       caminhadaFormatada: estimarCaminhada(distanciaKm),
@@ -141,6 +144,8 @@ export function enriquecerEOrdenarResultadosBusca(
 
   return enriquecidos;
 }
+
+export const ordenarEFiltrarResultadosBusca = enriquecerEOrdenarResultadosBusca;
 
 export function calcularDescontoPercentual(precoAtual, precoAnterior) {
   const atual = Number(precoAtual);
@@ -199,7 +204,7 @@ export function agruparHistoricoPorDia(historico, dataReferencia = new Date()) {
       : '';
 
     if (!gruposMap.has(key)) {
-      gruposMap.set(key, { dia: rotulo, items: [] });
+      gruposMap.set(key, { dia: rotulo, day: rotulo, items: [] });
     }
     gruposMap.get(key).items.push({
       ...item,
@@ -212,7 +217,13 @@ export function agruparHistoricoPorDia(historico, dataReferencia = new Date()) {
 
 export function calcularIndicadoresHistorico(historico, dataReferencia = new Date()) {
   if (!Array.isArray(historico) || historico.length === 0) {
-    return { buscasNoMes: 0, termosDiferentes: 0, lojasVisitadas: 0 };
+    return {
+      buscasNoMes: 0,
+      buscasMes: 0,
+      termosDiferentes: 0,
+      termosUnicos: 0,
+      lojasVisitadas: 0,
+    };
   }
 
   const ref = new Date(dataReferencia);
@@ -241,17 +252,40 @@ export function calcularIndicadoresHistorico(historico, dataReferencia = new Dat
 
   return {
     buscasNoMes,
+    buscasMes: buscasNoMes,
     termosDiferentes: termos.size,
+    termosUnicos: termos.size,
     lojasVisitadas: lojas.size,
   };
 }
 
-export function calcularIndicadoresProdutosLoja(meusProdutos = [], todasOfertas = [], lojaId = null) {
+export function calcularIndicadoresProdutosLoja(meusProdutos = [], arg2 = [], arg3 = null) {
   const lista = Array.isArray(meusProdutos) ? meusProdutos : [];
-  const ofertas = Array.isArray(todasOfertas) ? todasOfertas : [];
+  const calledWithOfertasLojaAndTodas = Array.isArray(arg3);
+  const ofertas = calledWithOfertasLojaAndTodas
+    ? arg3
+    : Array.isArray(arg2)
+      ? arg2
+      : [];
+  const ofertasLojaExplicitas =
+    calledWithOfertasLojaAndTodas && Array.isArray(arg2) ? arg2 : null;
+  const lojaId = calledWithOfertasLojaAndTodas
+    ? (lista[0]?.lojaId ?? lista[0]?.LojaId ?? ofertasLojaExplicitas?.[0]?.lojaId ?? null)
+    : arg3;
 
   const ofertasDaLojaPorProduto = new Map();
   const todasOfertasPorProduto = new Map();
+
+  if (ofertasLojaExplicitas) {
+    ofertasLojaExplicitas.forEach((o) => {
+      const pid = String(o?.produtoId ?? '');
+      if (!pid) return;
+      const atual = ofertasDaLojaPorProduto.get(pid);
+      if (!atual || Number(o.preco) < Number(atual.preco)) {
+        ofertasDaLojaPorProduto.set(pid, o);
+      }
+    });
+  }
 
   ofertas.forEach((o) => {
     const pid = String(o?.produtoId ?? '');
@@ -259,7 +293,7 @@ export function calcularIndicadoresProdutosLoja(meusProdutos = [], todasOfertas 
     if (!todasOfertasPorProduto.has(pid)) todasOfertasPorProduto.set(pid, []);
     todasOfertasPorProduto.get(pid).push(o);
 
-    if (lojaId && String(o?.lojaId) === String(lojaId)) {
+    if (!ofertasLojaExplicitas && lojaId && String(o?.lojaId) === String(lojaId)) {
       const atual = ofertasDaLojaPorProduto.get(pid);
       if (!atual || Number(o.preco) < Number(atual.preco)) {
         ofertasDaLojaPorProduto.set(pid, o);
@@ -271,14 +305,21 @@ export function calcularIndicadoresProdutosLoja(meusProdutos = [], todasOfertas 
   let semEstoque = 0;
   let primeiroLugarCount = 0;
 
-  lista.forEach((p) => {
+  const produtosEnriquecidos = lista.map((p) => {
     const pid = String(p?.id ?? '');
     const ofertaMinha = ofertasDaLojaPorProduto.get(pid);
 
+    const qtd =
+      ofertaMinha?.quantidadeEstoque != null
+        ? Number(ofertaMinha.quantidadeEstoque)
+        : p?.quantidadeEstoque != null
+          ? Number(p.quantidadeEstoque)
+          : p?.estoque != null
+            ? Number(p.estoque)
+            : null;
+    const disp = ofertaMinha ? ofertaMinha.disponivel !== false : p?.disponivel !== false;
+
     if (ofertaMinha) {
-      const qtd =
-        ofertaMinha.quantidadeEstoque != null ? Number(ofertaMinha.quantidadeEstoque) : null;
-      const disp = ofertaMinha.disponivel !== false;
       if (!disp || (qtd != null && qtd <= 0)) {
         semEstoque += 1;
       } else if (qtd != null && qtd > 0 && qtd < 10) {
@@ -286,20 +327,43 @@ export function calcularIndicadoresProdutosLoja(meusProdutos = [], todasOfertas 
       }
     }
 
-    const meuPreco = Number(ofertaMinha?.preco ?? p?.preco);
+    const meuPreco = Number(ofertaMinha?.preco ?? p?.preco ?? 0);
     const ofertasDoProduto = todasOfertasPorProduto.get(pid) || [];
-    if (ofertasDoProduto.length > 0 && Number.isFinite(meuPreco) && meuPreco > 0) {
-      const menorMercado = Math.min(
-        ...ofertasDoProduto
-          .map((o) => Number(o.preco))
-          .filter((v) => Number.isFinite(v) && v > 0)
-      );
+    const precosValidos = ofertasDoProduto
+      .map((o) => Number(o.preco))
+      .filter((v) => Number.isFinite(v) && v > 0);
+
+    if (precosValidos.length > 0 && Number.isFinite(meuPreco) && meuPreco > 0) {
+      const menorMercado = Math.min(...precosValidos);
       if (meuPreco <= menorMercado + 0.005) {
         primeiroLugarCount += 1;
       }
     } else if (Number.isFinite(meuPreco) && meuPreco > 0) {
       primeiroLugarCount += 1;
     }
+
+    const precosOrdenados = [
+      ...new Set(
+        [meuPreco, ...precosValidos]
+          .filter((v) => Number.isFinite(v) && v > 0)
+          .sort((a, b) => a - b)
+      ),
+    ];
+    const posicaoRanking =
+      precosOrdenados.length > 0
+        ? Math.max(
+            1,
+            precosOrdenados.findIndex((v) => Math.abs(v - meuPreco) < 0.005) + 1
+          ) || 1
+        : 1;
+
+    return {
+      ...p,
+      precoEfetivo: Number.isFinite(meuPreco) ? meuPreco : 0,
+      estoque: qtd,
+      disponivel: disp,
+      posicaoRanking,
+    };
   });
 
   const percentualPrimeiroLugar =
@@ -307,9 +371,11 @@ export function calcularIndicadoresProdutosLoja(meusProdutos = [], todasOfertas 
 
   return {
     ativos: lista.length,
+    produtosAtivos: lista.length,
     estoqueBaixo,
     semEstoque,
     percentualPrimeiroLugar,
+    produtosEnriquecidos,
     ofertasDaLojaPorProduto,
     todasOfertasPorProduto,
   };

@@ -47,7 +47,7 @@ import { COORDENADAS_SAQUAREMA, formatarPrecoBrl } from '../../utils/mapaUtils';
 import { montarUrlRotaGoogleMaps } from '../../utils/geo';
 import {
   calcularEconomiaBusca,
-  ordenarEFiltrarResultadosBusca,
+  enriquecerEOrdenarResultadosBusca,
 } from '../../utils/insights';
 import { fonts, radii, shadows } from '../../theme';
 
@@ -334,7 +334,7 @@ export default function SearchScreen() {
 
   const produtosEnriquecidos = useMemo(
     () =>
-      ordenarEFiltrarResultadosBusca(produtos, lojas, coordsClima, {
+      enriquecerEOrdenarResultadosBusca(produtos, lojas, coordsClima, {
         ordenarPor,
         apenasPromocao,
       }),
@@ -422,11 +422,11 @@ export default function SearchScreen() {
   async function abrirRotaParaItem(item) {
     if (!item) return;
     const url = montarUrlRotaGoogleMaps({
-      latDestino: item.lojaLat,
-      lngDestino: item.lojaLng,
+      destinoLat: item.latitudeLoja ?? item.lojaLat,
+      destinoLng: item.longitudeLoja ?? item.lojaLng,
       enderecoDestino: item.lojaEnderecoTexto || item.lojaNome || item.nome,
-      latOrigem: coordsClima?.latitude,
-      lngOrigem: coordsClima?.longitude,
+      origemLat: coordsClima?.latitude,
+      origemLng: coordsClima?.longitude,
     });
     if (!url) {
       Alert.alert('Rota', 'Endereço da loja não disponível para rota.');
@@ -1159,7 +1159,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   leftColumnDesktop: {
+    flex: 0,
+    flexBasis: 440,
     width: 440,
+    minWidth: 440,
     maxWidth: 440,
     flexGrow: 0,
     flexShrink: 0,

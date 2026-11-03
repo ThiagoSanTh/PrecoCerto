@@ -33,11 +33,12 @@ export function normalizarListaProdutos(produtos) {
   return (produtos || []).map(normalizarProdutoApi);
 }
 
-export function filtrarProdutosPorTermo(produtos, termo) {
-  const t = termo.trim().toLowerCase();
-  if (!t) return produtos;
+export function filtrarProdutosPorTermo(produtos = [], termo = '') {
+  const lista = Array.isArray(produtos) ? produtos : [];
+  const t = String(termo || '').trim().toLowerCase();
+  if (!t) return lista;
 
-  return produtos.filter((p) => {
+  return lista.filter((p) => {
     const nome = nomeProduto(p).toLowerCase();
     const marca = (p.marca || '').toLowerCase();
     const descricao = (p.descricao || '').toLowerCase();

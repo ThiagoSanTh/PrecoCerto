@@ -56,14 +56,31 @@ export function estimarCaminhada(km) {
 export function montarUrlRotaGoogleMaps({
   destinoLat,
   destinoLng,
+  latDestino,
+  lngDestino,
+  enderecoDestino = null,
   origemLat = null,
   origemLng = null,
+  latOrigem = null,
+  lngOrigem = null,
 } = {}) {
-  if (!coordenadaValida(destinoLat, destinoLng)) return null;
-  const dest = `${Number(destinoLat)},${Number(destinoLng)}`;
+  const dLat = destinoLat ?? latDestino;
+  const dLng = destinoLng ?? lngDestino;
+  const oLat = origemLat ?? latOrigem;
+  const oLng = origemLng ?? lngOrigem;
+
+  let dest = null;
+  if (coordenadaValida(dLat, dLng)) {
+    dest = `${Number(dLat)},${Number(dLng)}`;
+  } else if (enderecoDestino && String(enderecoDestino).trim()) {
+    dest = encodeURIComponent(String(enderecoDestino).trim());
+  }
+
+  if (!dest) return null;
+
   let url = `https://www.google.com/maps/dir/?api=1&destination=${dest}`;
-  if (coordenadaValida(origemLat, origemLng)) {
-    url += `&origin=${Number(origemLat)},${Number(origemLng)}`;
+  if (coordenadaValida(oLat, oLng)) {
+    url += `&origin=${Number(oLat)},${Number(oLng)}`;
   }
   return url;
 }

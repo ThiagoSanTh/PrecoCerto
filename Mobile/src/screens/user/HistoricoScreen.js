@@ -107,8 +107,8 @@ export default function HistoricoScreen() {
 
   function handleRepetirBusca(termo) {
     if (!termo) return;
-    navigation.navigate('Search', {
-      screen: 'SearchMain',
+    navigation.navigate('Buscar', {
+      screen: 'Search',
       params: { termoInicial: termo },
     });
   }

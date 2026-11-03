@@ -41,4 +41,20 @@ test('montarUrlRotaGoogleMaps builds Google Maps directions URL when destination
   assert.ok(url.includes('destination=-22.9329,-42.5114'));
   assert.ok(url.includes('origin=-22.92,-42.5'));
   assert.equal(montarUrlRotaGoogleMaps({ destinoLat: null, destinoLng: null }), null);
+
+  const urlAlias = montarUrlRotaGoogleMaps({
+    latDestino: -22.9329,
+    lngDestino: -42.5114,
+    latOrigem: -22.92,
+    lngOrigem: -42.5,
+  });
+  assert.ok(urlAlias.includes('destination=-22.9329,-42.5114'));
+  assert.ok(urlAlias.includes('origin=-22.92,-42.5'));
+
+  const urlEndereco = montarUrlRotaGoogleMaps({
+    latDestino: null,
+    lngDestino: null,
+    enderecoDestino: 'Supermercado Lagoa, Saquarema',
+  });
+  assert.ok(urlEndereco.includes('destination=Supermercado%20Lagoa%2C%20Saquarema'));
 });

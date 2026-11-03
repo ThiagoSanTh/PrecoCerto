@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   calcularEconomiaBusca,
   enriquecerEOrdenarResultadosBusca,
+  ordenarEFiltrarResultadosBusca,
   calcularDescontoPercentual,
   contarFavoritosEmPromocao,
   agruparHistoricoPorDia,
@@ -14,7 +15,7 @@ import {
 
 test('calcularEconomiaBusca returns savings between max and min price when at least 2 stores exist', () => {
   const itens = [
-    { id: '1', lojaId: 'L1', lojaNome: 'Supermercado Lagoa', preco: 17.9 },
+    { id: '1', lojaId: 'L1', lojaNome: 'Supermercado Lagoa', preco: 17.9, caminhadaFormatada: '~5 min a pé' },
     { id: '2', lojaId: 'L2', lojaNome: 'Empório Porto Novo', preco: 22.3 },
   ];
   const res = calcularEconomiaBusca(itens);
@@ -22,10 +23,12 @@ test('calcularEconomiaBusca returns savings between max and min price when at le
   assert.equal(res.economia, 4.4);
   assert.equal(res.melhorLojaNome, 'Supermercado Lagoa');
   assert.equal(res.menorPreco, 17.9);
+  assert.equal(res.melhorCaminhada, '~5 min a pé');
   assert.equal(calcularEconomiaBusca([itens[0]]), null);
 });
 
-test('enriquecerEOrdenarResultadosBusca marks best price, computes distance and sorts by price or distance', () => {
+test('enriquecerEOrdenarResultadosBusca and ordenarEFiltrarResultadosBusca mark best price, compute distance and sort by price or distance', () => {
+  assert.equal(typeof ordenarEFiltrarResultadosBusca, 'function');
   const itens = [
     { id: 'p2', nome: 'Café', lojaId: 'L2', lojaNome: 'Mercadinho', preco: 19.5, emPromocao: false },
     { id: 'p1', nome: 'Café', lojaId: 'L1', lojaNome: 'Lagoa', preco: 17.9, precoAnterior: 21.5, emPromocao: true },
@@ -36,7 +39,7 @@ test('enriquecerEOrdenarResultadosBusca marks best price, computes distance and 
   ];
   const cliente = { latitude: -22.9329, longitude: -42.5114 };
 
-  const porPreco = enriquecerEOrdenarResultadosBusca(itens, lojas, cliente, {
+  const porPreco = ordenarEFiltrarResultadosBusca(itens, lojas, cliente, {
     ordenarPor: 'preco',
     apenasPromocao: false,
   });
@@ -44,6 +47,8 @@ test('enriquecerEOrdenarResultadosBusca marks best price, computes distance and 
   assert.equal(porPreco[0].melhorPreco, true);
   assert.equal(porPreco[1].melhorPreco, false);
   assert.equal(porPreco[0].notaLoja, 4.8);
+  assert.equal(porPreco[0].lojaLat, -22.94);
+  assert.equal(porPreco[0].lojaLng, -42.52);
 
   const porDistancia = enriquecerEOrdenarResultadosBusca(itens, lojas, cliente, {
     ordenarPor: 'distancia',
@@ -83,11 +88,15 @@ test('agruparHistoricoPorDia and calcularIndicadoresHistorico group searches and
   const grupos = agruparHistoricoPorDia(lista, refNow);
   assert.equal(grupos.length, 3);
   assert.equal(grupos[0].dia, 'Hoje');
+  assert.equal(grupos[0].day, 'Hoje');
   assert.equal(grupos[1].dia, 'Ontem');
+  assert.equal(grupos[1].day, 'Ontem');
 
   const kpis = calcularIndicadoresHistorico(lista, refNow);
   assert.equal(kpis.buscasNoMes, 3);
+  assert.equal(kpis.buscasMes, 3);
   assert.equal(kpis.termosDiferentes, 2);
+  assert.equal(kpis.termosUnicos, 2);
   assert.equal(kpis.lojasVisitadas, 2);
 });
 
@@ -107,9 +116,22 @@ test('calcularIndicadoresProdutosLoja and calcularCompetitividadePrecos compute 
 
   const ind = calcularIndicadoresProdutosLoja(meusProdutos, todasOfertas, 'L1');
   assert.equal(ind.ativos, 3);
+  assert.equal(ind.produtosAtivos, 3);
   assert.equal(ind.estoqueBaixo, 1);
   assert.equal(ind.semEstoque, 1);
   assert.equal(ind.percentualPrimeiroLugar, 67);
+  assert.equal(Array.isArray(ind.produtosEnriquecidos), true);
+  assert.equal(ind.produtosEnriquecidos.length, 3);
+  assert.equal(ind.produtosEnriquecidos[0].precoEfetivo, 17.9);
+  assert.equal(ind.produtosEnriquecidos[0].estoque, 42);
+  assert.equal(ind.produtosEnriquecidos[0].posicaoRanking, 1);
+
+  const ofertasLoja = todasOfertas.filter((o) => o.lojaId === 'L1');
+  const indThreeArrays = calcularIndicadoresProdutosLoja(meusProdutos, ofertasLoja, todasOfertas);
+  assert.equal(indThreeArrays.produtosAtivos, 3);
+  assert.equal(indThreeArrays.estoqueBaixo, 1);
+  assert.equal(indThreeArrays.semEstoque, 1);
+  assert.equal(indThreeArrays.produtosEnriquecidos.length, 3);
 
   const comp = calcularCompetitividadePrecos(meusProdutos, todasOfertas, 'L1');
   assert.equal(comp.length, 3);
