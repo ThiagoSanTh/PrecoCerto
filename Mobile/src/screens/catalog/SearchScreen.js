@@ -76,6 +76,7 @@ export default function SearchScreen() {
   const [apenasPromocao, setApenasPromocao] = useState(false);
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
+  const [cardMapaRecolhido, setCardMapaRecolhido] = useState(false);
   const [chipsSugestao, setChipsSugestao] = useState(DEFAULT_CHIPS);
   const [abrindoChatId, setAbrindoChatId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -402,6 +403,7 @@ export default function SearchScreen() {
     );
     if (produto) {
       setSelectedId(produto.id);
+      setCardMapaRecolhido(false);
     }
     abrirProduto(productId, produto);
   }
@@ -681,16 +683,45 @@ export default function SearchScreen() {
       .filter(Boolean)
       .join(' · ');
 
+    if (!isDesktopWeb && cardMapaRecolhido) {
+      return (
+        <Pressable
+          onPress={() => setCardMapaRecolhido(false)}
+          style={[
+            styles.floatingStoreCollapsed,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Expandir detalhes da oferta selecionada"
+        >
+          <View style={styles.floatingCollapsedLeft}>
+            <Ionicons name="storefront-outline" size={16} color={colors.primary} />
+            <Text
+              style={[styles.floatingCollapsedTitle, { color: colors.text }]}
+              numberOfLines={1}
+            >
+              {selectedItem.lojaNome || 'Loja parceira'}
+            </Text>
+            <Text style={[styles.floatingCollapsedPrice, { color: colors.primary }]}>
+              {formatarPrecoBrl(selectedItem.preco)}
+            </Text>
+          </View>
+          <Ionicons name="chevron-up" size={18} color={colors.textMuted} />
+        </Pressable>
+      );
+    }
+
     return (
       <View
         style={[
           styles.floatingStoreCard,
+          !isDesktopWeb && styles.floatingStoreCardMobile,
           { backgroundColor: colors.card, borderColor: colors.border },
         ]}
       >
         <View style={styles.floatingHeader}>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.floatingEyebrow, { color: colors.primary }]}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={[styles.floatingEyebrow, { color: colors.primary }]} numberOfLines={1}>
               {distanciaTrilha || 'Disponível na região'}
             </Text>
             <Pressable
@@ -714,9 +745,22 @@ export default function SearchScreen() {
               </Text>
             </Pressable>
           </View>
-          <Text style={[styles.floatingPrice, { color: colors.text }]}>
-            {formatarPrecoBrl(selectedItem.preco)}
-          </Text>
+          <View style={styles.floatingPriceRightCol}>
+            {!isDesktopWeb ? (
+              <Pressable
+                onPress={() => setCardMapaRecolhido(true)}
+                hitSlop={10}
+                style={[styles.collapseMapCardBtn, { backgroundColor: colors.surfaceSubtle }]}
+                accessibilityRole="button"
+                accessibilityLabel="Recolher card da loja"
+              >
+                <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
+              </Pressable>
+            ) : null}
+            <Text style={[styles.floatingPrice, { color: colors.text }]}>
+              {formatarPrecoBrl(selectedItem.preco)}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.floatingActions}>
@@ -809,11 +853,18 @@ export default function SearchScreen() {
           edgeToEdge
         />
 
-        <View style={styles.weatherFloatingWrap} pointerEvents="box-none">
+        <View
+          style={[
+            styles.weatherFloatingWrap,
+            !isDesktopWeb && styles.weatherFloatingWrapMobile,
+          ]}
+          pointerEvents="box-none"
+        >
           <WeatherCard
             status={clima.status}
             dados={clima.data}
             stale={clima.stale}
+            compact={!isDesktopWeb}
             style={styles.weatherFloatingCard}
           />
         </View>
@@ -823,23 +874,25 @@ export default function SearchScreen() {
     );
   }
 
-  function renderSearchHeaderControls() {
+  function renderSearchHeaderControls({ compactMapMode = false } = {}) {
     return (
-      <View style={styles.controlsSection}>
+      <View style={[styles.controlsSection, compactMapMode && styles.controlsSectionCompact]}>
         {/* Header Location + Title */}
-        <View style={styles.headerTop}>
-          <View style={{ flex: 1 }}>
-            <View style={styles.locationRow}>
-              <Ionicons name="navigate" size={13} color={colors.primary} />
-              <Text style={[styles.locationText, { color: colors.primary }]}>
-                {cidadeHeader}
+        {!compactMapMode ? (
+          <View style={styles.headerTop}>
+            <View style={{ flex: 1 }}>
+              <View style={styles.locationRow}>
+                <Ionicons name="navigate" size={13} color={colors.primary} />
+                <Text style={[styles.locationText, { color: colors.primary }]}>
+                  {cidadeHeader}
+                </Text>
+              </View>
+              <Text style={[styles.heroTitle, { color: colors.text }]}>
+                O que você procura hoje?
               </Text>
             </View>
-            <Text style={[styles.heroTitle, { color: colors.text }]}>
-              O que você procura hoje?
-            </Text>
           </View>
-        </View>
+        ) : null}
 
         {/* Search Input Box */}
         <View
@@ -1021,11 +1074,17 @@ export default function SearchScreen() {
               value={modoVisualizacao}
               onChange={setModoVisualizacao}
             />
+            {compactMapMode ? (
+              <Text style={[styles.compactMapCount, { color: colors.textMuted }]}>
+                {produtosEnriquecidos.length}{' '}
+                {produtosEnriquecidos.length === 1 ? 'oferta' : 'ofertas'}
+              </Text>
+            ) : null}
           </View>
         ) : null}
 
         {/* AI Savings Banner */}
-        {economiaInfo && economiaInfo.economia > 0 ? (
+        {!compactMapMode && economiaInfo && economiaInfo.economia > 0 ? (
           <AiBannerCard
             onPress={() => {
               if (economiaInfo.melhorItem?.id) {
@@ -1046,19 +1105,21 @@ export default function SearchScreen() {
         ) : null}
 
         {/* Count + Sort Header */}
-        <View style={styles.resultsBar}>
-          <Text style={[styles.resultsCount, { color: colors.text }]}>
-            {produtosEnriquecidos.length}{' '}
-            {produtosEnriquecidos.length === 1
-              ? 'loja/oferta encontrada'
-              : 'ofertas encontradas'}
-          </Text>
-          <Pressable onPress={alternarOrdenacao} hitSlop={8}>
-            <Text style={[styles.sortTrigger, { color: colors.primary }]}>
-              {ordenarPor === 'preco' ? 'Menor preço ▾' : 'Mais perto ▾'}
+        {!compactMapMode ? (
+          <View style={styles.resultsBar}>
+            <Text style={[styles.resultsCount, { color: colors.text }]}>
+              {produtosEnriquecidos.length}{' '}
+              {produtosEnriquecidos.length === 1
+                ? 'loja/oferta encontrada'
+                : 'ofertas encontradas'}
             </Text>
-          </Pressable>
-        </View>
+            <Pressable onPress={alternarOrdenacao} hitSlop={8}>
+              <Text style={[styles.sortTrigger, { color: colors.primary }]}>
+                {ordenarPor === 'preco' ? 'Menor preço ▾' : 'Mais perto ▾'}
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
 
         {buscando ? (
           <ActivityIndicator
@@ -1140,7 +1201,9 @@ export default function SearchScreen() {
         </View>
       ) : modoVisualizacao === MODO_MAPA ? (
         <View style={styles.mobileSplitWrap}>
-          <View style={styles.mobileTopControls}>{renderSearchHeaderControls()}</View>
+          <View style={styles.mobileTopControls}>
+            {renderSearchHeaderControls({ compactMapMode: true })}
+          </View>
           {renderMapPanel()}
         </View>
       ) : (
@@ -1169,13 +1232,17 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
   },
   listContent: {
-    padding: 20,
+    padding: 16,
     paddingBottom: 110,
     gap: 12,
   },
   controlsSection: {
-    gap: 16,
+    gap: 14,
     marginBottom: 8,
+  },
+  controlsSectionCompact: {
+    gap: 10,
+    marginBottom: 4,
   },
   headerTop: {
     flexDirection: 'row',
@@ -1263,7 +1330,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   mobileModeRow: {
-    alignItems: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  compactMapCount: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 12,
+    fontWeight: '600',
   },
   aiBannerText: {
     fontFamily: fonts.sans,
@@ -1388,9 +1463,48 @@ const styles = StyleSheet.create({
     zIndex: 10,
     maxWidth: 260,
   },
+  weatherFloatingWrapMobile: {
+    top: 10,
+    right: 10,
+    maxWidth: 220,
+  },
   weatherFloatingCard: {
     borderRadius: radii.xl,
     ...shadows.soft,
+  },
+  floatingStoreCollapsed: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    bottom: 12,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    zIndex: 10,
+    ...shadows.float,
+  },
+  floatingCollapsedLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    minWidth: 0,
+  },
+  floatingCollapsedTitle: {
+    flex: 1,
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 13.5,
+    fontWeight: '600',
+  },
+  floatingCollapsedPrice: {
+    fontFamily: fonts.display,
+    fontSize: 15,
+    fontWeight: '700',
   },
   floatingStoreCard: {
     position: 'absolute',
@@ -1406,11 +1520,30 @@ const styles = StyleSheet.create({
     zIndex: 10,
     ...shadows.float,
   },
+  floatingStoreCardMobile: {
+    left: 12,
+    right: 12,
+    bottom: 12,
+    width: undefined,
+    padding: 14,
+    borderRadius: radii.xl,
+  },
   floatingHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
+  },
+  floatingPriceRightCol: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  collapseMapCardBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   floatingEyebrow: {
     fontFamily: fonts.sansSemiBold,
@@ -1419,25 +1552,25 @@ const styles = StyleSheet.create({
   },
   floatingStoreTitle: {
     fontFamily: fonts.display,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
-    marginTop: 3,
+    marginTop: 2,
   },
   floatingProductSub: {
     fontFamily: fonts.sans,
-    fontSize: 13,
+    fontSize: 12.5,
     marginTop: 2,
   },
   floatingPrice: {
     fontFamily: fonts.display,
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
   },
   floatingActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginTop: 14,
+    marginTop: 12,
   },
   routeBtn: {
     flex: 1,
@@ -1445,8 +1578,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
-    paddingVertical: 11,
-    paddingHorizontal: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderRadius: radii.md,
   },
   routeBtnText: {
@@ -1455,8 +1588,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   iconActionBtn: {
-    width: 44,
-    height: 44,
+    width: 42,
+    height: 42,
     borderRadius: radii.md,
     borderWidth: 1,
     alignItems: 'center',
@@ -1467,8 +1600,8 @@ const styles = StyleSheet.create({
   },
   mobileTopControls: {
     paddingHorizontal: 16,
-    paddingTop: 14,
-    maxHeight: 280,
+    paddingTop: 10,
+    paddingBottom: 6,
   },
   emptyText: {
     textAlign: 'center',

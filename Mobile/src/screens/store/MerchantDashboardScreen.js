@@ -33,8 +33,9 @@ import { fonts, radii } from '../../theme';
 export default function MerchantDashboardScreen({ navigation }) {
   const { session, isLojista } = useAuth();
   const { colors } = useTheme();
-  const { isDesktopWeb, isTabletWeb } = useLayoutProfile();
+  const { isDesktopWeb, isTabletWeb, height } = useLayoutProfile();
   const lojaId = session?.perfil?.lojaId || session?.perfil?.lojaVinculadaId || null;
+  const listMaxHeight = Math.max(220, Math.min(300, Math.round((height || 760) * 0.36)));
 
   const [loja, setLoja] = useState(null);
   const [meusProdutos, setMeusProdutos] = useState([]);
@@ -297,7 +298,7 @@ export default function MerchantDashboardScreen({ navigation }) {
             <View style={[styles.middleGrid, isWide && styles.middleGridWide]}>
               <SurfaceCard style={[styles.demandCard, isWide && { flex: 2 }]}>
                 <View style={styles.sectionHeaderRow}>
-                  <View>
+                  <View style={styles.sectionHeaderTextCol}>
                     <Text style={[styles.sectionTitle, { color: colors.text }]}>
                       Demanda registrada na sua loja
                     </Text>
@@ -403,7 +404,7 @@ export default function MerchantDashboardScreen({ navigation }) {
             </View>
 
             <View style={[styles.bottomGrid, isWide && styles.bottomGridWide]}>
-              <SurfaceCard style={styles.halfCard}>
+              <SurfaceCard style={[styles.halfCard, isWide && styles.halfCardWide]}>
                 <Text style={[styles.sectionTitle, { color: colors.text }]}>
                   Competitividade de preço
                 </Text>
@@ -416,8 +417,13 @@ export default function MerchantDashboardScreen({ navigation }) {
                     Cadastre produtos e ofertas para comparar seus preços.
                   </Text>
                 ) : (
-                  <View style={styles.compList}>
-                    {competitividade.slice(0, 6).map((item, idx) => {
+                  <ScrollView
+                    nestedScrollEnabled
+                    showsVerticalScrollIndicator
+                    style={[styles.cardInnerScroll, { maxHeight: listMaxHeight }]}
+                    contentContainerStyle={styles.compList}
+                  >
+                    {competitividade.map((item, idx) => {
                       const diff = item.diferencaPercentual;
                       const menorOuIgual = diff <= 0;
                       return (
@@ -425,39 +431,51 @@ export default function MerchantDashboardScreen({ navigation }) {
                           key={item.produtoId}
                           style={[
                             styles.compRow,
+                            isWide && styles.compRowWide,
                             idx > 0 && {
                               borderTopWidth: 1,
                               borderTopColor: colors.border,
                             },
                           ]}
                         >
-                          <Text
-                            style={[styles.compName, { color: colors.text }]}
-                            numberOfLines={1}
-                          >
-                            {item.nome}
-                          </Text>
-                          <View style={styles.compNumbers}>
+                          <View style={styles.compTopLine}>
+                            <Text
+                              style={[styles.compName, { color: colors.text }]}
+                              numberOfLines={2}
+                            >
+                              {item.nome}
+                            </Text>
+                            {!isWide ? (
+                              <PillBadge
+                                label={`${diff > 0 ? '+' : ''}${diff.toFixed(1)}%`}
+                                variant={menorOuIgual ? 'success' : 'destructive'}
+                                style={styles.compBadge}
+                              />
+                            ) : null}
+                          </View>
+                          <View style={[styles.compNumbers, !isWide && styles.compNumbersMobile]}>
                             <Text style={[styles.compAvg, { color: colors.textMuted }]}>
-                              {formatarPrecoBrl(item.mediaMercado)}
+                              Média {formatarPrecoBrl(item.mediaMercado)}
                             </Text>
                             <Text style={[styles.compMe, { color: colors.text }]}>
                               {formatarPrecoBrl(item.meuPreco)}
                             </Text>
-                            <PillBadge
-                              label={`${diff > 0 ? '+' : ''}${diff.toFixed(1)}%`}
-                              variant={menorOuIgual ? 'success' : 'destructive'}
-                              style={styles.compBadge}
-                            />
+                            {isWide ? (
+                              <PillBadge
+                                label={`${diff > 0 ? '+' : ''}${diff.toFixed(1)}%`}
+                                variant={menorOuIgual ? 'success' : 'destructive'}
+                                style={styles.compBadge}
+                              />
+                            ) : null}
                           </View>
                         </View>
                       );
                     })}
-                  </View>
+                  </ScrollView>
                 )}
               </SurfaceCard>
 
-              <SurfaceCard style={styles.halfCard}>
+              <SurfaceCard style={[styles.halfCard, isWide && styles.halfCardWide]}>
                 <Text style={[styles.sectionTitle, { color: colors.text }]}>
                   Mais procurados na sua loja
                 </Text>
@@ -470,8 +488,13 @@ export default function MerchantDashboardScreen({ navigation }) {
                     Nenhuma pesquisa registrada até o momento.
                   </Text>
                 ) : (
-                  <View style={styles.procuradosList}>
-                    {termosCruzados.slice(0, 6).map((t) => (
+                  <ScrollView
+                    nestedScrollEnabled
+                    showsVerticalScrollIndicator
+                    style={[styles.cardInnerScroll, { maxHeight: listMaxHeight }]}
+                    contentContainerStyle={styles.procuradosList}
+                  >
+                    {termosCruzados.map((t) => (
                       <View key={t.termo} style={styles.procuradoItem}>
                         <View style={styles.procuradoTop}>
                           <View style={styles.procuradoLabelRow}>
@@ -480,7 +503,10 @@ export default function MerchantDashboardScreen({ navigation }) {
                               size={14}
                               color={colors.textMuted}
                             />
-                            <Text style={[styles.procuradoTermo, { color: colors.text }]}>
+                            <Text
+                              style={[styles.procuradoTermo, { color: colors.text }]}
+                              numberOfLines={2}
+                            >
                               {t.termo} ({t.quantidade})
                             </Text>
                           </View>
@@ -517,7 +543,7 @@ export default function MerchantDashboardScreen({ navigation }) {
                         </View>
                       </View>
                     ))}
-                  </View>
+                  </ScrollView>
                 )}
               </SurfaceCard>
             </View>
@@ -552,36 +578,42 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   kpiGrid: {
-    gap: 12,
-  },
-  kpiGridWide: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: 10,
+  },
+  kpiGridWide: {
+    gap: 12,
   },
   kpiCard: {
-    padding: 18,
+    flexGrow: 1,
+    flexBasis: '46%',
+    minWidth: 140,
+    padding: 14,
   },
   kpiCardWide: {
     flex: 1,
     minWidth: 190,
+    padding: 18,
   },
   kpiTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 6,
   },
   kpiIconBox: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
     borderRadius: radii.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   kpiValue: {
     fontFamily: fonts.display,
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '700',
-    marginTop: 14,
+    marginTop: 10,
   },
   kpiLabel: {
     fontFamily: fonts.sans,
@@ -604,6 +636,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     gap: 12,
+  },
+  sectionHeaderTextCol: {
+    flex: 1,
+    minWidth: 0,
   },
   sectionTitle: {
     fontFamily: fonts.display,
@@ -708,29 +744,51 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
   },
   halfCard: {
-    flex: 1,
     padding: 18,
+    overflow: 'hidden',
+  },
+  halfCardWide: {
+    flex: 1,
+  },
+  cardInnerScroll: {
+    marginTop: 12,
   },
   compList: {
-    marginTop: 14,
+    paddingRight: 2,
   },
   compRow: {
+    flexDirection: 'column',
+    paddingVertical: 10,
+    gap: 6,
+  },
+  compRowWide: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 11,
     gap: 8,
+  },
+  compTopLine: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 8,
+    flex: 1,
+    minWidth: 0,
   },
   compName: {
     flex: 1,
     fontFamily: fonts.sans,
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: '600',
+    lineHeight: 18,
   },
   compNumbers: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+  },
+  compNumbersMobile: {
+    justifyContent: 'space-between',
   },
   compAvg: {
     fontFamily: fonts.sans,
@@ -738,7 +796,7 @@ const styles = StyleSheet.create({
   },
   compMe: {
     fontFamily: fonts.display,
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: '700',
     minWidth: 68,
     textAlign: 'right',
@@ -746,10 +804,11 @@ const styles = StyleSheet.create({
   compBadge: {
     minWidth: 56,
     alignItems: 'center',
+    flexShrink: 0,
   },
   procuradosList: {
-    marginTop: 14,
     gap: 14,
+    paddingRight: 2,
   },
   procuradoItem: {
     gap: 6,
@@ -757,23 +816,28 @@ const styles = StyleSheet.create({
   procuradoTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: 8,
   },
   procuradoLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     flex: 1,
+    minWidth: 0,
   },
   procuradoTermo: {
+    flex: 1,
     fontFamily: fonts.sans,
     fontSize: 13,
     fontWeight: '600',
+    lineHeight: 18,
   },
   procuradoStatus: {
     fontFamily: fonts.sans,
     fontSize: 11,
     fontWeight: '700',
+    flexShrink: 0,
   },
   progressTrack: {
     height: 8,

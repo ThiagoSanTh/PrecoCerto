@@ -2,6 +2,7 @@ import {
   View,
   Text,
   FlatList,
+  ScrollView,
   TextInput,
   Pressable,
   ActivityIndicator,
@@ -509,7 +510,12 @@ export default function AiChatScreen({ navigation, route }) {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.bottomArea}
       >
-        <View style={styles.suggestionsWrap}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.suggestionsWrap}
+          keyboardShouldPersistTaps="handled"
+        >
           {chipsSugestao.map((chip) => (
             <Pressable
               key={chip}
@@ -531,7 +537,7 @@ export default function AiChatScreen({ navigation, route }) {
               </Text>
             </Pressable>
           ))}
-        </View>
+        </ScrollView>
 
         <View
           style={[
@@ -788,8 +794,9 @@ const styles = StyleSheet.create({
   },
   suggestionsWrap: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
     gap: 8,
+    paddingVertical: 2,
   },
   suggestionChip: {
     borderRadius: radii.full,

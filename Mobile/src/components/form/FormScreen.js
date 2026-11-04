@@ -7,7 +7,7 @@ import {
   Platform,
   StyleSheet,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFormStyles } from '../../hooks/useFormStyles';
 import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import { useTheme } from '../../context/ThemeContext';
@@ -34,17 +34,28 @@ export default function FormScreen({
 }) {
   const s = useFormStyles();
   const { colors } = useTheme();
-  const { contentFullWidth } = useLayoutProfile();
+  const { contentFullWidth, isPhone } = useLayoutProfile();
+  const insets = useSafeAreaInsets();
   const shellVariant = webVariant === 'auth' ? 'auth' : 'default';
   const isAuthLayout = shellVariant === 'auth';
   const showHeader = !hideHeader;
-  const useNarrowLayout = narrowContent && contentFullWidth;
+  const useNarrowLayout = narrowContent && contentFullWidth && !isPhone;
   const bodyPaddingStyle =
     noBodyPadding
       ? styles.noBodyPadding
-      : contentFullWidth
-        ? styles.fullWidthBodyPadding
-        : null;
+      : isPhone
+        ? styles.phoneBodyPadding
+        : contentFullWidth
+          ? styles.fullWidthBodyPadding
+          : null;
+
+  const safeEdges = footer
+    ? ['top', 'bottom', 'left', 'right']
+    : ['top', 'left', 'right'];
+  const webSafeTopStyle =
+    Platform.OS === 'web' && isPhone
+      ? { paddingTop: 'max(env(safe-area-inset-top, 0px), 10px)' }
+      : null;
 
   const innerContent = (
     <>
@@ -85,9 +96,10 @@ export default function FormScreen({
     <SafeAreaView
       style={[
         s.safe,
+        webSafeTopStyle,
         { backgroundColor: isAuthLayout ? 'transparent' : colors.background },
       ]}
-      edges={['top', 'bottom', 'left', 'right']}
+      edges={safeEdges}
     >
       <ScreenShell variant={shellVariant} fullBleed={fullBleed}>
         <KeyboardAvoidingView
@@ -98,7 +110,7 @@ export default function FormScreen({
             <View
               style={[
                 s.header,
-                contentFullWidth && styles.fullWidthHeader,
+                isPhone ? styles.phoneHeader : contentFullWidth && styles.fullWidthHeader,
                 { borderBottomColor: colors.border },
               ]}
             >
@@ -139,6 +151,10 @@ export default function FormScreen({
             <View
               style={[
                 s.footer,
+                isPhone && {
+                  paddingHorizontal: 16,
+                  paddingBottom: Math.max(insets.bottom || 0, 14),
+                },
                 useNarrowLayout && styles.narrowFooter,
                 { backgroundColor: colors.surface, borderTopColor: colors.border },
               ]}
@@ -165,8 +181,15 @@ const styles = StyleSheet.create({
     paddingTop: 0,
     paddingBottom: 0,
   },
+  phoneBodyPadding: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
   fullWidthBodyPadding: {
     paddingHorizontal: 20,
+  },
+  phoneHeader: {
+    paddingHorizontal: 16,
   },
   fullWidthHeader: {
     paddingHorizontal: 20,

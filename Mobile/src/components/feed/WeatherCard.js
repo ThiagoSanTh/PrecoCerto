@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { useState } from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -27,15 +28,25 @@ function formatarAtualizacao(iso) {
   return data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
-export default function WeatherCard({ status = 'loading', dados = null, stale = false, style }) {
+export default function WeatherCard({
+  status = 'loading',
+  dados = null,
+  stale = false,
+  compact = false,
+  style,
+}) {
   const { colors } = useTheme();
+  const [expanded, setExpanded] = useState(false);
+  const isPill = compact && !expanded;
   const cardStyle = [
     styles.card,
+    isPill && styles.cardPill,
     { backgroundColor: colors.card, borderColor: colors.border },
     style,
   ];
 
   if (status === 'loading' && !dados) {
+    if (compact) return null;
     return (
       <View style={cardStyle} accessibilityLabel="Carregando clima">
         <View style={[styles.skelLine, { backgroundColor: colors.border, width: '42%' }]} />
@@ -45,6 +56,7 @@ export default function WeatherCard({ status = 'loading', dados = null, stale = 
   }
 
   if (status === 'sem-localizacao') {
+    if (compact) return null;
     return (
       <View style={cardStyle}>
         <Text style={[styles.muted, { color: colors.textMuted }]}>
@@ -55,6 +67,7 @@ export default function WeatherCard({ status = 'loading', dados = null, stale = 
   }
 
   if ((status === 'erro' || status === 'offline') && !dados) {
+    if (compact) return null;
     return (
       <View style={cardStyle}>
         <Text style={[styles.muted, { color: colors.textMuted }]}>
@@ -71,6 +84,7 @@ export default function WeatherCard({ status = 'loading', dados = null, stale = 
   const cidade = dados.localidade?.cidade
     ? [dados.localidade.cidade, dados.localidade.estado].filter(Boolean).join(', ')
     : 'Sua região';
+  const cidadeCurta = dados.localidade?.cidade || 'Clima';
   const temp = formatarGraus(dados.atual.temperatura);
   const sensacao = formatarGraus(dados.atual.sensacaoTermica);
   const icone = ICONES[dados.atual.icone] || ICONES.cloudy;
@@ -80,8 +94,41 @@ export default function WeatherCard({ status = 'loading', dados = null, stale = 
   const mostrarStale = stale || dados.desatualizado;
   const hora = formatarAtualizacao(dados.obtidoEm);
 
+  if (isPill) {
+    return (
+      <Pressable
+        onPress={() => setExpanded(true)}
+        style={cardStyle}
+        accessibilityRole="button"
+        accessibilityLabel={`Clima em ${cidade}: ${temp || ''}. Toque para expandir`}
+      >
+        <View style={styles.pillRow}>
+          <Ionicons name={icone} size={16} color={colors.primary} />
+          <Text style={[styles.pillCidade, { color: colors.text }]} numberOfLines={1}>
+            {cidadeCurta}
+          </Text>
+          {temp ? (
+            <Text style={[styles.pillTemp, { color: colors.text }]}>{temp}</Text>
+          ) : null}
+        </View>
+      </Pressable>
+    );
+  }
+
+  const Container = compact ? Pressable : View;
+  const containerProps = compact
+    ? {
+        onPress: () => setExpanded(false),
+        accessibilityRole: 'button',
+      }
+    : {};
+
   return (
-    <View style={cardStyle} accessibilityLabel={`Clima em ${cidade}`}>
+    <Container
+      {...containerProps}
+      style={cardStyle}
+      accessibilityLabel={`Clima em ${cidade}`}
+    >
       <View style={styles.row}>
         <Ionicons name={icone} size={18} color={colors.primary} />
         <Text style={[styles.cidade, { color: colors.text }]} numberOfLines={1}>
@@ -89,6 +136,9 @@ export default function WeatherCard({ status = 'loading', dados = null, stale = 
         </Text>
         {temp ? (
           <Text style={[styles.temp, { color: colors.text }]}>{temp}</Text>
+        ) : null}
+        {compact ? (
+          <Ionicons name="chevron-up" size={14} color={colors.textMuted} />
         ) : null}
       </View>
       <View style={styles.row}>
@@ -101,7 +151,7 @@ export default function WeatherCard({ status = 'loading', dados = null, stale = 
       {mostrarStale && hora ? (
         <Text style={[styles.stale, { color: colors.textMuted }]}>Última atualização {hora}</Text>
       ) : null}
-    </View>
+    </Container>
   );
 }
 
@@ -113,6 +163,26 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     minHeight: 52,
     justifyContent: 'center',
+  },
+  cardPill: {
+    minHeight: 36,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  pillRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  pillCidade: {
+    fontSize: 12,
+    fontWeight: '600',
+    maxWidth: 110,
+  },
+  pillTemp: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   row: {
     flexDirection: 'row',

@@ -503,8 +503,8 @@ export default function ProductsScreen({ navigation }) {
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <View style={styles.mobileTopLine}>
                         <Text
-                          style={[styles.prodTitle, { color: colors.text }]}
-                          numberOfLines={1}
+                          style={[styles.prodTitle, styles.mobileProdTitle, { color: colors.text }]}
+                          numberOfLines={2}
                         >
                           {nome}
                         </Text>
@@ -517,25 +517,33 @@ export default function ProductsScreen({ navigation }) {
                       </View>
                       <Text
                         style={[styles.prodSku, { color: colors.textMuted }]}
+                        numberOfLines={2}
                       >
-                        {cat} · {p.codigoBarras || p.marca || ''} ·{' '}
-                        {esgotado
-                          ? 'Esgotado'
-                          : p.estoque != null
-                            ? `Estoque: ${p.estoque}`
-                            : 'Disponível'}
+                        {[
+                          cat,
+                          p.codigoBarras || p.marca || null,
+                          esgotado
+                            ? 'Esgotado'
+                            : p.estoque != null
+                              ? `Estoque: ${p.estoque}`
+                              : 'Disponível',
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
                       </Text>
                     </View>
-                    <Text
-                      style={[styles.cellPrice, { color: colors.text }]}
-                    >
-                      {formatarPrecoBrl(p.precoEfetivo)}
-                    </Text>
-                    <Ionicons
-                      name="pencil-outline"
-                      size={16}
-                      color={colors.textMuted}
-                    />
+                    <View style={styles.mobileRightCol}>
+                      <Text
+                        style={[styles.cellPrice, { color: colors.text }]}
+                      >
+                        {formatarPrecoBrl(p.precoEfetivo)}
+                      </Text>
+                      <Ionicons
+                        name="pencil-outline"
+                        size={16}
+                        color={colors.textMuted}
+                      />
+                    </View>
                   </Pressable>
                 );
               })}
@@ -587,16 +595,17 @@ const styles = StyleSheet.create({
   kpiRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 10,
   },
   kpiCard: {
-    flex: 1,
-    minWidth: 160,
-    padding: 16,
+    flexGrow: 1,
+    flexBasis: '46%',
+    minWidth: 135,
+    padding: 14,
   },
   kpiVal: {
     fontFamily: fonts.display,
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '700',
   },
   kpiLabel: {
@@ -692,14 +701,24 @@ const styles = StyleSheet.create({
   mobileRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
   mobileTopLine: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 8,
+  },
+  mobileProdTitle: {
+    flex: 1,
+    lineHeight: 19,
+  },
+  mobileRightCol: {
+    alignItems: 'flex-end',
+    gap: 6,
+    flexShrink: 0,
   },
   emptyText: {
     textAlign: 'center',

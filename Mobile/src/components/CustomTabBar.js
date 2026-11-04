@@ -1,6 +1,7 @@
-import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CommonActions } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useLayoutProfile } from '../hooks/useLayoutProfile';
@@ -99,7 +100,8 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
     setAppMode,
     logout,
   } = useAuth();
-  const { useSidebarNav, sidebarWidth } = useLayoutProfile();
+  const { useSidebarNav, sidebarWidth, isCompactPhone } = useLayoutProfile();
+  const insets = useSafeAreaInsets();
 
   const perfil = session?.perfil;
   const nomeExibicao = perfil?.nomeUsuario || 'Visitante';
@@ -287,12 +289,30 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
 
   const allowedMobile = emModoLoja ? MOBILE_STORE_ROUTES : MOBILE_USER_ROUTES;
   const mobileRoutes = state.routes.filter((r) => allowedMobile.has(r.name));
+  const safeBottom = Math.max(insets.bottom || 0, 12);
+  const safeHorizontal = Math.max(insets.left || 0, insets.right || 0, isCompactPhone ? 10 : 14);
 
   return (
-    <View style={styles.mobileFloatWrap} pointerEvents="box-none">
+    <View
+      style={[
+        styles.mobileFloatWrap,
+        {
+          paddingBottom: safeBottom,
+          paddingHorizontal: safeHorizontal,
+          backgroundColor: colors.background,
+        },
+        Platform.OS === 'web'
+          ? {
+              paddingBottom: `calc(env(safe-area-inset-bottom, 0px) + ${safeBottom}px)`,
+            }
+          : null,
+      ]}
+      pointerEvents="box-none"
+    >
       <View
         style={[
           styles.mobilePillBar,
+          isCompactPhone && styles.mobilePillBarCompact,
           { backgroundColor: colors.ink },
         ]}
       >
@@ -316,13 +336,14 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
               onPress={() => handleRoutePress(route, focused)}
               style={[
                 styles.mobileTabItem,
+                isCompactPhone && styles.mobileTabItemCompact,
                 focused && { backgroundColor: colors.highlight },
               ]}
             >
               <View>
                 <Ionicons
                   name={focused ? iconName : `${iconName}-outline`}
-                  size={19}
+                  size={isCompactPhone ? 18 : 19}
                   color={focused ? colors.highlightForeground : colors.inkMuted}
                 />
                 {showBadge ? (
@@ -341,6 +362,7 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
               <Text
                 style={[
                   styles.mobileTabLabel,
+                  isCompactPhone && styles.mobileTabLabelCompact,
                   {
                     color: focused
                       ? colors.highlightForeground
@@ -451,10 +473,9 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   mobileFloatWrap: {
-    paddingHorizontal: 12,
-    paddingBottom: 10,
-    paddingTop: 4,
-    backgroundColor: 'transparent',
+    paddingHorizontal: 14,
+    paddingBottom: 12,
+    paddingTop: 6,
   },
   mobilePillBar: {
     flexDirection: 'row',
@@ -463,18 +484,30 @@ const styles = StyleSheet.create({
     gap: 4,
     ...shadows.float,
   },
+  mobilePillBarCompact: {
+    padding: 5,
+    gap: 2,
+  },
   mobileTabItem: {
     flex: 1,
+    minWidth: 0,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radii.lg,
     paddingVertical: 8,
+    paddingHorizontal: 2,
     gap: 2,
+  },
+  mobileTabItemCompact: {
+    paddingVertical: 6,
   },
   mobileTabLabel: {
     fontFamily: fonts.sans,
     fontSize: 10,
     fontWeight: '700',
+  },
+  mobileTabLabelCompact: {
+    fontSize: 9,
   },
   mobileBadge: {
     position: 'absolute',
