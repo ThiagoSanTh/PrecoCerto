@@ -1,6 +1,7 @@
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
+import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import { fonts, radii, shadows } from '../../theme';
 
 export function BrandLogo({ dark = true, subtitle = 'Saquarema · RJ' }) {
@@ -39,13 +40,23 @@ export function BrandLogo({ dark = true, subtitle = 'Saquarema · RJ' }) {
 
 export function PageHeader({ eyebrow, title, subtitle, action, style }) {
   const { colors } = useTheme();
+  const { isCompactPhone } = useLayoutProfile();
   return (
     <View style={[styles.headerRow, style]}>
       <View style={styles.headerTextCol}>
         {eyebrow ? (
           <Text style={[styles.eyebrow, { color: colors.primary }]}>{eyebrow}</Text>
         ) : null}
-        <Text style={[styles.pageTitle, { color: colors.text }]}>{title}</Text>
+        <Text
+          accessibilityRole="header"
+          style={[
+            styles.pageTitle,
+            isCompactPhone && { fontSize: 22 },
+            { color: colors.text },
+          ]}
+        >
+          {title}
+        </Text>
         {subtitle ? (
           <Text style={[styles.pageSubtitle, { color: colors.textMuted }]}>{subtitle}</Text>
         ) : null}
@@ -55,13 +66,14 @@ export function PageHeader({ eyebrow, title, subtitle, action, style }) {
   );
 }
 
-export function SurfaceCard({ children, style, padded = true }) {
+export function SurfaceCard({ children, style, padded = true, noPadding = false }) {
   const { colors } = useTheme();
+  const isPadded = padded && !noPadding;
   return (
     <View
       style={[
         styles.surfaceCard,
-        padded && styles.surfaceCardPadded,
+        isPadded && styles.surfaceCardPadded,
         {
           backgroundColor: colors.card,
           borderColor: colors.border,
@@ -122,7 +134,7 @@ export function PillBadge({ label, variant = 'highlight', style, textStyle }) {
 
   let bg = colors.highlight;
   let fg = colors.highlightForeground;
-  if (variant === 'soft') {
+  if (variant === 'soft' || variant === 'primarySoft') {
     bg = colors.primarySoft;
     fg = colors.accentForeground;
   } else if (variant === 'muted') {
@@ -143,10 +155,15 @@ export function PillBadge({ label, variant = 'highlight', style, textStyle }) {
   );
 }
 
-export function AiBannerCard({ children, icon = 'sparkles', style }) {
+export function AiBannerCard({ children, icon = 'sparkles', onPress, style }) {
   const { colors } = useTheme();
+  const Container = onPress ? Pressable : View;
+  const containerProps = onPress
+    ? { onPress, accessibilityRole: 'button' }
+    : {};
   return (
-    <View
+    <Container
+      {...containerProps}
       style={[
         styles.aiBanner,
         { backgroundColor: colors.ink },
@@ -167,7 +184,7 @@ export function AiBannerCard({ children, icon = 'sparkles', style }) {
         <Ionicons name={icon} size={18} color={colors.highlightForeground} />
       </View>
       <View style={styles.aiContent}>{children}</View>
-    </View>
+    </Container>
   );
 }
 

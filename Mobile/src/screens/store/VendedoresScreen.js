@@ -1,4 +1,13 @@
-import { View, Text, FlatList, Alert, ActivityIndicator, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  Alert,
+  ActivityIndicator,
+  StyleSheet,
+  Pressable,
+  Platform,
+} from 'react-native';
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
@@ -14,10 +23,11 @@ import {
   PrimaryButton,
   ListCardText,
 } from '../../components/form';
-import { colors } from '../../theme';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function VendedoresScreen({ navigation, route }) {
   const lojaId = route?.params?.lojaId;
+  const { colors } = useTheme();
   const [vendedores, setVendedores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState('');
@@ -64,20 +74,28 @@ export default function VendedoresScreen({ navigation, route }) {
     }
   }
 
+  async function executarRemover(item) {
+    try {
+      await removerVendedor(lojaId, item.id);
+      await carregar();
+    } catch (error) {
+      Alert.alert('Erro', formatApiError(error));
+    }
+  }
+
   function confirmarRemover(item) {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.confirm === 'function') {
+      if (window.confirm(`Remover ${item.nomeUsuario} da equipe?`)) {
+        executarRemover(item);
+      }
+      return;
+    }
     Alert.alert('Remover vendedor', `Remover ${item.nomeUsuario} da equipe?`, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Remover',
         style: 'destructive',
-        onPress: async () => {
-          try {
-            await removerVendedor(lojaId, item.id);
-            await carregar();
-          } catch (error) {
-            Alert.alert('Erro', formatApiError(error));
-          }
-        },
+        onPress: () => executarRemover(item),
       },
     ]);
   }
@@ -111,15 +129,30 @@ export default function VendedoresScreen({ navigation, route }) {
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingVertical: 8 }}
           renderItem={({ item }) => (
-            <View style={styles.card}>
+            <View
+              style={[
+                styles.card,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
               <View style={{ flex: 1 }}>
-                <Text style={styles.nome}>{item.nomeUsuario}</Text>
-                <Text style={styles.email}>{item.email}</Text>
-                {item.cargo ? <Text style={styles.cargo}>{item.cargo}</Text> : null}
+                <Text style={[styles.nome, { color: colors.text }]}>{item.nomeUsuario}</Text>
+                <Text style={[styles.email, { color: colors.textMuted }]}>{item.email}</Text>
+                {item.cargo ? (
+                  <Text style={[styles.cargo, { color: colors.primary }]}>{item.cargo}</Text>
+                ) : null}
               </View>
-              <Text style={styles.remover} onPress={() => confirmarRemover(item)}>
-                Remover
-              </Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Remover vendedor ${item.nomeUsuario}`}
+                onPress={() => confirmarRemover(item)}
+                style={styles.removerBtn}
+              >
+                <Text style={[styles.remover, { color: colors.destructive }]}>Remover</Text>
+              </Pressable>
             </View>
           )}
           ListEmptyComponent={
@@ -144,8 +177,13 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 10,
   },
-  nome: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
-  email: { fontSize: 13, color: '#64748B', marginTop: 2 },
-  cargo: { fontSize: 12, color: colors.primaryDark, marginTop: 2 },
-  remover: { color: '#EF4444', fontWeight: '600', fontSize: 13, paddingLeft: 12 },
+  nome: { fontSize: 15, fontWeight: '700' },
+  email: { fontSize: 13, marginTop: 2 },
+  cargo: { fontSize: 12, marginTop: 2, fontWeight: '600' },
+  removerBtn: {
+    minHeight: 44,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+  },
+  remover: { fontWeight: '700', fontSize: 13 },
 });

@@ -41,7 +41,7 @@ import { fonts, radii } from '../../theme';
 export default function ProductsScreen({ navigation }) {
   const { session } = useAuth();
   const { colors } = useTheme();
-  const { useSidebarNav } = useLayoutProfile();
+  const { useTableView } = useLayoutProfile();
   const lojaId = session?.perfil?.lojaId;
 
   const [nomeLoja, setNomeLoja] = useState(
@@ -305,7 +305,7 @@ export default function ProductsScreen({ navigation }) {
                 ? 'Nenhum produto encontrado para essa busca.'
                 : 'Nenhum produto cadastrado ainda.'}
             </ListCardText>
-          ) : useSidebarNav ? (
+          ) : useTableView ? (
             <View>
               {/* Table Head */}
               <View

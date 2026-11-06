@@ -55,7 +55,7 @@ export default function ConversasScreen({ navigation }) {
   const { emModoLoja } = useAuth();
   const { colors } = useTheme();
   const { atualizarFromConversas } = useChatBadge();
-  const { useSidebarNav } = useLayoutProfile();
+  const { useSplitView } = useLayoutProfile();
 
   const carregar = useCallback(
     async (force = false) => {
@@ -149,7 +149,7 @@ export default function ConversasScreen({ navigation }) {
       )
     );
 
-    if (!useSidebarNav) {
+    if (!useSplitView) {
       navigation.navigate('Chat', {
         conversaCodigo: item.codigoPublico,
         titulo: item.nomeContato || 'Conversa',
@@ -163,7 +163,7 @@ export default function ConversasScreen({ navigation }) {
         style={[
           styles.leftCol,
           { backgroundColor: colors.card },
-          useSidebarNav && [
+          useSplitView && [
             styles.leftColSplit,
             { borderRightColor: colors.border },
           ],
@@ -224,7 +224,7 @@ export default function ConversasScreen({ navigation }) {
             }
             renderItem={({ item }) => {
               const selecionada =
-                useSidebarNav &&
+                useSplitView &&
                 conversaAtiva?.codigoPublico === item.codigoPublico;
               const horario = formatarHorarioConversa(item.ultimaMensagemEm);
               const previa =
@@ -327,7 +327,7 @@ export default function ConversasScreen({ navigation }) {
       noBodyPadding
       scrollable={false}
     >
-      {useSidebarNav ? (
+      {useSplitView ? (
         <View style={styles.splitRow}>
           {renderListaColuna()}
           <View style={styles.rightCol}>

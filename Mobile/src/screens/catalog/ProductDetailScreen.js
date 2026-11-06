@@ -54,7 +54,7 @@ import {
 import { labelCategoria } from '../../utils/categoriasProduto';
 import { mapApiError } from '../../utils/apiErrorUtils';
 import { useLayoutProfile } from '../../hooks/useLayoutProfile';
-import { colors } from '../../theme';
+import { useTheme } from '../../context/ThemeContext';
 
 function preencherFormularioProduto(prod, ofertaLoja) {
   return {
@@ -84,6 +84,7 @@ function preencherFormularioProduto(prod, ofertaLoja) {
 export default function ProductDetailScreen({ route, navigation }) {
   const productId = route.params?.productId;
   const { isWeb } = useLayoutProfile();
+  const { colors } = useTheme();
   const { session, isCliente, emModoLoja } = useAuth();
   const lojaId = session?.perfil?.lojaId;
   const clienteId = isCliente ? session?.perfil?.id : null;
@@ -345,6 +346,12 @@ export default function ProductDetailScreen({ route, navigation }) {
   }
 
   function confirmarExclusao() {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.confirm === 'function') {
+      if (window.confirm('Esta ação não pode ser desfeita. Deseja excluir este produto?')) {
+        handleExcluir();
+      }
+      return;
+    }
     Alert.alert(
       'Excluir produto',
       'Esta ação não pode ser desfeita. Deseja excluir este produto?',
@@ -554,29 +561,49 @@ export default function ProductDetailScreen({ route, navigation }) {
       ) : (
         <View style={styles.infoBlock}>
           {produto.marca ? (
-            <Text style={[styles.marca, isWeb && styles.marcaWeb]}>{produto.marca}</Text>
+            <Text style={[styles.marca, isWeb && styles.marcaWeb, { color: colors.textMuted }]}>
+              {produto.marca}
+            </Text>
           ) : null}
 
-          <Text style={[styles.nome, isWeb && styles.nomeWeb]}>{nomeProduto(produto)}</Text>
+          <Text style={[styles.nome, isWeb && styles.nomeWeb, { color: colors.text }]}>
+            {nomeProduto(produto)}
+          </Text>
 
           {produto.descricao ? (
-            <Text style={[styles.descricao, isWeb && styles.descricaoWeb]}>
+            <Text
+              style={[
+                styles.descricao,
+                isWeb && styles.descricaoWeb,
+                { color: colors.textSecondary || colors.textMuted },
+              ]}
+            >
               {produto.descricao}
             </Text>
           ) : null}
 
-          <Text style={[styles.meta, isWeb && styles.metaWeb]}>
+          <Text style={[styles.meta, isWeb && styles.metaWeb, { color: colors.textMuted }]}>
             Categoria: {produto.categoriaNome || labelCategoria(produto.categoria)}
           </Text>
         </View>
       )}
 
       {lojaNome ? (
-        <Text style={[styles.loja, isWeb && styles.lojaWeb]}>Vendido por {lojaNome}</Text>
+        <Text
+          style={[
+            styles.loja,
+            isWeb && styles.lojaWeb,
+            { color: colors.textSecondary || colors.textMuted },
+          ]}
+        >
+          Vendido por {lojaNome}
+        </Text>
       ) : null}
 
       {endereco ? (
-        <Text style={[styles.endereco, isWeb && styles.enderecoWeb]}>{endereco}</Text>
+        <Text style={[styles.endereco, isWeb && styles.enderecoWeb, { color: colors.textMuted }]}>
+          {endereco}
+        </Text>
       ) : null}
 
       <View style={{ marginTop: 20 }}>

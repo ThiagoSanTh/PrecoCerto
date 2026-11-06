@@ -32,6 +32,12 @@ export function ThemeProvider({ children }) {
 
   const colors = tema === 'dark' ? darkColors : lightColors;
 
+  useEffect(() => {
+    if (typeof document !== 'undefined' && document.documentElement) {
+      document.documentElement.style.colorScheme = tema === 'dark' ? 'dark' : 'light';
+    }
+  }, [tema]);
+
   return (
     <ThemeContext.Provider value={{ tema, colors, isDark: tema === 'dark', alternarTema }}>
       {children}

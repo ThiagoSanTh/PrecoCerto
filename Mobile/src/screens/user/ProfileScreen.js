@@ -204,7 +204,10 @@ export default function ProfileScreen({ navigation }) {
           </View>
 
           <View style={styles.statsRow}>
-            <View
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Abrir ofertas e lojas favoritas"
+              onPress={() => navigation.navigate('Favoritos')}
               style={[
                 styles.statBox,
                 { backgroundColor: colors.sidebarAccent },
@@ -218,9 +221,12 @@ export default function ProfileScreen({ navigation }) {
               <Text style={[styles.statLabel, { color: colors.inkMuted }]}>
                 favoritos
               </Text>
-            </View>
+            </Pressable>
 
-            <View
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Abrir histórico de buscas salvas"
+              onPress={() => navigation.navigate('Histórico')}
               style={[
                 styles.statBox,
                 { backgroundColor: colors.sidebarAccent },
@@ -234,7 +240,7 @@ export default function ProfileScreen({ navigation }) {
               <Text style={[styles.statLabel, { color: colors.inkMuted }]}>
                 buscas salvas
               </Text>
-            </View>
+            </Pressable>
 
             <View
               style={[

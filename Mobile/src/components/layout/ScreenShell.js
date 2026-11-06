@@ -16,7 +16,7 @@ export default function ScreenShell({ children, variant = 'default', fullBleed =
     authCardMaxWidth,
     contentFullWidth,
   } = useLayoutProfile();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
 
   const shellVariant = fullBleed ? 'fullBleed' : variant;
   const isAuth = shellVariant === 'auth';
@@ -24,7 +24,7 @@ export default function ScreenShell({ children, variant = 'default', fullBleed =
   const showAuthCard = isAuth;
   const useFullWidth = contentFullWidth || isFullBleed;
   const authBackgroundColor =
-    !isWeb || isDesktopWeb ? '#E2E8F0' : colors.background;
+    (!isWeb || isDesktopWeb) && !isDark ? '#E2E8F0' : colors.background;
 
   const columnWidth = showAuthCard
     ? '100%'

@@ -76,6 +76,7 @@ export default function SearchScreen() {
   const [apenasPromocao, setApenasPromocao] = useState(false);
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
+  const [focoRotaKey, setFocoRotaKey] = useState(0);
   const [cardMapaRecolhido, setCardMapaRecolhido] = useState(false);
   const [chipsSugestao, setChipsSugestao] = useState(DEFAULT_CHIPS);
   const [abrindoChatId, setAbrindoChatId] = useState(null);
@@ -90,7 +91,7 @@ export default function SearchScreen() {
   const [gpsResolvido, setGpsResolvido] = useState(false);
   const { session, isCliente, sincronizarGpsCliente } = useAuth();
   const { colors } = useTheme();
-  const { isDesktopWeb, useSidebarNav } = useLayoutProfile();
+  const { useSplitView, useSidebarNav } = useLayoutProfile();
 
   const clienteId = isCliente ? session?.perfil?.id : null;
   const buscaIdRef = useRef(0);
@@ -421,6 +422,27 @@ export default function SearchScreen() {
     });
   }
 
+  function handleSelectStoreFromMap(lojaId) {
+    if (!lojaId) return;
+    const match = produtosEnriquecidos.find(
+      (p) => String(p.lojaId) === String(lojaId)
+    );
+    if (match) {
+      setSelectedId(match.id);
+      setCardMapaRecolhido(false);
+    }
+  }
+
+  function focarRotaNoMapa(item) {
+    if (!item) return;
+    setSelectedId(item.id);
+    setCardMapaRecolhido(false);
+    if (!useSplitView) {
+      setModoVisualizacao(MODO_MAPA);
+    }
+    setFocoRotaKey((k) => k + 1);
+  }
+
   async function abrirRotaParaItem(item) {
     if (!item) return;
     const url = montarUrlRotaGoogleMaps({
@@ -534,7 +556,7 @@ export default function SearchScreen() {
     return (
       <Pressable
         onPress={() => {
-          if (isDesktopWeb) {
+          if (useSplitView) {
             if (isSelected) {
               abrirProduto(item.id, item);
             } else {
@@ -683,7 +705,7 @@ export default function SearchScreen() {
       .filter(Boolean)
       .join(' · ');
 
-    if (!isDesktopWeb && cardMapaRecolhido) {
+    if (!useSplitView && cardMapaRecolhido) {
       return (
         <Pressable
           onPress={() => setCardMapaRecolhido(false)}
@@ -715,7 +737,7 @@ export default function SearchScreen() {
       <View
         style={[
           styles.floatingStoreCard,
-          !isDesktopWeb && styles.floatingStoreCardMobile,
+          !useSplitView && styles.floatingStoreCardMobile,
           { backgroundColor: colors.card, borderColor: colors.border },
         ]}
       >
@@ -746,7 +768,7 @@ export default function SearchScreen() {
             </Pressable>
           </View>
           <View style={styles.floatingPriceRightCol}>
-            {!isDesktopWeb ? (
+            {!useSplitView ? (
               <Pressable
                 onPress={() => setCardMapaRecolhido(true)}
                 hitSlop={10}
@@ -765,10 +787,10 @@ export default function SearchScreen() {
 
         <View style={styles.floatingActions}>
           <Pressable
-            onPress={() => abrirRotaParaItem(selectedItem)}
+            onPress={() => focarRotaNoMapa(selectedItem)}
             style={[styles.routeBtn, { backgroundColor: colors.primary }]}
             accessibilityRole="button"
-            accessibilityLabel="Como chegar"
+            accessibilityLabel="Traçar rota no mapa"
           >
             <Ionicons
               name="navigate-outline"
@@ -781,8 +803,20 @@ export default function SearchScreen() {
                 { color: colors.primaryForeground },
               ]}
             >
-              Como chegar
+              Traçar rota
             </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => abrirRotaParaItem(selectedItem)}
+            style={[
+              styles.iconActionBtn,
+              { borderColor: colors.border, backgroundColor: colors.surface },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Abrir rota no Google Maps"
+          >
+            <Ionicons name="compass-outline" size={17} color={colors.text} />
           </Pressable>
 
           <Pressable
@@ -843,20 +877,25 @@ export default function SearchScreen() {
       <View style={[styles.mapPanel, { backgroundColor: colors.map }]}>
         <LojasMapView
           lojas={lojas}
-          localizacaoCliente={localizacaoCliente}
+          localizacaoCliente={localizacaoCliente || coordsClima}
           lojaIdsDestaque={lojaIdsDestaque}
+          lojaSelecionadaId={selectedItem?.lojaId || null}
+          rotaAtiva={Boolean(selectedItem?.lojaId)}
+          focoRotaKey={focoRotaKey}
           produtosPorLoja={produtosPorLoja}
           imagemPinPorLoja={imagemPinPorLoja}
           buscaAtiva={Boolean(termoAtivo)}
           onProductPress={abrirProdutoDoMapa}
           onStorePress={abrirCatalogoLoja}
+          onStoreSelect={handleSelectStoreFromMap}
           edgeToEdge
+          hideInternalCard
         />
 
         <View
           style={[
             styles.weatherFloatingWrap,
-            !isDesktopWeb && styles.weatherFloatingWrapMobile,
+            !useSplitView && styles.weatherFloatingWrapMobile,
           ]}
           pointerEvents="box-none"
         >
@@ -864,7 +903,7 @@ export default function SearchScreen() {
             status={clima.status}
             dados={clima.data}
             stale={clima.stale}
-            compact={!isDesktopWeb}
+            compact={!useSplitView}
             style={styles.weatherFloatingCard}
           />
         </View>
@@ -1063,8 +1102,8 @@ export default function SearchScreen() {
           })}
         </ScrollView>
 
-        {/* Mobile List / Map Switcher */}
-        {!isDesktopWeb ? (
+        {/* Mobile/Tablet Portrait List / Map Switcher */}
+        {!useSplitView ? (
           <View style={styles.mobileModeRow}>
             <SegmentedControl
               options={[
@@ -1137,7 +1176,7 @@ export default function SearchScreen() {
       <View
         style={[
           styles.leftColumn,
-          isDesktopWeb && [
+          useSplitView && [
             styles.leftColumnDesktop,
             { borderRightColor: colors.border },
           ],
@@ -1194,7 +1233,7 @@ export default function SearchScreen() {
       noBodyPadding
       error={feedError}
     >
-      {isDesktopWeb ? (
+      {useSplitView ? (
         <View style={styles.splitContainer}>
           {renderLeftListColumn()}
           {renderMapPanel()}

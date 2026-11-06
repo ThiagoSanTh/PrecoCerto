@@ -1,21 +1,35 @@
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { CATEGORIAS_PRODUTO } from '../../utils/categoriasProduto';
-import { colors } from '../../theme';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function CategoriaPicker({ label = 'Categoria', value, onChange }) {
+  const { colors } = useTheme();
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, { color: colors.label }]}>{label}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
         {CATEGORIAS_PRODUTO.map((cat) => {
           const ativo = Number(value) === cat.valor;
           return (
             <Pressable
               key={cat.valor}
-              style={[styles.chip, ativo && styles.chipAtivo]}
+              accessibilityRole="button"
+              accessibilityState={{ selected: ativo }}
+              style={[
+                styles.chip,
+                { borderColor: colors.primary },
+                ativo && { backgroundColor: colors.primary },
+              ]}
               onPress={() => onChange(cat.valor)}
             >
-              <Text style={[styles.chipText, ativo && styles.chipTextAtivo]}>{cat.label}</Text>
+              <Text
+                style={[
+                  styles.chipText,
+                  { color: ativo ? colors.primaryForeground : colors.primary },
+                ]}
+              >
+                {cat.label}
+              </Text>
             </Pressable>
           );
         })}
@@ -31,7 +45,6 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#475569',
     marginBottom: 6,
   },
   row: {
@@ -43,17 +56,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  chipAtivo: {
-    backgroundColor: colors.primary,
   },
   chipText: {
-    color: colors.primary,
     fontSize: 13,
     fontWeight: '600',
-  },
-  chipTextAtivo: {
-    color: '#fff',
   },
 });

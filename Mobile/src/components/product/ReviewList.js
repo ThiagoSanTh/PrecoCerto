@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import StarRating from './StarRating';
 import { useLayoutProfile } from '../../hooks/useLayoutProfile';
+import { useTheme } from '../../context/ThemeContext';
 
 function formatarData(data) {
   if (!data) return '';
@@ -81,6 +82,7 @@ const webStyles = StyleSheet.create({
 
 export default function ReviewList({ media, avaliacoes = [] }) {
   const { isWeb } = useLayoutProfile();
+  const { colors } = useTheme();
   const lista = avaliacoes.slice(0, 5);
   const starSizeResumo = isWeb ? 20 : 18;
   const starSizeCard = isWeb ? 16 : 14;
@@ -88,16 +90,27 @@ export default function ReviewList({ media, avaliacoes = [] }) {
   const styles = useMemo(
     () => ({
       container: baseStyles.container,
-      titulo: [baseStyles.titulo, isWeb && webStyles.titulo],
+      titulo: [baseStyles.titulo, isWeb && webStyles.titulo, { color: colors.text }],
       resumo: baseStyles.resumo,
-      quantidade: [baseStyles.quantidade, isWeb && webStyles.quantidade],
-      vazio: [baseStyles.vazio, isWeb && webStyles.vazio],
-      card: baseStyles.card,
+      quantidade: [
+        baseStyles.quantidade,
+        isWeb && webStyles.quantidade,
+        { color: colors.textMuted },
+      ],
+      vazio: [baseStyles.vazio, isWeb && webStyles.vazio, { color: colors.textMuted }],
+      card: [
+        baseStyles.card,
+        { backgroundColor: colors.surfaceSubtle || colors.card, borderColor: colors.border },
+      ],
       cardHeader: baseStyles.cardHeader,
-      data: [baseStyles.data, isWeb && webStyles.data],
-      comentario: [baseStyles.comentario, isWeb && webStyles.comentario],
+      data: [baseStyles.data, isWeb && webStyles.data, { color: colors.textMuted }],
+      comentario: [
+        baseStyles.comentario,
+        isWeb && webStyles.comentario,
+        { color: colors.textSecondary || colors.text },
+      ],
     }),
-    [isWeb]
+    [isWeb, colors]
   );
 
   return (

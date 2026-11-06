@@ -1,11 +1,11 @@
 import { StyleSheet, Platform } from 'react-native';
-import { colors, fonts, radii, shadows } from '../../theme';
+import { colors as defaultColors, fonts, radii, shadows } from '../../theme';
 
 function scaleFont(size, scale) {
   return Math.round(size * scale);
 }
 
-export function createFormStyles(scale = 1) {
+export function createFormStyles(scale = 1, colors = defaultColors) {
   return StyleSheet.create({
     safe: {
       flex: 1,

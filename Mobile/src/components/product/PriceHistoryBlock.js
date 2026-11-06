@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { formatarPrecoBrl } from '../../utils/mapaUtils';
 import { formatarPrecoMl } from '../../utils/precoUtils';
 import { useLayoutProfile } from '../../hooks/useLayoutProfile';
+import { useTheme } from '../../context/ThemeContext';
 
 function formatarData(data) {
   if (!data) return null;
@@ -129,27 +130,59 @@ export default function PriceHistoryBlock({
   actions,
 }) {
   const { isWeb } = useLayoutProfile();
+  const { colors } = useTheme();
   const { inteiro, centavos } = formatarPrecoMl(precoAtual);
 
   const styles = useMemo(
     () => ({
       container: baseStyles.container,
-      badge: baseStyles.badge,
-      badgeText: [baseStyles.badgeText, isWeb && webStyles.badgeText],
+      badge: [
+        baseStyles.badge,
+        { backgroundColor: colors.successSoft || colors.primarySoft },
+      ],
+      badgeText: [
+        baseStyles.badgeText,
+        isWeb && webStyles.badgeText,
+        { color: colors.successForeground || colors.success },
+      ],
       precoHeaderRow: baseStyles.precoHeaderRow,
       precoCol: baseStyles.precoCol,
       actions: baseStyles.actions,
       precoAtualRow: baseStyles.precoAtualRow,
-      moeda: [baseStyles.moeda, isWeb && webStyles.moeda],
-      inteiro: [baseStyles.inteiro, isWeb && webStyles.inteiro],
-      centavos: [baseStyles.centavos, isWeb && webStyles.centavos],
-      historico: baseStyles.historico,
-      historicoTitulo: [baseStyles.historicoTitulo, isWeb && webStyles.historicoTitulo],
+      moeda: [
+        baseStyles.moeda,
+        isWeb && webStyles.moeda,
+        { color: colors.text, fontVariant: ['tabular-nums'] },
+      ],
+      inteiro: [
+        baseStyles.inteiro,
+        isWeb && webStyles.inteiro,
+        { color: colors.text, fontVariant: ['tabular-nums'] },
+      ],
+      centavos: [
+        baseStyles.centavos,
+        isWeb && webStyles.centavos,
+        { color: colors.text, fontVariant: ['tabular-nums'] },
+      ],
+      historico: [baseStyles.historico, { borderTopColor: colors.border }],
+      historicoTitulo: [
+        baseStyles.historicoTitulo,
+        isWeb && webStyles.historicoTitulo,
+        { color: colors.textSecondary || colors.textMuted },
+      ],
       antigoRow: baseStyles.antigoRow,
-      antigoPreco: [baseStyles.antigoPreco, isWeb && webStyles.antigoPreco],
-      antigoData: [baseStyles.antigoData, isWeb && webStyles.antigoData],
+      antigoPreco: [
+        baseStyles.antigoPreco,
+        isWeb && webStyles.antigoPreco,
+        { color: colors.textMuted, fontVariant: ['tabular-nums'] },
+      ],
+      antigoData: [
+        baseStyles.antigoData,
+        isWeb && webStyles.antigoData,
+        { color: colors.textMuted },
+      ],
     }),
-    [isWeb]
+    [isWeb, colors]
   );
 
   return (

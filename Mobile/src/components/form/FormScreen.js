@@ -29,24 +29,26 @@ export default function FormScreen({
   hideHeader = false,
   noBodyPadding = false,
   narrowContent = false,
+  maxContentWidth,
   error,
   onErrorAction,
 }) {
   const s = useFormStyles();
   const { colors } = useTheme();
-  const { contentFullWidth, isPhone } = useLayoutProfile();
+  const { contentFullWidth, isPhone, keyboardBehavior, bodyHorizontalPadding } = useLayoutProfile();
   const insets = useSafeAreaInsets();
   const shellVariant = webVariant === 'auth' ? 'auth' : 'default';
   const isAuthLayout = shellVariant === 'auth';
   const showHeader = !hideHeader;
   const useNarrowLayout = narrowContent && contentFullWidth && !isPhone;
+  const hasMaxContentWidth = Number(maxContentWidth) > 0 && contentFullWidth && !isPhone;
   const bodyPaddingStyle =
     noBodyPadding
       ? styles.noBodyPadding
       : isPhone
-        ? styles.phoneBodyPadding
+        ? [styles.phoneBodyPadding, { paddingHorizontal: bodyHorizontalPadding }]
         : contentFullWidth
-          ? styles.fullWidthBodyPadding
+          ? [styles.fullWidthBodyPadding, { paddingHorizontal: bodyHorizontalPadding }]
           : null;
 
   const safeEdges = footer
@@ -57,11 +59,24 @@ export default function FormScreen({
       ? { paddingTop: 'max(env(safe-area-inset-top, 0px), 10px)' }
       : null;
 
-  const innerContent = (
+  const rawInnerContent = (
     <>
       <FormErrorBanner error={error} onAction={onErrorAction} />
       {children}
     </>
+  );
+
+  const innerContent = hasMaxContentWidth ? (
+    <View
+      style={[
+        styles.maxWidthColumn,
+        { maxWidth: maxContentWidth, flex: scrollable ? undefined : 1 },
+      ]}
+    >
+      {rawInnerContent}
+    </View>
+  ) : (
+    rawInnerContent
   );
 
   const content = scrollable ? (
@@ -104,7 +119,7 @@ export default function FormScreen({
       <ScreenShell variant={shellVariant} fullBleed={fullBleed}>
         <KeyboardAvoidingView
           style={isAuthLayout ? styles.authBody : s.flex}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={keyboardBehavior}
         >
           {showHeader ? (
             <View
@@ -197,6 +212,11 @@ const styles = StyleSheet.create({
   narrowColumn: {
     width: '100%',
     maxWidth: 420,
+    alignSelf: 'center',
+    alignItems: 'stretch',
+  },
+  maxWidthColumn: {
+    width: '100%',
     alignSelf: 'center',
     alignItems: 'stretch',
   },

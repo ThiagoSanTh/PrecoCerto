@@ -19,11 +19,15 @@ export default function LojasMapView({
   lojas,
   localizacaoCliente: localizacaoExterna,
   lojaIdsDestaque = null,
+  lojaSelecionadaId = null,
+  rotaAtiva = true,
+  focoRotaKey = 0,
   produtosPorLoja = {},
   imagemPinPorLoja = {},
   buscaAtiva = false,
   onProductPress,
   onStorePress,
+  onStoreSelect,
   edgeToEdge = false,
 }) {
   const [localizacaoInterna, setLocalizacaoInterna] = useState(null);
@@ -115,6 +119,18 @@ export default function LojasMapView({
     });
   }, [localizacaoCliente]);
 
+  const enviarSelecaoRota = useCallback(() => {
+    if (!mapaProntoRef.current) return;
+    frameRef.current?.enviarMensagem({
+      type: 'selecionarLoja',
+      payload: {
+        lojaId: lojaSelecionadaId ? String(lojaSelecionadaId) : null,
+        trazarRota: Boolean(rotaAtiva && lojaSelecionadaId),
+        ajustarBounds: true,
+      },
+    });
+  }, [lojaSelecionadaId, rotaAtiva, focoRotaKey]);
+
   useEffect(() => {
     enviarDestaques();
   }, [enviarDestaques]);
@@ -122,6 +138,10 @@ export default function LojasMapView({
   useEffect(() => {
     enviarCliente();
   }, [enviarCliente]);
+
+  useEffect(() => {
+    enviarSelecaoRota();
+  }, [enviarSelecaoRota]);
 
   useEffect(() => {
     mapaProntoRef.current = false;
@@ -134,6 +154,9 @@ export default function LojasMapView({
         mapaProntoRef.current = true;
         enviarDestaques();
         enviarCliente();
+        enviarSelecaoRota();
+      } else if (data.type === 'storeSelected' && data.lojaId && onStoreSelect) {
+        onStoreSelect(data.lojaId);
       } else if (data.type === 'product' && data.productId && onProductPress) {
         onProductPress(data.productId);
       } else if (data.type === 'store' && data.lojaId && onStorePress) {

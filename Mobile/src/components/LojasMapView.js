@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
-import MapView, { Marker, UrlTile, PROVIDER_DEFAULT } from 'react-native-maps';
+import MapView, { Marker, Polyline, UrlTile, PROVIDER_DEFAULT } from 'react-native-maps';
 import { obterLocalizacaoAtual } from '../services/locationService';
 import { normalizarLojaParaMapa } from '../utils/leafletMapHtml';
 import { SAQUAREMA_CENTER } from '../utils/mapaUtils';
@@ -68,16 +68,21 @@ export default function LojasMapView({
   lojas,
   localizacaoCliente: localizacaoExterna,
   lojaIdsDestaque = null,
+  lojaSelecionadaId: lojaSelecionadaExterna = null,
+  rotaAtiva = true,
   produtosPorLoja = {},
   imagemPinPorLoja = {},
   buscaAtiva = false,
   onProductPress,
   onStorePress,
+  onStoreSelect,
   edgeToEdge = false,
+  hideInternalCard = false,
 }) {
   const [localizacaoInterna, setLocalizacaoInterna] = useState(null);
   const [erroGps, setErroGps] = useState(null);
-  const [lojaSelecionadaId, setLojaSelecionadaId] = useState(null);
+  const [lojaSelecionadaInterna, setLojaSelecionadaId] = useState(null);
+  const lojaSelecionadaId = lojaSelecionadaExterna ?? lojaSelecionadaInterna;
   const gpsProprio = localizacaoExterna === undefined;
 
   useEffect(() => {
@@ -139,7 +144,13 @@ export default function LojasMapView({
 
     return (
       <View style={styles.card}>
-        <Pressable style={styles.cardFechar} onPress={() => setLojaSelecionadaId(null)} hitSlop={10}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Fechar card da loja"
+          style={styles.cardFechar}
+          onPress={() => setLojaSelecionadaId(null)}
+          hitSlop={10}
+        >
           <Text style={styles.cardFecharTexto}>✕</Text>
         </Pressable>
         <Text style={styles.cardTitulo}>{lojaSelecionada.nome}</Text>
@@ -207,15 +218,32 @@ export default function LojasMapView({
                 onPress={(e) => {
                   e.stopPropagation?.();
                   setLojaSelecionadaId(loja.id);
+                  onStoreSelect?.(loja.id);
                 }}
               >
                 <PinLoja loja={loja} destaque={destaque} imagemUrl={imagemUrl} />
               </Marker>
             );
           })}
+          {rotaAtiva && lojaSelecionada ? (
+            <Polyline
+              coordinates={[
+                {
+                  latitude: Number(localizacaoCliente?.latitude ?? SAQUAREMA_CENTER[0]),
+                  longitude: Number(localizacaoCliente?.longitude ?? SAQUAREMA_CENTER[1]),
+                },
+                {
+                  latitude: lojaSelecionada.lat,
+                  longitude: lojaSelecionada.lng,
+                },
+              ]}
+              strokeColor="#0E7C66"
+              strokeWidth={4}
+            />
+          ) : null}
         </MapView>
         <Text style={styles.atribuicao} pointerEvents="none">© OpenStreetMap</Text>
-        {renderCard()}
+        {!hideInternalCard ? renderCard() : null}
       </View>
       {edgeToEdge && avisoTexto && !lojaSelecionada ? (
         <View style={styles.bannerOverlay} pointerEvents="none">
@@ -237,14 +265,14 @@ const styles = StyleSheet.create({
   },
   mapEdgeToEdge: { borderRadius: 0 },
   pin: {
-    borderWidth: 2,
-    borderColor: '#2DD4BF',
-    backgroundColor: '#14B8A6',
+    borderWidth: 2.5,
+    borderColor: '#FFFFFF',
+    backgroundColor: '#0F1D22',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  pinDestaque: { backgroundColor: '#0D9488', borderWidth: 3, borderColor: '#F59E0B' },
+  pinDestaque: { backgroundColor: '#0E7C66', borderWidth: 2.5, borderColor: '#B6F035' },
   pinImg: { backgroundColor: '#fff' },
   pinImagem: { width: '100%', height: '100%' },
   pinTexto: { color: '#fff', fontWeight: 'bold', fontSize: 17 },

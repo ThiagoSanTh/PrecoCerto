@@ -136,14 +136,14 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
 
   if (useSidebarNav) {
     const clienteCrossLinks = [
-      { key: 'c-buscar', label: 'Buscar', icon: 'search' },
-      { key: 'c-ia', label: 'Assistente IA', icon: 'sparkles', badge: 'Novo' },
-      { key: 'c-fav', label: 'Favoritos', icon: 'heart' },
-      { key: 'c-hist', label: 'Histórico', icon: 'time' },
+      { key: 'c-buscar', route: 'Buscar', label: 'Buscar', icon: 'search' },
+      { key: 'c-ia', route: 'IA', label: 'Assistente IA', icon: 'sparkles', badge: 'Novo' },
+      { key: 'c-fav', route: 'Favoritos', label: 'Favoritos', icon: 'heart' },
+      { key: 'c-hist', route: 'Histórico', label: 'Histórico', icon: 'time' },
     ];
     const lojistaCrossLinks = [
-      { key: 's-painel', label: 'Painel BI', icon: 'bar-chart' },
-      { key: 's-prod', label: 'Meus produtos', icon: 'storefront' },
+      { key: 's-painel', route: 'Painel', label: 'Painel BI', icon: 'bar-chart' },
+      { key: 's-prod', route: 'Produtos', label: 'Meus produtos', icon: 'storefront' },
     ];
 
     return (
@@ -219,7 +219,16 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
                     iconName={item.icon}
                     focused={false}
                     badgeText={item.badge}
-                    onPress={() => setAppMode(emModoLoja ? 'user' : 'store')}
+                    onPress={async () => {
+                      await setAppMode(emModoLoja ? 'user' : 'store');
+                      setTimeout(() => {
+                        try {
+                          navigation.navigate(item.route);
+                        } catch {
+                          /* rota tratada após re-render das abas */
+                        }
+                      }, 50);
+                    }}
                     colors={colors}
                   />
                 ))}

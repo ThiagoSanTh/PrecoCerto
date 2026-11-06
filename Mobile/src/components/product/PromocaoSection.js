@@ -1,6 +1,13 @@
 import { View, Text, Switch, StyleSheet } from 'react-native';
 import { FormField } from '../form';
-import { colors } from '../../theme';
+import { useTheme } from '../../context/ThemeContext';
+
+function aplicarMascaraDataBr(valor = '') {
+  const digitos = String(valor).replace(/\D/g, '').slice(0, 8);
+  if (digitos.length <= 2) return digitos;
+  if (digitos.length <= 4) return `${digitos.slice(0, 2)}/${digitos.slice(2)}`;
+  return `${digitos.slice(0, 2)}/${digitos.slice(2, 4)}/${digitos.slice(4)}`;
+}
 
 export default function PromocaoSection({
   emPromocao,
@@ -16,19 +23,28 @@ export default function PromocaoSection({
   quantidadeEstoque,
   onChangeQuantidadeEstoque,
 }) {
+  const { colors } = useTheme();
   return (
-    <View style={styles.container}>
-      <Text style={styles.titulo}>Promoção</Text>
-      <Text style={styles.hint}>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: colors.surfaceSubtle || colors.card,
+          borderColor: colors.border,
+        },
+      ]}
+    >
+      <Text style={[styles.titulo, { color: colors.text }]}>Promoção</Text>
+      <Text style={[styles.hint, { color: colors.textMuted }]}>
         Configure uma oferta promocional para este produto na sua loja.
       </Text>
 
       <View style={styles.switchRow}>
-        <Text style={styles.switchLabel}>Produto em promoção</Text>
+        <Text style={[styles.switchLabel, { color: colors.text }]}>Produto em promoção</Text>
         <Switch
           value={emPromocao}
           onValueChange={onTogglePromocao}
-          trackColor={{ false: '#CBD5E1', true: colors.primary }}
+          trackColor={{ false: colors.border, true: colors.primary }}
           thumbColor="#fff"
         />
       </View>
@@ -52,15 +68,15 @@ export default function PromocaoSection({
           <FormField
             label="Data início (DD/MM/AAAA)"
             value={dataInicio}
-            onChangeText={onChangeDataInicio}
-            placeholder="Opcional"
+            onChangeText={(v) => onChangeDataInicio?.(aplicarMascaraDataBr(v))}
+            placeholder="DD/MM/AAAA (Opcional)"
             keyboardType="number-pad"
           />
           <FormField
             label="Data fim (DD/MM/AAAA)"
             value={dataFim}
-            onChangeText={onChangeDataFim}
-            placeholder="Opcional"
+            onChangeText={(v) => onChangeDataFim?.(aplicarMascaraDataBr(v))}
+            placeholder="DD/MM/AAAA (Opcional)"
             keyboardType="number-pad"
           />
         </>
