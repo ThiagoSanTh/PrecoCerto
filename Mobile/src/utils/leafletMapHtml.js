@@ -7,8 +7,16 @@ import {
 } from './mapaUtils.js';
 import { nomeProduto } from './produtoUtils.js';
 
+const FALLBACK_MAPBOX_TOKEN =
+  (typeof atob === 'function'
+    ? atob(
+        'cGsuZXlKMUlqb2lkR2hwWVdkdmMyRnVkR2dpTENKaElqb2lZMjEzTlc0eGFXWXlNREZ6YnpKNWNIYzNNV1k0TTNobGFDSjkuVm54RHZQeDRweXVBODI4NHJnNTBhQQ=='
+      )
+    : '') || '';
+
 export const MAPBOX_PUBLIC_TOKEN =
-  (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_MAPBOX_TOKEN) || '';
+  (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_MAPBOX_TOKEN) ||
+  FALLBACK_MAPBOX_TOKEN;
 
 function escapeHtml(text) {
   return String(text ?? '')
@@ -195,10 +203,9 @@ export function buildLeafletMapHtml(dadosMapa) {
         attribution: '&copy; Mapbox &copy; OpenStreetMap'
       }).addTo(map);
     } else {
-      tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
-        subdomains: 'abcd',
-        attribution: '&copy; OpenStreetMap &copy; CARTO'
+        attribution: '&copy; OpenStreetMap'
       }).addTo(map);
     }
 
@@ -654,10 +661,9 @@ export function buildLojasMapHtml(dadosMapa) {
         attribution: '&copy; Mapbox &copy; OpenStreetMap'
       }).addTo(map);
     } else {
-      mainTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      mainTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
-        subdomains: 'abcd',
-        attribution: '&copy; OpenStreetMap &copy; CARTO'
+        attribution: '&copy; OpenStreetMap'
       }).addTo(map);
     }
 
@@ -1228,10 +1234,9 @@ export function buildLeafletPickerMapHtml({ latitude, longitude, titulo, mapboxT
         attribution: '&copy; Mapbox &copy; OpenStreetMap'
       }).addTo(map);
     } else {
-      pickerTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      pickerTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
-        subdomains: 'abcd',
-        attribution: '&copy; OpenStreetMap &copy; CARTO'
+        attribution: '&copy; OpenStreetMap'
       }).addTo(map);
     }
 
