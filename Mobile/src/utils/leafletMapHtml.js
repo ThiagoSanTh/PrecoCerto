@@ -7,6 +7,9 @@ import {
 } from './mapaUtils.js';
 import { nomeProduto } from './produtoUtils.js';
 
+export const MAPBOX_PUBLIC_TOKEN =
+  (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_MAPBOX_TOKEN) || '';
+
 function escapeHtml(text) {
   return String(text ?? '')
     .replace(/&/g, '&amp;')
@@ -81,7 +84,8 @@ export function prepararDadosMapaLeaflet(localizacaoCliente, produtos) {
 }
 
 export function buildLeafletMapHtml(dadosMapa) {
-  const payload = JSON.stringify(dadosMapa);
+  const mapboxToken = dadosMapa?.mapboxToken || MAPBOX_PUBLIC_TOKEN;
+  const payload = JSON.stringify({ ...dadosMapa, mapboxToken });
 
   return `<!DOCTYPE html>
 <html>
@@ -181,11 +185,22 @@ export function buildLeafletMapHtml(dadosMapa) {
     });
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    var tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19,
-      subdomains: 'abcd',
-      attribution: '&copy; OpenStreetMap &copy; CARTO'
-    }).addTo(map);
+    var mapboxToken = DATA.mapboxToken;
+    var tileLayer;
+    if (mapboxToken) {
+      tileLayer = L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/512/{z}/{x}/{y}@2x?access_token=' + mapboxToken, {
+        maxZoom: 19,
+        tileSize: 512,
+        zoomOffset: -1,
+        attribution: '&copy; Mapbox &copy; OpenStreetMap'
+      }).addTo(map);
+    } else {
+      tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd',
+        attribution: '&copy; OpenStreetMap &copy; CARTO'
+      }).addTo(map);
+    }
 
     tileLayer.on('tileerror', function() {
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -322,7 +337,8 @@ export function sanitizarLojasParaHtml(marcadores) {
  * e motor de rotas integrado (OSRM + Polyline em camadas + resumo de trajeto).
  */
 export function buildLojasMapHtml(dadosMapa) {
-  const payload = JSON.stringify(dadosMapa);
+  const mapboxToken = dadosMapa?.mapboxToken || MAPBOX_PUBLIC_TOKEN;
+  const payload = JSON.stringify({ ...dadosMapa, mapboxToken });
 
   return `<!DOCTYPE html>
 <html>
@@ -628,11 +644,22 @@ export function buildLojasMapHtml(dadosMapa) {
     });
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    var mainTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19,
-      subdomains: 'abcd',
-      attribution: '&copy; OpenStreetMap &copy; CARTO'
-    }).addTo(map);
+    var mapboxToken = DATA.mapboxToken;
+    var mainTiles;
+    if (mapboxToken) {
+      mainTiles = L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/512/{z}/{x}/{y}@2x?access_token=' + mapboxToken, {
+        maxZoom: 19,
+        tileSize: 512,
+        zoomOffset: -1,
+        attribution: '&copy; Mapbox &copy; OpenStreetMap'
+      }).addTo(map);
+    } else {
+      mainTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd',
+        attribution: '&copy; OpenStreetMap &copy; CARTO'
+      }).addTo(map);
+    }
 
     var fallbackAdded = false;
     mainTiles.on('tileerror', function() {
@@ -836,18 +863,57 @@ export function buildLojasMapHtml(dadosMapa) {
       }
 
       var osrmProfile = modoWalking ? 'foot' : 'driving';
-      var url =
-        'https://router.project-osrm.org/route/v1/' +
-        osrmProfile +
-        '/' +
-        origem.lng + ',' + origem.lat + ';' +
-        destino.lng + ',' + destino.lat +
-        '?overview=full&geometries=geojson';
+      var mapboxProfile = modoWalking ? 'walking' : 'driving';
+      var routePromise;
 
-      fetch(url)
-        .then(function(res) { return res.json(); })
-        .then(function(json) {
+      if (DATA.mapboxToken) {
+        var mapboxUrl =
+          'https://api.mapbox.com/directions/v5/mapbox/' +
+          mapboxProfile +
+          '/' +
+          origem.lng + ',' + origem.lat + ';' +
+          destino.lng + ',' + destino.lat +
+          '?geometries=geojson&overview=full&access_token=' +
+          DATA.mapboxToken;
+
+        routePromise = fetch(mapboxUrl)
+          .then(function(res) {
+            if (!res.ok) throw new Error('Mapbox HTTP ' + res.status);
+            return res.json();
+          })
+          .then(function(json) {
+            if (!json || !json.routes || !json.routes.length) throw new Error('Sem rotas Mapbox');
+            return { json: json, provider: 'mapbox' };
+          })
+          .catch(function() {
+            var osrmUrl =
+              'https://router.project-osrm.org/route/v1/' +
+              osrmProfile +
+              '/' +
+              origem.lng + ',' + origem.lat + ';' +
+              destino.lng + ',' + destino.lat +
+              '?overview=full&geometries=geojson';
+            return fetch(osrmUrl)
+              .then(function(res) { return res.json(); })
+              .then(function(json) { return { json: json, provider: 'osrm' }; });
+          });
+      } else {
+        var osrmUrl =
+          'https://router.project-osrm.org/route/v1/' +
+          osrmProfile +
+          '/' +
+          origem.lng + ',' + origem.lat + ';' +
+          destino.lng + ',' + destino.lat +
+          '?overview=full&geometries=geojson';
+        routePromise = fetch(osrmUrl)
+          .then(function(res) { return res.json(); })
+          .then(function(json) { return { json: json, provider: 'osrm' }; });
+      }
+
+      routePromise
+        .then(function(result) {
           if (reqId !== routeReqCounter) return;
+          var json = result && result.json;
           if (!json || !json.routes || !json.routes[0] || !json.routes[0].geometry) return;
           var route = json.routes[0];
           var coords = route.geometry.coordinates.map(function(c) {
@@ -869,7 +935,8 @@ export function buildLojasMapHtml(dadosMapa) {
               type: 'routeCalculated',
               lojaId: String(destino.id),
               distanceKm: kmReal,
-              durationMin: minReal
+              durationMin: minReal,
+              provider: result.provider || 'mapbox'
             });
           }
         })
@@ -1088,7 +1155,7 @@ const LEAFLET_BASE_CSS = `
 /**
  * Mapa Leaflet para escolher a localização da loja (pin arrastável + toque).
  */
-export function buildLeafletPickerMapHtml({ latitude, longitude, titulo }) {
+export function buildLeafletPickerMapHtml({ latitude, longitude, titulo, mapboxToken }) {
   const hasPin = latitude != null && longitude != null;
   const data = {
     marker: hasPin
@@ -1101,6 +1168,7 @@ export function buildLeafletPickerMapHtml({ latitude, longitude, titulo }) {
       zoom: hasPin ? 16 : SAQUAREMA_ZOOM,
     },
     titulo: escapeHtml(titulo || 'Local da loja'),
+    mapboxToken: mapboxToken || MAPBOX_PUBLIC_TOKEN,
   };
   const payload = JSON.stringify(data);
 
@@ -1150,11 +1218,22 @@ export function buildLeafletPickerMapHtml({ latitude, longitude, titulo }) {
     });
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    var pickerTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19,
-      subdomains: 'abcd',
-      attribution: '&copy; OpenStreetMap &copy; CARTO'
-    }).addTo(map);
+    var mapboxToken = DATA.mapboxToken;
+    var pickerTiles;
+    if (mapboxToken) {
+      pickerTiles = L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/512/{z}/{x}/{y}@2x?access_token=' + mapboxToken, {
+        maxZoom: 19,
+        tileSize: 512,
+        zoomOffset: -1,
+        attribution: '&copy; Mapbox &copy; OpenStreetMap'
+      }).addTo(map);
+    } else {
+      pickerTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd',
+        attribution: '&copy; OpenStreetMap &copy; CARTO'
+      }).addTo(map);
+    }
 
     pickerTiles.on('tileerror', function() {
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
