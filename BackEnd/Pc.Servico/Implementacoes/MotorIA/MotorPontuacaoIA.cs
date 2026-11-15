@@ -18,10 +18,8 @@ namespace Pc.Servico.Implementacoes.MotorIA
             var precos = candidatos.Where(c => c.Preco.HasValue).Select(c => c.Preco!.Value).ToList();
             var dists = candidatos.Where(c => c.DistanciaKm.HasValue).Select(c => c.DistanciaKm!.Value).ToList();
 
-            decimal precoMin = precos.Count > 0 ? precos.Min() : 0;
-            decimal precoMax = precos.Count > 0 ? precos.Max() : 0;
-            decimal distMin = dists.Count > 0 ? dists.Min() : 0;
-            decimal distMax = dists.Count > 0 ? dists.Max() : 0;
+            var (precoMin, precoMax) = CalcularLimitesRobusto(precos);
+            var (distMin, distMax) = CalcularLimitesRobusto(dists);
 
             foreach (var c in candidatos)
             {
@@ -70,12 +68,31 @@ namespace Pc.Servico.Implementacoes.MotorIA
             contexto.Candidatos = candidatos.OrderByDescending(x => x.Score).ToList();
         }
 
+        private static (decimal Min, decimal Max) CalcularLimitesRobusto(List<decimal> valores)
+        {
+            if (valores.Count == 0) return (0m, 0m);
+            var ordenados = valores.OrderBy(v => v).ToList();
+            var minAbs = ordenados[0];
+            var maxAbs = ordenados[^1];
+            if (ordenados.Count < 4) return (minAbs, maxAbs);
+
+            var q1 = ordenados[ordenados.Count / 4];
+            var q3 = ordenados[(3 * (ordenados.Count - 1)) / 4];
+            var iqr = q3 - q1;
+            var min = Math.Max(minAbs, q1 - 1.5m * iqr);
+            var max = Math.Min(maxAbs, q3 + 1.5m * iqr);
+            return (min, max);
+        }
+
         private static double NormalizarInvertido(decimal? valor, decimal min, decimal max)
         {
             if (valor is null) return 0.5;
-            if (max <= min) return 1.0;
-            var n = (double)((valor.Value - min) / (max - min));
-            return Math.Clamp(1.0 - n, 0, 1);
+            if (valor.Value <= min) return 1.0;
+            if (valor.Value >= max) return 0.0;
+            var amplitude = (double)(max - min);
+            if (amplitude <= 0) return 1.0;
+            var n = (double)(valor.Value - min) / amplitude;
+            return Math.Clamp(1.0 - n, 0.0, 1.0);
         }
 
         private static List<string> MontarMotivos(CandidatoIA c, ContextoIA ctx)

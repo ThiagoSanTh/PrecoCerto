@@ -3,8 +3,10 @@ using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Pc.Dominio.Entities.Catalogo;
 using Pc.Dominio.Entities.Estabelecimentos;
+using Pc.Dominio.Entities.MotorIA;
 using Pc.Dominio.Enums.MotorIA;
 using Pc.Repositorio.Comum;
+using Pc.Repositorio.Interfaces;
 using Pc.Servico.Implementacoes.IA;
 using Pc.Servico.Interfaces;
 using Pc.Servico.Interfaces.MotorIA;
@@ -26,6 +28,8 @@ namespace Pc.Servico.Implementacoes.MotorIA
         private readonly IClimaServico _clima;
         private readonly ILogger<MotorIA> _logger;
         private readonly ILlmRouterService? _llmRouter;
+        private readonly ISessaoChatRepositorio? _sessaoRepo;
+        private readonly IValidadorRespostaIA? _validador;
 
         public MotorIA(
             IInterpretadorIA interpretador,
@@ -39,7 +43,9 @@ namespace Pc.Servico.Implementacoes.MotorIA
             IAvaliacaoServico avaliacoes,
             IClimaServico clima,
             ILogger<MotorIA> logger,
-            ILlmRouterService? llmRouter = null)
+            ILlmRouterService? llmRouter = null,
+            ISessaoChatRepositorio? sessaoRepo = null,
+            IValidadorRespostaIA? validador = null)
         {
             _interpretador = interpretador;
             _regras = regras;
@@ -53,6 +59,8 @@ namespace Pc.Servico.Implementacoes.MotorIA
             _clima = clima;
             _logger = logger;
             _llmRouter = llmRouter;
+            _sessaoRepo = sessaoRepo;
+            _validador = validador;
         }
 
         public async Task<ResultadoAnaliseIA> AnalisarAsync(
@@ -60,6 +68,21 @@ namespace Pc.Servico.Implementacoes.MotorIA
             CancellationToken cancellationToken = default)
         {
             var swTotal = Stopwatch.StartNew();
+            SessaoChat? sessao = null;
+            if (_sessaoRepo is not null && (pedido.SessaoId.HasValue || pedido.UsuarioId.HasValue))
+            {
+                sessao = await _sessaoRepo.ObterOuCriarAsync(pedido.SessaoId, pedido.UsuarioId, cancellationToken);
+                if (pedido.Historico.Count == 0)
+                {
+                    var msgs = await _sessaoRepo.ListarUltimasMensagensAsync(sessao.Id, 8, cancellationToken);
+                    pedido.Historico = msgs.Select(m => new MensagemHistoricoIA
+                    {
+                        Papel = m.Papel,
+                        Texto = m.Texto
+                    }).ToList();
+                }
+            }
+
             var swInterp = Stopwatch.StartNew();
             var ctx = _interpretador.Interpretar(pedido);
 
@@ -76,7 +99,7 @@ namespace Pc.Servico.Implementacoes.MotorIA
 
             if (ctx.Intencao is IntencaoIA.ForaDoDominio or IntencaoIA.NaoEntendida or IntencaoIA.Saudacao)
             {
-                return await FinalizarAsync(ctx, swTotal, swInterp.ElapsedMilliseconds, 0, 0, cancellationToken);
+                return await FinalizarAsync(pedido, sessao, ctx, swTotal, swInterp.ElapsedMilliseconds, 0, 0, cancellationToken);
             }
 
             if (PrecisaClima(ctx))
@@ -109,6 +132,8 @@ namespace Pc.Servico.Implementacoes.MotorIA
                 string.Join(',', ctx.FallbacksUsados));
 
             return await FinalizarAsync(
+                pedido,
+                sessao,
                 ctx,
                 swTotal,
                 swInterp.ElapsedMilliseconds,
@@ -168,6 +193,8 @@ namespace Pc.Servico.Implementacoes.MotorIA
         }
 
         private async Task<ResultadoAnaliseIA> FinalizarAsync(
+            PedidoAnaliseIA pedido,
+            SessaoChat? sessao,
             ContextoIA ctx,
             Stopwatch total,
             long interpMs,
@@ -181,16 +208,31 @@ namespace Pc.Servico.Implementacoes.MotorIA
                 && ctx.Intencao is not (IntencaoIA.ForaDoDominio or IntencaoIA.NaoEntendida or IntencaoIA.Saudacao))
             {
                 var (textoLlm, provedorGen) = await _llmRouter.GerarRespostaAsync(ctx, ct);
-                resposta = textoLlm;
-                if (!string.IsNullOrWhiteSpace(provedorGen) && provedorGen != "Deterministico")
+                if (!string.IsNullOrWhiteSpace(textoLlm))
                 {
-                    ctx.ProvedorLlm = provedorGen;
+                    if (_validador is not null && !_validador.Validar(textoLlm, ctx))
+                    {
+                        ctx.FallbacksUsados.Add("resposta_llm_rejeitada");
+                    }
+                    else
+                    {
+                        resposta = textoLlm;
+                        if (!string.IsNullOrWhiteSpace(provedorGen) && provedorGen != "Deterministico")
+                        {
+                            ctx.ProvedorLlm = provedorGen;
+                        }
+                    }
                 }
             }
 
             if (string.IsNullOrWhiteSpace(resposta))
             {
                 resposta = _gerador.Gerar(ctx);
+            }
+
+            if (sessao is not null && _sessaoRepo is not null)
+            {
+                await _sessaoRepo.AdicionarTurnoAsync(sessao.Id, pedido.Mensagem, resposta, ct);
             }
 
             total.Stop();
@@ -220,6 +262,7 @@ namespace Pc.Servico.Implementacoes.MotorIA
             return new ResultadoAnaliseIA
             {
                 Sucesso = true,
+                SessaoId = sessao?.Id,
                 Resposta = resposta,
                 Intencao = ctx.Intencao,
                 Objetivo = ctx.Objetivo,

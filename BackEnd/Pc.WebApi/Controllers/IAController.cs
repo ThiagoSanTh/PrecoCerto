@@ -59,7 +59,8 @@ namespace Pc.WebApi.Controllers
                 Mensagem = mensagem,
                 Latitude = request.Latitude,
                 Longitude = request.Longitude,
-                UsuarioId = User.GetUserId()
+                UsuarioId = User.GetUserId(),
+                SessaoId = request.SessaoId
             }, cancellationToken);
             sw.Stop();
 
@@ -72,6 +73,7 @@ namespace Pc.WebApi.Controllers
             return Ok(new IAChatResponseDto
             {
                 Sucesso = resultado.Sucesso,
+                SessaoId = resultado.SessaoId,
                 Intencao = resultado.Intencao.ToString(),
                 Resposta = resultado.Resposta,
                 Dados = resultado.Resultados
@@ -110,6 +112,7 @@ namespace Pc.WebApi.Controllers
                 Latitude = request.Latitude,
                 Longitude = request.Longitude,
                 UsuarioId = request.UsuarioId ?? User.GetUserId(),
+                SessaoId = request.SessaoId,
                 LojaIdUsuario = request.LojaIdUsuario,
                 ModoOperacional = request.ModoOperacional,
                 Historico = request.Historico?.Select(h => new MensagemHistoricoIA
@@ -131,6 +134,7 @@ namespace Pc.WebApi.Controllers
             return Ok(new IAAnalisarResponseDto
             {
                 Sucesso = resultado.Sucesso,
+                SessaoId = resultado.SessaoId,
                 Resposta = resultado.Resposta,
                 Intencao = resultado.Intencao.ToString(),
                 Objetivo = resultado.Objetivo?.ToString(),

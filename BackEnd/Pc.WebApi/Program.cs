@@ -495,7 +495,9 @@ builder.Services.AddScoped<IMotorRegrasIA, MotorRegrasIA>();
 builder.Services.AddScoped<IMotorPontuacaoIA, MotorPontuacaoIA>();
 builder.Services.AddScoped<IMotorRecomendacaoIA, MotorRecomendacaoIA>();
 builder.Services.AddScoped<IGeradorRespostaIA, GeradorRespostaIA>();
+builder.Services.AddScoped<IValidadorRespostaIA, ValidadorRespostaIA>();
 builder.Services.AddScoped<IRagConhecimentoIA, RagConhecimentoIA>();
+builder.Services.AddScoped<ISessaoChatRepositorio, SessaoChatRepositorio>();
 builder.Services.AddScoped<IMotorIA, MotorIA>();
 
 // RAG

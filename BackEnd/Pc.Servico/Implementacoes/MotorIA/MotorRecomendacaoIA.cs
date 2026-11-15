@@ -17,8 +17,8 @@ namespace Pc.Servico.Implementacoes.MotorIA
         {
             contexto.Candidatos = contexto.Candidatos
                 .Where(c => c.Disponivel && (c.Preco is null || c.Preco > 0))
-                .Where(c => contexto.OrcamentoMax is null || c.Preco is null || c.Preco <= contexto.OrcamentoMax)
-                .Where(c => contexto.DistanciaMaxKm is null || c.DistanciaKm is null || c.DistanciaKm <= contexto.DistanciaMaxKm)
+                .Where(c => !contexto.OrcamentoMax.HasValue || (c.Preco is not null && c.Preco <= contexto.OrcamentoMax))
+                .Where(c => !contexto.DistanciaMaxKm.HasValue || (c.DistanciaKm is not null && c.DistanciaKm <= contexto.DistanciaMaxKm))
                 .ToList();
 
             _pontuacao.Pontuar(contexto);

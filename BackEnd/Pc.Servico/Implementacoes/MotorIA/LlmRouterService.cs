@@ -224,7 +224,7 @@ namespace Pc.Servico.Implementacoes.MotorIA
         private static string MontarPromptInterpretacao(PedidoAnaliseIA pedido)
         {
             var hist = pedido.Historico is { Count: > 0 }
-                ? string.Join(" | ", pedido.Historico.TakeLast(4).Select(h => $"{h.Papel}: {h.Texto}"))
+                ? string.Join(" | ", pedido.Historico.TakeLast(8).Select(h => $"{h.Papel}: {h.Texto}"))
                 : "vazio";
 
             return $$"""
@@ -244,6 +244,7 @@ namespace Pc.Servico.Implementacoes.MotorIA
             - Se pedir receita, churrasco, café da manhã ou sintoma leve (dor de cabeça), use intencao="RecomendarPorOcasiao" e liste os ingredientes/itens em "itensBusca".
             - Se pedir futebol, política, piada ou tema fora de compras, use intencao="ForaDoDominio".
             - Se modoOperacional="loja" e perguntar sobre seus produtos/concorrência, use intencao="AnalisarConcorrenciaLojista".
+            - Correferência multi-turn: se MensagemAtual for continuação/refinamento do HistoricoRecente (ex.: "E esse?", "Tem mais barato?", "Qual fica mais perto?", "E naquela loja?", "E uma Sony?"), resolva pronomes, referências implícitas e trocas de marca/restrição herdando produtoTermo/lojaTermo/marca do HistoricoRecente conforme aplicável. Se o usuário mudar de assunto ou iniciar nova busca independente, descarte o contexto antigo.
             ModoOperacional: {{pedido.ModoOperacional ?? "cliente"}}
             HistoricoRecente: {{hist}}
             MensagemAtual: {{pedido.Mensagem}}

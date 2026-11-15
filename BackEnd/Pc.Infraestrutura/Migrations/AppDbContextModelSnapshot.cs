@@ -441,6 +441,68 @@ namespace Pc.Infraestrutura.Migrations
                     b.ToTable("PreferenciasClientes");
                 });
 
+            modelBuilder.Entity("Pc.Dominio.Entities.MotorIA.MensagemChat", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("DataAtualizacao")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Papel")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("SessaoChatId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Texto")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SessaoChatId", "DataCriacao");
+
+                    b.ToTable("MensagensChat", (string)null);
+                });
+
+            modelBuilder.Entity("Pc.Dominio.Entities.MotorIA.SessaoChat", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("DataAtualizacao")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("UltimaInteracaoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId", "UltimaInteracaoEm");
+
+                    b.ToTable("SessoesChat", (string)null);
+                });
+
             modelBuilder.Entity("Pc.Dominio.Entities.Rag.DocumentoRag", b =>
                 {
                     b.Property<Guid>("Id")
@@ -820,6 +882,27 @@ namespace Pc.Infraestrutura.Migrations
                     b.Navigation("Cliente");
                 });
 
+            modelBuilder.Entity("Pc.Dominio.Entities.MotorIA.MensagemChat", b =>
+                {
+                    b.HasOne("Pc.Dominio.Entities.MotorIA.SessaoChat", "SessaoChat")
+                        .WithMany("Mensagens")
+                        .HasForeignKey("SessaoChatId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SessaoChat");
+                });
+
+            modelBuilder.Entity("Pc.Dominio.Entities.MotorIA.SessaoChat", b =>
+                {
+                    b.HasOne("Pc.Dominio.Entities.Usuarios.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Usuario");
+                });
+
             modelBuilder.Entity("Pc.Dominio.Entities.Usuarios.Usuario", b =>
                 {
                     b.HasOne("Pc.Dominio.Entities.Estabelecimentos.Loja", "LojaVinculada")
@@ -836,6 +919,11 @@ namespace Pc.Infraestrutura.Migrations
                 });
 
             modelBuilder.Entity("Pc.Dominio.Entities.Interacoes.Conversa", b =>
+                {
+                    b.Navigation("Mensagens");
+                });
+
+            modelBuilder.Entity("Pc.Dominio.Entities.MotorIA.SessaoChat", b =>
                 {
                     b.Navigation("Mensagens");
                 });

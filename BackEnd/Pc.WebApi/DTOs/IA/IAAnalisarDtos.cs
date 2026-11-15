@@ -22,6 +22,8 @@ namespace Pc.WebApi.DTOs.IA
 
         public Guid? UsuarioId { get; set; }
 
+        public Guid? SessaoId { get; set; }
+
         public Guid? LojaIdUsuario { get; set; }
 
         public string? ModoOperacional { get; set; }
@@ -47,6 +49,7 @@ namespace Pc.WebApi.DTOs.IA
     public class IAAnalisarResponseDto
     {
         public bool Sucesso { get; set; }
+        public Guid? SessaoId { get; set; }
         public string Resposta { get; set; } = string.Empty;
         public string Intencao { get; set; } = string.Empty;
         public string? Objetivo { get; set; }

@@ -124,6 +124,7 @@ namespace Pc.Servico.Modelos.MotorIA
     public class PedidoAnaliseIA
     {
         public string Mensagem { get; set; } = string.Empty;
+        public Guid? SessaoId { get; set; }
         public double? Latitude { get; set; }
         public double? Longitude { get; set; }
         public Guid? UsuarioId { get; set; }
@@ -150,6 +151,7 @@ namespace Pc.Servico.Modelos.MotorIA
     public class ResultadoAnaliseIA
     {
         public bool Sucesso { get; set; } = true;
+        public Guid? SessaoId { get; set; }
         public string Resposta { get; set; } = string.Empty;
         public IntencaoIA Intencao { get; set; }
         public ObjetivoIA? Objetivo { get; set; }

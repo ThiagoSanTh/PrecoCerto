@@ -2,6 +2,7 @@
 using Pc.Dominio.Entities.Catalogo;
 using Pc.Dominio.Entities.Estabelecimentos;
 using Pc.Dominio.Entities.Interacoes;
+using Pc.Dominio.Entities.MotorIA;
 using Pc.Dominio.Entities.Rag;
 using Pc.Dominio.Entities.Usuarios;
 
@@ -32,6 +33,9 @@ namespace Pc.Infraestrutura
 
         public DbSet<DocumentoRag> DocumentosRag { get; set; }
         public DbSet<RagIndexDlq> RagIndexDlq { get; set; }
+
+        public DbSet<SessaoChat> SessoesChat { get; set; }
+        public DbSet<MensagemChat> MensagensChat { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -165,6 +169,30 @@ namespace Pc.Infraestrutura
                 e.HasIndex(d => d.Status);
                 e.HasIndex(d => d.CriadoEmUtc);
                 e.HasIndex(d => new { d.Tipo, d.EntidadeId });
+            });
+
+            modelBuilder.Entity<SessaoChat>(e =>
+            {
+                e.ToTable("SessoesChat");
+                e.HasKey(s => s.Id);
+                e.HasIndex(s => new { s.UsuarioId, s.UltimaInteracaoEm });
+                e.HasOne(s => s.Usuario)
+                    .WithMany()
+                    .HasForeignKey(s => s.UsuarioId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<MensagemChat>(e =>
+            {
+                e.ToTable("MensagensChat");
+                e.HasKey(m => m.Id);
+                e.Property(m => m.Papel).HasMaxLength(20).IsRequired();
+                e.Property(m => m.Texto).IsRequired();
+                e.HasIndex(m => new { m.SessaoChatId, m.DataCriacao });
+                e.HasOne(m => m.SessaoChat)
+                    .WithMany(s => s.Mensagens)
+                    .HasForeignKey(m => m.SessaoChatId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }

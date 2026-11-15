@@ -12,5 +12,7 @@ namespace Pc.WebApi.DTOs.IA
 
         [Range(-180, 180)]
         public double? Longitude { get; set; }
+
+        public Guid? SessaoId { get; set; }
     }
 }
