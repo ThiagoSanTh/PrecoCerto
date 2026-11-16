@@ -720,9 +720,9 @@
     "semantic_hash": ""
   },
   "BackEnd/Pc.Servico.Tests/MotorIA/MotorIATests.cs": {
-    "mtime": 1792972314.5553598,
-    "seen": 1794776891.1073594,
-    "ast_hash": "d4b7e9985aac3666ae2c1c28d7e42fc7",
+    "mtime": 1794791285.9079528,
+    "seen": 1794791340.557537,
+    "ast_hash": "b39f8e07214044b40819a825591cd464",
     "semantic_hash": ""
   },
   "BackEnd/Pc.Servico.Tests/Pc.Servico.Tests.csproj": {
@@ -876,15 +876,15 @@
     "semantic_hash": ""
   },
   "BackEnd/Pc.Servico/Implementacoes/MotorIA/ClassificadorIntencaoIA.cs": {
-    "mtime": 1792972314.5583608,
-    "seen": 1794776891.1073837,
-    "ast_hash": "7652a885a43f203616f9abd43667e579",
+    "mtime": 1794791228.258329,
+    "seen": 1794791340.5576057,
+    "ast_hash": "20abe8094bc30033e65b11e2da910dcc",
     "semantic_hash": ""
   },
   "BackEnd/Pc.Servico/Implementacoes/MotorIA/ExtratorEntidadesIA.cs": {
-    "mtime": 1792972314.5583608,
-    "seen": 1794776891.1073847,
-    "ast_hash": "adca8aac6687637f8a02af8dc5fa3f49",
+    "mtime": 1794791243.1573398,
+    "seen": 1794791340.557608,
+    "ast_hash": "a60e15dc5c4fb06ff7145c98f5b5e06c",
     "semantic_hash": ""
   },
   "BackEnd/Pc.Servico/Implementacoes/MotorIA/GeradorRespostaIA.cs": {
@@ -900,15 +900,15 @@
     "semantic_hash": ""
   },
   "BackEnd/Pc.Servico/Implementacoes/MotorIA/LlmRouterService.cs": {
-    "mtime": 1794778865.6311443,
-    "seen": 1794779032.9577084,
-    "ast_hash": "deba5cd7c7f51c34e188ec25432f53e7",
+    "mtime": 1794791214.0901897,
+    "seen": 1794791340.5576155,
+    "ast_hash": "0e4c9563cf0096d5534c9358e5769d58",
     "semantic_hash": ""
   },
   "BackEnd/Pc.Servico/Implementacoes/MotorIA/MotorIA.cs": {
-    "mtime": 1794778927.3185797,
-    "seen": 1794779032.957713,
-    "ast_hash": "3941614848a8948a84fead38b8e50ddc",
+    "mtime": 1794791260.675801,
+    "seen": 1794791340.557618,
+    "ast_hash": "32db43eb127af7c52526593fafc36141",
     "semantic_hash": ""
   },
   "BackEnd/Pc.Servico/Implementacoes/MotorIA/MotorPontuacaoIA.cs": {
@@ -1218,15 +1218,15 @@
     "semantic_hash": ""
   },
   "BackEnd/Pc.Servico/Modelos/MotorIA/ContextoIA.cs": {
-    "mtime": 1794778862.9417238,
-    "seen": 1794779032.9747646,
-    "ast_hash": "0ff19c210b0cfd9d5fc9f59aa3fb71e2",
+    "mtime": 1794791197.687024,
+    "seen": 1794791340.5577605,
+    "ast_hash": "5b3278173fe42b897c8c70386cb386e0",
     "semantic_hash": ""
   },
   "BackEnd/Pc.Servico/Modelos/MotorIA/LlmSettings.cs": {
-    "mtime": 1792972314.566362,
-    "seen": 1794776891.1074445,
-    "ast_hash": "437533cdfba30df3fc57a21f078c741c",
+    "mtime": 1794791196.4981327,
+    "seen": 1794791340.557763,
+    "ast_hash": "5f164c1fb7b88f3b846a598b3c97551f",
     "semantic_hash": ""
   },
   "BackEnd/Pc.Servico/Modelos/Rag/RagModelos.cs": {
@@ -1350,9 +1350,9 @@
     "semantic_hash": ""
   },
   "BackEnd/Pc.WebApi/Controllers/IAController.cs": {
-    "mtime": 1794779073.9853668,
-    "seen": 1794779324.9593432,
-    "ast_hash": "6a2e9c26e59190886d856029bee1956c",
+    "mtime": 1794791205.0021722,
+    "seen": 1794791340.557815,
+    "ast_hash": "a936a05c2fb153be3e9c1b1b6e3e5d82",
     "semantic_hash": ""
   },
   "BackEnd/Pc.WebApi/Controllers/LojasController.cs": {
@@ -1548,9 +1548,9 @@
     "semantic_hash": ""
   },
   "BackEnd/Pc.WebApi/DTOs/IA/IAChatResponseDto.cs": {
-    "mtime": 1794779068.935011,
-    "seen": 1794779324.9681125,
-    "ast_hash": "0dc36bdbab634e2dc382db134a306c88",
+    "mtime": 1794791203.8225927,
+    "seen": 1794791340.5578964,
+    "ast_hash": "5c1df2e33fbd0d97a515a416472a2edb",
     "semantic_hash": ""
   },
   "BackEnd/Pc.WebApi/DTOs/Interacoes/AvaliacaoCriarDto.cs": {
@@ -3288,9 +3288,9 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1792020084.0,
-    "seen": 1794776891.1077754,
-    "ast_hash": "07088f30ae76536b47299a5a05492812",
+    "mtime": 1794789540.222736,
+    "seen": 1794791340.558627,
+    "ast_hash": "a3dde5194a3b42dc1e3ffb7698b02984",
     "semantic_hash": ""
   },
   "TAREFAS.md": {

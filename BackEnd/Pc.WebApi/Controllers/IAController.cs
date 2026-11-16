@@ -76,6 +76,8 @@ namespace Pc.WebApi.Controllers
                 SessaoId = resultado.SessaoId,
                 Intencao = resultado.Intencao.ToString(),
                 Resposta = resultado.Resposta,
+                ProvedorLlm = resultado.ProvedorLlm,
+                Fallbacks = resultado.Fallbacks,
                 Dados = resultado.Resultados
             });
         }

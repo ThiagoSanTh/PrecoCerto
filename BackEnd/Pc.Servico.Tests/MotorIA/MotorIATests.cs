@@ -535,5 +535,34 @@ namespace Pc.Servico.Tests.MotorIA
             Assert.Equal(prodId, res.Resultados[0].ProdutoId);
             Assert.Equal(lojaId, res.Resultados[0].LojaId);
         }
+
+        [Fact]
+        public async Task AnalisarAsync_mercado_perto_de_loja_ancora_busca_lojas_proximas_e_nao_repete_camera()
+        {
+            var ancora = new Loja { Id = Guid.NewGuid(), NomeFantasia = "Gabriel's Store", Ativo = true };
+            ancora.Endereco.Latitude = -22.9200m;
+            ancora.Endereco.Longitude = -42.5100m;
+
+            var mercado = new Loja { Id = Guid.NewGuid(), NomeFantasia = "Mercado Economia", Ativo = true };
+            mercado.Endereco.Latitude = -22.9210m;
+            mercado.Endereco.Longitude = -42.5110m;
+
+            _lojas.Setup(l => l.BuscarPorNomeAsync("Gabriel1s Store")).ReturnsAsync(new List<Loja>());
+            _lojas.Setup(l => l.BuscarPorNomeAsync("Gabriel")).ReturnsAsync(new List<Loja> { ancora });
+            _lojas.Setup(l => l.ListarPorProximidadeAsync(-22.9200m, -42.5100m, It.IsAny<decimal>(), 20))
+                .ReturnsAsync(new List<Loja> { ancora, mercado });
+
+            var sut = CriarMotor();
+            var res = await sut.AnalisarAsync(new PedidoAnaliseIA
+            {
+                Mensagem = "preciso fazer compras tambem, aonde tem um mercado perto da Gabriel1s Store para eu passar logo apos comprar a camera ?"
+            });
+
+            Assert.Equal(IntencaoIA.BuscarLojaMaisProxima, res.Intencao);
+            Assert.Single(res.Resultados);
+            Assert.Equal(mercado.Id, res.Resultados[0].LojaId);
+            Assert.DoesNotContain("Câmera", res.Resposta, StringComparison.OrdinalIgnoreCase);
+            _produtos.Verify(p => p.BuscarPorTermosAsync(It.IsAny<IEnumerable<string>>(), null), Times.Never);
+        }
     }
 }

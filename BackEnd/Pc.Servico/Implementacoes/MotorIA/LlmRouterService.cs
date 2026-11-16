@@ -234,7 +234,8 @@ namespace Pc.Servico.Implementacoes.MotorIA
               "objetivo": "Economizar | Proximidade | Rapidez | Promocao | Qualidade | Conveniencia | null",
               "produtoTermo": "substantivo principal do produto em minúsculo sem acento ou null",
               "itensBusca": ["lista", "de", "produtos", "sem", "acento"],
-              "lojaTermo": "nome da loja se citada (sem verbos como vende/tem) ou null",
+              "lojaTermo": "nome da loja buscada (sem verbos como vende/tem) ou null",
+              "lojaReferenciaTermo": "nome da loja âncora quando pedir outra loja/mercado perto dela (ex.: 'perto da Gabriel's Store') ou null",
               "orcamentoMax": numero_ou_null,
               "distanciaMaxKm": numero_ou_null,
               "urgenciaAlta": false,
@@ -244,6 +245,7 @@ namespace Pc.Servico.Implementacoes.MotorIA
             - Se pedir receita, churrasco, café da manhã ou sintoma leve (dor de cabeça), use intencao="RecomendarPorOcasiao" e liste os ingredientes/itens em "itensBusca".
             - Se pedir futebol, política, piada ou tema fora de compras, use intencao="ForaDoDominio".
             - Se modoOperacional="loja" e perguntar sobre seus produtos/concorrência, use intencao="AnalisarConcorrenciaLojista".
+            - Se pedir um estabelecimento/mercado/loja perto de outra loja ("mercado perto da X", "onde tem um mercado perto da X"), use intencao="BuscarLojaMaisProxima", lojaReferenciaTermo="X", lojaTermo=null, produtoTermo=null (ignore produtos citados apenas como contexto temporal, ex.: "após comprar a câmera").
             - Correferência multi-turn: se MensagemAtual for continuação/refinamento do HistoricoRecente (ex.: "E esse?", "Tem mais barato?", "Qual fica mais perto?", "E naquela loja?", "E uma Sony?"), resolva pronomes, referências implícitas e trocas de marca/restrição herdando produtoTermo/lojaTermo/marca do HistoricoRecente conforme aplicável. Se o usuário mudar de assunto ou iniciar nova busca independente, descarte o contexto antigo.
             ModoOperacional: {{pedido.ModoOperacional ?? "cliente"}}
             HistoricoRecente: {{hist}}
