@@ -3395,6 +3395,18 @@
     "ast_hash": "d427205b1f9dc126d7e4ff9c87a91d7f",
     "semantic_hash": ""
   },
+  "BackEnd/scripts/limpar-usuarios-nao-confirmados.sql": {
+    "mtime": 1792020084.0,
+    "seen": 1794780135.1246848,
+    "ast_hash": "039b48e72cfa3dcecca6cdd3f8ca0fef",
+    "semantic_hash": ""
+  },
+  "BackEnd/scripts/setup-produtos-imagens-storage.sql": {
+    "mtime": 1792020084.0,
+    "seen": 1794780135.124689,
+    "ast_hash": "e630dbe08c41516e75fb2c6d60cfd28c",
+    "semantic_hash": ""
+  },
   "Mobile/package-lock.json": {
     "mtime": 1793672911.8834968,
     "seen": 1794776891.1077833,
