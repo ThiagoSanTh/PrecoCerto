@@ -185,6 +185,15 @@ namespace Pc.Servico.Implementacoes.MotorIA
             if (!string.IsNullOrWhiteSpace(llm.LojaTermo))
                 ctx.LojaTermo = TextoNormalizador.Normalizar(llm.LojaTermo);
 
+            if (!string.IsNullOrWhiteSpace(llm.LojaReferenciaTermo))
+                ctx.LojaReferenciaTermo = llm.LojaReferenciaTermo.Trim();
+
+            if (ctx.Intencao is IntencaoIA.BuscarLojaMaisProxima && !string.IsNullOrWhiteSpace(ctx.LojaReferenciaTermo))
+            {
+                ctx.ProdutoTermo = null;
+                ctx.TermosBuscaProduto.Clear();
+            }
+
             if (llm.OrcamentoMax is > 0)
                 ctx.OrcamentoMax = llm.OrcamentoMax;
 
@@ -734,25 +743,43 @@ namespace Pc.Servico.Implementacoes.MotorIA
         private async Task CarregarLojasAsync(ContextoIA ctx, CancellationToken ct)
         {
             List<Dominio.Entities.Estabelecimentos.Loja> lojas;
-            if (!string.IsNullOrWhiteSpace(ctx.LojaTermo))
-                lojas = await _lojas.BuscarPorNomeAsync(ctx.LojaTermo) ?? new List<Loja>();
-            else if (ctx.Latitude is double lat && ctx.Longitude is double lng)
+            decimal? refLat = ctx.Latitude is double ulat ? (decimal)ulat : null;
+            decimal? refLng = ctx.Longitude is double ulng ? (decimal)ulng : null;
+
+            if (!string.IsNullOrWhiteSpace(ctx.LojaReferenciaTermo))
             {
-                // Raio amplo para "mais próxima": ranqueamento por distância faz o corte fino.
-                var raio = ctx.DistanciaMaxKm
-                    ?? (ctx.Intencao is IntencaoIA.BuscarLojaMaisProxima or IntencaoIA.ConsultarEntrega ? 500m : 15m);
-                lojas = await _lojas.ListarPorProximidadeAsync((decimal)lat, (decimal)lng, raio, 20) ?? new List<Loja>();
-                if (lojas.Count == 0)
+                var ancora = await ResolverLojaAncoraAsync(ctx.LojaReferenciaTermo);
+                if (ancora?.Endereco?.Latitude is decimal alat && ancora.Endereco.Longitude is decimal alng)
                 {
-                    var page = await _lojas.ListarPaginadoAsync(Dominio.Comum.PaginacaoParametros.De(1, 20));
-                    lojas = page?.Items?.ToList() ?? new List<Loja>();
-                    ctx.FallbacksUsados.Add("sem_lojas_no_raio");
+                    refLat = alat;
+                    refLng = alng;
+                    var raio = ctx.DistanciaMaxKm ?? 50m;
+                    var proximas = await _lojas.ListarPorProximidadeAsync(alat, alng, raio, 20) ?? new List<Loja>();
+                    lojas = proximas.Where(l => l.Id != ancora.Id).ToList();
                 }
+                else
+                {
+                    ctx.FallbacksUsados.Add("loja_referencia_sem_coordenadas");
+                    lojas = await ListarLojasProximasOuPaginadasAsync(ctx);
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(ctx.LojaTermo))
+            {
+                lojas = await _lojas.BuscarPorNomeAsync(ctx.LojaTermo) ?? new List<Loja>();
             }
             else
             {
-                var page = await _lojas.ListarPaginadoAsync(Dominio.Comum.PaginacaoParametros.De(1, 20));
-                lojas = page?.Items?.ToList() ?? new List<Loja>();
+                lojas = await ListarLojasProximasOuPaginadasAsync(ctx);
+            }
+
+            if (!string.IsNullOrWhiteSpace(ctx.TipoLojaTermo) && lojas.Count > 0)
+            {
+                var tipoNorm = TextoNormalizador.Normalizar(ctx.TipoLojaTermo);
+                var filtradas = lojas
+                    .Where(l => TextoNormalizador.Normalizar(l.NomeFantasia).Contains(tipoNorm, StringComparison.Ordinal))
+                    .ToList();
+                if (filtradas.Count > 0)
+                    lojas = filtradas;
             }
 
             var topLojas = lojas.Take(20).ToList();
@@ -761,10 +788,10 @@ namespace Pc.Servico.Implementacoes.MotorIA
             foreach (var l in topLojas)
             {
                 decimal? dist = null;
-                if (ctx.Latitude is double lat && ctx.Longitude is double lng
+                if (refLat is decimal rlat && refLng is decimal rlng
                     && l.Endereco?.Latitude is decimal olat && l.Endereco.Longitude is decimal olng)
                 {
-                    dist = GeoHelper.CalcularDistanciaKm((decimal)lat, (decimal)lng, olat, olng);
+                    dist = GeoHelper.CalcularDistanciaKm(rlat, rlng, olat, olng);
                 }
 
                 medias.TryGetValue(l.Id, out var av);
@@ -780,6 +807,44 @@ namespace Pc.Servico.Implementacoes.MotorIA
                     QuantidadeAvaliacoes = av.Qtd
                 });
             }
+        }
+
+        private async Task<Loja?> ResolverLojaAncoraAsync(string termo)
+        {
+            var encontradas = await _lojas.BuscarPorNomeAsync(termo);
+            if (encontradas is { Count: > 0 })
+                return encontradas[0];
+
+            // Tolerância simples para typos como "Gabriel1s Store" -> busca pelo token principal ("gabriel").
+            var tokenPrincipal = termo.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Select(t => System.Text.RegularExpressions.Regex.Replace(t, @"[^A-Za-zÀ-ú]", ""))
+                .FirstOrDefault(t => t.Length >= 4);
+            if (!string.IsNullOrWhiteSpace(tokenPrincipal))
+            {
+                encontradas = await _lojas.BuscarPorNomeAsync(tokenPrincipal);
+                if (encontradas is { Count: > 0 })
+                    return encontradas[0];
+            }
+
+            return null;
+        }
+
+        private async Task<List<Loja>> ListarLojasProximasOuPaginadasAsync(ContextoIA ctx)
+        {
+            if (ctx.Latitude is double lat && ctx.Longitude is double lng)
+            {
+                // Raio amplo para "mais próxima": ranqueamento por distância faz o corte fino.
+                var raio = ctx.DistanciaMaxKm
+                    ?? (ctx.Intencao is IntencaoIA.BuscarLojaMaisProxima or IntencaoIA.ConsultarEntrega ? 500m : 15m);
+                var lojas = await _lojas.ListarPorProximidadeAsync((decimal)lat, (decimal)lng, raio, 20) ?? new List<Loja>();
+                if (lojas.Count > 0)
+                    return lojas;
+
+                ctx.FallbacksUsados.Add("sem_lojas_no_raio");
+            }
+
+            var page = await _lojas.ListarPaginadoAsync(Dominio.Comum.PaginacaoParametros.De(1, 20));
+            return page?.Items?.ToList() ?? new List<Loja>();
         }
 
         private async Task TentarRagAsync(ContextoIA ctx, CancellationToken ct)

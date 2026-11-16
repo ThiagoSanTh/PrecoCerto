@@ -86,6 +86,12 @@ namespace Pc.Servico.Implementacoes.MotorIA
                 return;
             }
 
+            if (ContemEstabelecimento(t) && (t.Contains("perto de") || t.Contains("perto da") || t.Contains("perto do") || t.Contains("proximo ") || t.Contains("proxima ")))
+            {
+                contexto.Intencao = IntencaoIA.BuscarLojaMaisProxima;
+                return;
+            }
+
             if (t.Contains("compar") || t.Contains("vale mais a pena") || t.Contains("melhor opcao") || t.Contains("melhor opção"))
             {
                 contexto.Intencao = IntencaoIA.CompararPrecos;
@@ -114,7 +120,8 @@ namespace Pc.Servico.Implementacoes.MotorIA
 
             if (t.Contains("disponivel") || t.Contains("disponível") || t.StartsWith("tem ") || t.Contains(" tem "))
             {
-                if (t.Contains("loja") && !ContemProdutoHint(t) && !TemVerboBuscaProduto(t))
+                if ((t.Contains("loja") && !ContemProdutoHint(t) && !TemVerboBuscaProduto(t))
+                    || Regex.IsMatch(t, @"\b(?:aonde|onde)\s+tem\s+(?:um|uma)\s+(?:mercado|supermercado|farmacia|padaria|acougue|hortifruti|loja)\b"))
                 {
                     contexto.Intencao = IntencaoIA.BuscarLoja;
                     return;
@@ -179,6 +186,11 @@ namespace Pc.Servico.Implementacoes.MotorIA
                 return limpo.StartsWith(sn + " ", StringComparison.Ordinal) || limpo == sn;
             });
         }
+
+        private static bool ContemEstabelecimento(string t) =>
+            t.Contains("loja") || t.Contains("mercado") || t.Contains("supermercado")
+            || t.Contains("farmacia") || t.Contains("padaria")
+            || t.Contains("acougue") || t.Contains("hortifruti");
 
         private static bool TemVerboBuscaProduto(string t) =>
             t.Contains("achar") || t.Contains("encontrar") || t.Contains("comprar")

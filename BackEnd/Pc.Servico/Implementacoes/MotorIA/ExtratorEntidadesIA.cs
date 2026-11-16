@@ -141,6 +141,23 @@ namespace Pc.Servico.Implementacoes.MotorIA
 
         private static void ExtrairLoja(ContextoIA ctx, string original)
         {
+            var mRef = Regex.Match(
+                original,
+                @"\b(?:perto|pr[oó]ximo|pr[oó]xima)\s+(?:de|da|do|a|ao)\s+([A-Za-zÀ-ú0-9][A-Za-zÀ-ú0-9'\s\-]{1,40})",
+                RegexOptions.IgnoreCase);
+            if (mRef.Success)
+            {
+                var refNome = mRef.Groups[1].Value.Trim();
+                refNome = Regex.Replace(refNome, @"[?\.,!;:].*$", "").Trim();
+                refNome = Regex.Replace(refNome, @"\b(?:para|pra|logo|apos|ap[oó]s|depois|antes|onde|aonde)\b.*$", "", RegexOptions.IgnoreCase).Trim();
+                if (refNome.Length >= 2)
+                {
+                    ctx.LojaReferenciaTermo = refNome;
+                    ctx.TipoLojaTermo = ExtrairTipoEstabelecimento(ctx.MensagemNormalizada);
+                    return;
+                }
+            }
+
             var m = Regex.Match(original, @"\b(?:loja|mercado|supermercado)\s+([A-Za-zÀ-ú0-9][\w\s\-]{1,40})", RegexOptions.IgnoreCase);
             if (!m.Success)
                 return;
@@ -154,6 +171,16 @@ namespace Pc.Servico.Implementacoes.MotorIA
             {
                 ctx.LojaTermo = nome;
             }
+        }
+
+        private static string? ExtrairTipoEstabelecimento(string t)
+        {
+            foreach (var tipo in new[] { "supermercado", "mercado", "farmacia", "padaria", "acougue", "hortifruti" })
+            {
+                if (t.Contains(tipo, StringComparison.Ordinal))
+                    return tipo;
+            }
+            return null;
         }
 
         private static void ExtrairItensMultiplosOuOcasiao(ContextoIA ctx, string t)
@@ -172,7 +199,8 @@ namespace Pc.Servico.Implementacoes.MotorIA
                 }
             }
 
-            if (ctx.Intencao == IntencaoIA.MontarCesta || t.Contains(','))
+            if (ctx.Intencao == IntencaoIA.MontarCesta
+                || (t.Contains(',') && ctx.Intencao is not (IntencaoIA.BuscarLoja or IntencaoIA.BuscarLojaMaisProxima or IntencaoIA.RecomendarLoja or IntencaoIA.ProdutosDaLoja)))
             {
                 var tSemValores = RemoverValoresNumericos(t);
                 var tokens = TokensSignificativos(tSemValores);
@@ -195,7 +223,11 @@ namespace Pc.Servico.Implementacoes.MotorIA
 
         private static void ExtrairProduto(ContextoIA ctx, string t)
         {
-            if (ctx.Intencao is IntencaoIA.ProdutosDaLoja or IntencaoIA.AnalisarConcorrenciaLojista)
+            if (ctx.Intencao is IntencaoIA.ProdutosDaLoja
+                or IntencaoIA.AnalisarConcorrenciaLojista
+                or IntencaoIA.BuscarLoja
+                or IntencaoIA.BuscarLojaMaisProxima
+                or IntencaoIA.RecomendarLoja)
                 return;
 
             var tLimpo = RemoverValoresNumericos(t);

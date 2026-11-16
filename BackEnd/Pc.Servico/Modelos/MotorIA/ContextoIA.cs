@@ -80,6 +80,8 @@ namespace Pc.Servico.Modelos.MotorIA
         /// <summary>Lista de itens quando o usuário pede cesta básica ou ocasião com vários produtos.</summary>
         public List<string> ItensBusca { get; set; } = new();
         public string? LojaTermo { get; set; }
+        public string? LojaReferenciaTermo { get; set; }
+        public string? TipoLojaTermo { get; set; }
         public CategoriaProduto? Categoria { get; set; }
         public string? Caracteristica { get; set; }
         public decimal? OrcamentoMax { get; set; }

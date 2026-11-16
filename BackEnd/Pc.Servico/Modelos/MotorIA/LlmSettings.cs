@@ -5,14 +5,14 @@ namespace Pc.Servico.Modelos.MotorIA
         public const string SectionName = "Llm";
 
         public string GeminiApiKey { get; set; } = string.Empty;
-        public string GeminiModel { get; set; } = "gemini-2.5-flash";
+        public string GeminiModel { get; set; } = "gemini-3.8-flash";
         public string GeminiBaseUrl { get; set; } = "https://generativelanguage.googleapis.com/v1beta";
 
         public string NvidiaApiKey { get; set; } = string.Empty;
         public string NvidiaModel { get; set; } = "stepfun-ai/step-5-preview";
         public string NvidiaBaseUrl { get; set; } = "https://integrate.api.nvidia.com/v1";
 
-        public int TimeoutMs { get; set; } = 3500;
+        public int TimeoutMs { get; set; } = 8000;
         public int CooldownSegundos { get; set; } = 300;
     }
 
@@ -24,6 +24,7 @@ namespace Pc.Servico.Modelos.MotorIA
         public List<string> ItensBusca { get; set; } = new();
         public string? ProdutoTermo { get; set; }
         public string? LojaTermo { get; set; }
+        public string? LojaReferenciaTermo { get; set; }
         public string? Categoria { get; set; }
         public decimal? OrcamentoMax { get; set; }
         public decimal? DistanciaMaxKm { get; set; }
