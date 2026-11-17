@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { CommonActions } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -9,6 +8,7 @@ import {
   clearPendingAuthAction,
   consumePendingAuthAction,
   irParaLogin,
+  setCompraPendente,
   peekPendingAuthAction,
   setPendingAuthAction,
 } from '../navigation/authIntent';
@@ -48,13 +48,17 @@ const TELAS_AUTH = new Set(['Login', 'Cadastro', 'EsqueciSenha']);
 function retomarAcao(navigation, action) {
   if (!action) return;
   if (action.type === 'comprar') {
-    const screen = action.screen === 'ProductDetail' ? 'ProductDetail' : 'Search';
+    if (action.screen === 'ProductDetail') {
+      navigation.navigate('Buscar', {
+        screen: 'ProductDetail',
+        params: { productId: String(action.item?.id || '') },
+      });
+      return;
+    }
+    setCompraPendente(action.item?.id);
     navigation.navigate('Buscar', {
-      screen,
-      params:
-        screen === 'ProductDetail'
-          ? { productId: String(action.item?.id || ''), retomarCompra: action.item }
-          : { retomarCompra: action.item },
+      screen: 'Search',
+      params: { retomarCompraId: String(action.item?.id || '') },
     });
     return;
   }
@@ -63,6 +67,10 @@ function retomarAcao(navigation, action) {
   if (!name) return;
   if (name === 'IA' || name === 'AiChat') {
     navigation.navigate('IA');
+    return;
+  }
+  if (name === 'Mensagens' || name === 'ConversasLista') {
+    navigation.navigate('Mensagens');
     return;
   }
   if (ABAS_COM_SESSAO.has(name) || name === 'Buscar') {
@@ -94,6 +102,8 @@ function SidebarNavItem({
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected: focused }}
+      accessibilityLabel={label}
+      hitSlop={4}
       onPress={onPress}
       style={[
         styles.sidebarItem,
@@ -164,12 +174,9 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
   async function handleLogout() {
     clearPendingAuthAction();
     await logout();
-    navigation.dispatch(
-      CommonActions.reset({
-        index: 0,
-        routes: [{ name: 'Home' }],
-      })
-    );
+    if (navigationRef.isReady()) {
+      navigationRef.reset({ index: 0, routes: [{ name: 'Home' }] });
+    }
   }
 
   function entrar() {
@@ -512,6 +519,7 @@ const styles = StyleSheet.create({
     gap: 12,
     borderRadius: radii.lg,
     paddingHorizontal: 12,
+    minHeight: 44,
     paddingVertical: 10,
   },
   sidebarItemLabel: {

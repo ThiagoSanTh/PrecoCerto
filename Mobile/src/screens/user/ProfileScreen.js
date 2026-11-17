@@ -14,6 +14,8 @@ import { podeCriarLoja } from '../../utils/modoUsuario';
 import { listarFavoritosCliente } from '../../services/favoritoService';
 import { listarHistoricoCliente } from '../../services/historicoService';
 import { obterLoja } from '../../services/lojaService';
+import { navigationRef } from '../../navigation/navigationRef';
+import { clearPendingAuthAction } from '../../navigation/authIntent';
 import { FormScreen } from '../../components/form';
 import { SurfaceCard } from '../../components/ui/DesignPrimitives';
 import { fonts, radii } from '../../theme';
@@ -74,8 +76,11 @@ export default function ProfileScreen({ navigation }) {
   );
 
   async function handleLogout() {
+    clearPendingAuthAction();
     await logout();
-    navigation.replace('Login');
+    if (navigationRef.isReady()) {
+      navigationRef.reset({ index: 0, routes: [{ name: 'Home' }] });
+    }
   }
 
   async function handleAtualizarLocalizacao() {

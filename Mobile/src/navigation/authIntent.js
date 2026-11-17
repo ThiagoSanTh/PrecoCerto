@@ -1,4 +1,5 @@
 let pending = null;
+let compraId = null;
 const falhas = new Set();
 
 export function setPendingAuthAction(action) {
@@ -7,6 +8,21 @@ export function setPendingAuthAction(action) {
 
 export function clearPendingAuthAction() {
   pending = null;
+  compraId = null;
+}
+
+export function setCompraPendente(id) {
+  compraId = id ? String(id) : null;
+}
+
+export function peekCompraPendente() {
+  return compraId;
+}
+
+export function consumeCompraPendente() {
+  const id = compraId;
+  compraId = null;
+  return id;
 }
 
 export function peekPendingAuthAction() {

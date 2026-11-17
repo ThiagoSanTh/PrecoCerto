@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { deveEncaminharAoLogin, isPedidoPublicoDeCatalogo, pageSizeSeguro } from '../apiAccess.js';
+import { deveAbrirLoginNo401, deveEncaminharAoLogin, isPedidoPublicoDeCatalogo, pageSizeSeguro } from '../apiAccess.js';
 
 test('leitura de catálogo, mapa e busca segue sem sessão', () => {
   const publicos = [
@@ -62,6 +62,16 @@ test('só 401 de rota protegida leva ao login', () => {
   assert.equal(deveEncaminharAoLogin(403, { method: 'post', url: '/IA/analisar' }), false);
   assert.equal(deveEncaminharAoLogin(429, { method: 'get', url: '/Feed' }), false);
   assert.equal(deveEncaminharAoLogin(429, { method: 'post', url: '/IA/chat' }), false);
+});
+
+test('401 na vitrine não abre o login', () => {
+  const conversas = { method: 'get', url: '/Conversas' };
+  assert.equal(deveAbrirLoginNo401(401, conversas, 'Search'), false);
+  assert.equal(deveAbrirLoginNo401(401, conversas, 'Home'), false);
+  assert.equal(deveAbrirLoginNo401(401, conversas, 'Mensagens'), true);
+  assert.equal(deveAbrirLoginNo401(401, conversas, 'ConversasLista'), true);
+  assert.equal(deveAbrirLoginNo401(401, { method: 'get', url: '/Feed' }, 'Search'), false);
+  assert.equal(deveAbrirLoginNo401(403, conversas, 'Mensagens'), false);
 });
 
 test('pageSize não passa de 100', () => {

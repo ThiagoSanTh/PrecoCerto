@@ -34,6 +34,9 @@ import {
   irParaLogin,
   setPendingAuthAction,
   clearPendingAuthAction,
+  setCompraPendente,
+  peekCompraPendente,
+  consumeCompraPendente,
 } from '../../navigation/authIntent';
 import { useTheme } from '../../context/ThemeContext';
 import { useLayoutProfile } from '../../hooks/useLayoutProfile';
@@ -363,26 +366,47 @@ export default function SearchScreen() {
     [produtosEnriquecidos]
   );
 
+  const compraPendenteIdRef = useRef(peekCompraPendente());
+  if (session && route.params?.retomarCompraId) {
+    compraPendenteIdRef.current = String(route.params.retomarCompraId);
+    setCompraPendente(compraPendenteIdRef.current);
+  } else if (peekCompraPendente()) {
+    compraPendenteIdRef.current = peekCompraPendente();
+  }
+
   useEffect(() => {
+    const pendente = compraPendenteIdRef.current;
     if (produtosEnriquecidos.length === 0) {
-      setSelectedId(null);
+      if (!pendente) setSelectedId(null);
+      return;
+    }
+    if (pendente) {
+      const achou = produtosEnriquecidos.some((p) => String(p.id) === pendente);
+      if (!achou) return;
+      if (String(selectedId) !== pendente) setSelectedId(pendente);
+      compraPendenteIdRef.current = null;
+      consumeCompraPendente();
       return;
     }
     const existe = produtosEnriquecidos.some(
       (p) => String(p.id) === String(selectedId)
     );
-    if (!existe) {
-      setSelectedId(produtosEnriquecidos[0].id);
-    }
+    if (!existe) setSelectedId(produtosEnriquecidos[0].id);
   }, [produtosEnriquecidos, selectedId]);
 
-  const selectedItem = useMemo(
-    () =>
+  const selectedItem = useMemo(() => {
+    const pendente = compraPendenteIdRef.current;
+    if (pendente) {
+      return (
+        produtosEnriquecidos.find((p) => String(p.id) === pendente) || null
+      );
+    }
+    return (
       produtosEnriquecidos.find((p) => String(p.id) === String(selectedId)) ||
       produtosEnriquecidos[0] ||
-      null,
-    [produtosEnriquecidos, selectedId]
-  );
+      null
+    );
+  }, [produtosEnriquecidos, selectedId]);
 
   const lojaIdsDestaque = useMemo(() => {
     if (selectedItem?.lojaId) return [String(selectedItem.lojaId)];
@@ -480,6 +504,7 @@ export default function SearchScreen() {
 
   function pedirCompra(item, screen = 'Search') {
     if (!item || session) return;
+    setCompraPendente(item.id);
     setPendingAuthAction({
       type: 'comprar',
       screen,
@@ -493,18 +518,11 @@ export default function SearchScreen() {
     irParaLogin(navigation);
   }
 
-  const compraTratadaRef = useRef(null);
-
   useEffect(() => {
-    const pendente = route.params?.retomarCompra;
-    if (!session || !pendente?.id) return undefined;
-    const chave = String(pendente.id);
-    if (compraTratadaRef.current === chave) return undefined;
-    compraTratadaRef.current = chave;
-    setSelectedId(pendente.id);
-    navigation.setParams?.({ retomarCompra: undefined });
+    if (!route.params?.retomarCompraId) return undefined;
+    navigation.setParams?.({ retomarCompraId: undefined });
     return undefined;
-  }, [session, route.params?.retomarCompra, navigation]);
+  }, [route.params?.retomarCompraId, navigation]);
 
   async function handleAbrirChatItem(item) {
     if (!item || !clienteId) return;
@@ -690,7 +708,10 @@ export default function SearchScreen() {
                   e?.stopPropagation?.();
                   abrirProduto(item.id, item);
                 }}
-                hitSlop={6}
+                hitSlop={12}
+                accessibilityRole="button"
+                accessibilityLabel="Ver produto"
+                style={styles.verDetalhesBtn}
               >
                 <Text style={[styles.verDetalhesLink, { color: colors.primary }]}>
                   Ver produto →
@@ -1062,6 +1083,7 @@ export default function SearchScreen() {
           ) : null}
           <Pressable
             onPress={() => setMostrarFiltros((v) => !v)}
+            hitSlop={8}
             style={[
               styles.filterBtn,
               {
@@ -1177,6 +1199,9 @@ export default function SearchScreen() {
               <Pressable
                 key={chip}
                 onPress={() => handleChipPress(chip)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={chip}
                 style={[
                   styles.chip,
                   {
@@ -1408,6 +1433,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
     minWidth: 44,
     marginTop: 8,
+    marginLeft: 12,
     paddingHorizontal: 12,
     borderRadius: radii.md,
     alignItems: 'center',
@@ -1445,6 +1471,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    minHeight: 44,
     borderWidth: 1,
     borderRadius: radii.xl,
     paddingLeft: 14,
@@ -1457,14 +1484,15 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sans,
     fontSize: 15,
     paddingVertical: 6,
+    minHeight: 44,
     minWidth: 0,
   },
   clearBtn: {
     padding: 4,
   },
   filterBtn: {
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
     borderRadius: radii.md,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1494,10 +1522,14 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   chip: {
+    minHeight: 44,
+    minWidth: 44,
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: radii.full,
     borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   chipText: {
     fontFamily: fonts.sansSemiBold,
@@ -1602,6 +1634,11 @@ const styles = StyleSheet.create({
   metaText: {
     fontFamily: fonts.sansMedium,
     fontSize: 12,
+  },
+  verDetalhesBtn: {
+    minHeight: 44,
+    minWidth: 44,
+    justifyContent: 'center',
   },
   verDetalhesLink: {
     fontFamily: fonts.sansSemiBold,

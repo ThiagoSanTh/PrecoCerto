@@ -52,6 +52,24 @@ export function deveEncaminharAoLogin(status, config) {
   return true;
 }
 
+/** 401 em rota pública limpa a sessão e fica na vitrine. Só ação autenticada abre o login. */
+export function deveAbrirLoginNo401(status, config, routeName) {
+  if (!deveEncaminharAoLogin(status, config)) return false;
+  if (!routeName) return false;
+  const publicas = new Set([
+    'Login',
+    'Cadastro',
+    'EsqueciSenha',
+    'NotFound',
+    'Home',
+    'Buscar',
+    'Search',
+    'ProductDetail',
+    'StoreCatalog',
+  ]);
+  return !publicas.has(routeName);
+}
+
 export function pageSizeSeguro(pageSize) {
   const n = Number(pageSize);
   if (!Number.isFinite(n) || n < 1) return 20;

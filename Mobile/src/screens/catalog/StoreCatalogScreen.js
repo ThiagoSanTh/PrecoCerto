@@ -106,6 +106,15 @@ export default function StoreCatalogScreen({ route, navigation }) {
           });
           return;
         }
+        if (pagina === 1 && !append && (err?.response?.status === 400 || err?.response?.status === 404)) {
+          setProdutos([]);
+          setHasNext(false);
+          setError({
+            title: 'Catálogo indisponível',
+            message: 'Não foi possível abrir o catálogo desta loja.',
+          });
+          return;
+        }
         if (pagina === 1 && !append) setError(mapApiError(err));
       } finally {
         loader(false);

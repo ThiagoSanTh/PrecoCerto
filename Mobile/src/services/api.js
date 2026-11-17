@@ -2,7 +2,7 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import { getToken, clearToken } from './tokenStorage';
 import { getContextoOperacional } from '../utils/modoUsuario';
-import { deveEncaminharAoLogin } from './apiAccess';
+import { deveAbrirLoginNo401, deveEncaminharAoLogin, isPedidoPublicoDeCatalogo } from './apiAccess';
 import { emitAuthFailure, peekPendingAuthAction, setPendingAuthAction } from '../navigation/authIntent';
 import { navigationRef } from '../navigation/navigationRef';
 
@@ -102,7 +102,7 @@ function semAuthorization(headers) {
 function redirecionarLoginSePrecisar() {
   if (!navigationRef.isReady()) return;
   const name = navigationRef.getCurrentRoute()?.name;
-  if (!name || name === 'Login' || name === 'Cadastro' || name === 'EsqueciSenha') return;
+  if (!name || !deveAbrirLoginNo401(401, { method: 'get', url: '/Conversas' }, name)) return;
   if (!peekPendingAuthAction()) {
     setPendingAuthAction({ type: 'route', name });
   }
@@ -111,7 +111,7 @@ function redirecionarLoginSePrecisar() {
 
 api.interceptors.request.use(async (config) => {
   const token = await getToken();
-  if (token) {
+  if (token && !config._semToken) {
     config.headers.Authorization = `Bearer ${token}`;
   } else {
     semAuthorization(config.headers);
@@ -123,10 +123,22 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (deveEncaminharAoLogin(error.response?.status, error.config)) {
+    const status = error.response?.status;
+    if (status === 401 && isPedidoPublicoDeCatalogo(error.config) && !error.config?._semToken) {
+      await clearToken();
+      emitAuthFailure();
+      const headers = { ...(error.config.headers || {}) };
+      delete headers.Authorization;
+      return api.request({ ...error.config, headers, _semToken: true });
+    }
+    const routeName = navigationRef.isReady() ? navigationRef.getCurrentRoute()?.name : null;
+    if (deveAbrirLoginNo401(status, error.config, routeName)) {
       await clearToken();
       emitAuthFailure();
       redirecionarLoginSePrecisar();
+    } else if (deveEncaminharAoLogin(status, error.config)) {
+      await clearToken();
+      emitAuthFailure();
     }
     return Promise.reject(error);
   }
