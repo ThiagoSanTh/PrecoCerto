@@ -73,7 +73,7 @@ namespace Pc.WebApi.Controllers
             var resposta = new AvaliacaoRespostaDto
             {
                 Id = avaliacao.Id,
-                ClienteId = avaliacao.ClienteId,
+                ClienteId = Authz.IsSelfOrAdmin(this, avaliacao.ClienteId) ? avaliacao.ClienteId : Guid.Empty,
                 LojaId = avaliacao.LojaId,
                 NomeLoja = avaliacao.Loja?.NomeFantasia ?? string.Empty,
                 Nota = avaliacao.Nota,
@@ -115,6 +115,9 @@ namespace Pc.WebApi.Controllers
         [HttpGet("cliente/{clienteId:guid}")]
         public async Task<IActionResult> ListarPorCliente(Guid clienteId)
         {
+            var denied = Authz.ForbidUnlessSelfOrAdmin(this, clienteId);
+            if (denied != null) return denied;
+
             var avaliacoes = await _avaliacaoServico.ListarPorClienteAsync(clienteId);
 
             var resposta = avaliacoes.Select(a => new AvaliacaoRespostaDto

@@ -80,12 +80,13 @@ namespace Pc.WebApi.Controllers
         [Authorize(Roles = "Lojista,Vendedor,Admin")]
         public async Task<IActionResult> Atualizar(Guid id, [FromBody] OfertaCriarDto dto)
         {
-            if (!Authz.OwnsLoja(this, dto.LojaId))
-                return Forbid();
             var ofertaExistente = await _ofertaServico.ObterPorIdAsync(id);
 
             if (ofertaExistente == null)
                 return NotFound("Oferta n?o encontrada.");
+
+            if (!Authz.OwnsLoja(this, ofertaExistente.LojaId) || dto.LojaId != ofertaExistente.LojaId)
+                return Forbid();
 
             ofertaExistente.ProdutoId = dto.ProdutoId;
             ofertaExistente.LojaId = dto.LojaId;
