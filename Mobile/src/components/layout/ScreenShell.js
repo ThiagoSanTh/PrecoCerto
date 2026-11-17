@@ -2,6 +2,10 @@ import { View, StyleSheet, Platform } from 'react-native';
 import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import { useTheme } from '../../context/ThemeContext';
 
+export function authCanvasColor({ isWeb, isDesktopWeb, isDark, background }) {
+  return (!isWeb || isDesktopWeb) && !isDark ? '#E2E8F0' : background;
+}
+
 /**
  * Wrapper centralizado (80% da largura) para telas mobile/narrow web.
  * Com sidebar web: largura total da área de conteúdo.
@@ -23,8 +27,12 @@ export default function ScreenShell({ children, variant = 'default', fullBleed =
   const isFullBleed = shellVariant === 'fullBleed';
   const showAuthCard = isAuth;
   const useFullWidth = contentFullWidth || isFullBleed;
-  const authBackgroundColor =
-    (!isWeb || isDesktopWeb) && !isDark ? '#E2E8F0' : colors.background;
+  const authBackgroundColor = authCanvasColor({
+    isWeb,
+    isDesktopWeb,
+    isDark,
+    background: colors.background,
+  });
 
   const columnWidth = showAuthCard
     ? '100%'
