@@ -205,13 +205,14 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.ForwardLimit = 1;
     options.KnownNetworks.Clear();
     options.KnownProxies.Clear();
-    // A Railway não publica um CIDR estável. O guia deles confia em redes
-    // privadas e em 100.0.0.0/8. Loopback cobre o dev local. ULA cobre IPv6.
+    // A Railway não publica um CIDR estável. O template antigo de Caddy usa
+    // 100.0.0.0/8, que inclui IPs públicos. A rede interna observada é a
+    // CGNAT RFC 6598, 100.64.0.0/10. Loopback cobre o dev local. ULA cobre IPv6.
     Rede("127.0.0.0", 8);
     Rede("10.0.0.0", 8);
     Rede("172.16.0.0", 12);
     Rede("192.168.0.0", 16);
-    Rede("100.0.0.0", 8);
+    Rede("100.64.0.0", 10);
     Rede("::1", 128);
     Rede("fc00::", 7);
 

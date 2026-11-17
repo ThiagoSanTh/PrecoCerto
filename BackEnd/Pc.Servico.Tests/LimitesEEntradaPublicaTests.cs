@@ -181,6 +181,40 @@ public class XForwardedForTests : IClassFixture<CatalogoApiFactory>
         Assert.Equal(HttpStatusCode.TooManyRequests, ultimo);
         Assert.NotEqual(HttpStatusCode.TooManyRequests, outroCliente);
     }
+
+    [Fact]
+    public async Task Ip_publico_em_100_0_0_0_8_nao_forja_xff()
+    {
+        var socket = IPAddress.Parse("100.1.2.3");
+        for (var i = 0; i < 120; i++)
+        {
+            await LimitePorIpTests.Enviar(
+                _factory, "GET", "/api/Feed", socket, xff: "203.0.113.77");
+        }
+
+        var outroHop = await LimitePorIpTests.Enviar(
+            _factory, "GET", "/api/Feed", socket, xff: "203.0.113.78");
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, outroHop);
+    }
+
+    [Fact]
+    public async Task Cgnat_100_64_confia_no_ultimo_hop()
+    {
+        var proxy = IPAddress.Parse("100.64.0.2");
+        HttpStatusCode ultimo = 0;
+        for (var i = 0; i < 121; i++)
+        {
+            ultimo = await LimitePorIpTests.Enviar(
+                _factory, "GET", "/api/Feed", proxy, xff: "203.0.113.77");
+        }
+
+        var outroCliente = await LimitePorIpTests.Enviar(
+            _factory, "GET", "/api/Feed", proxy, xff: "203.0.113.79");
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, ultimo);
+        Assert.NotEqual(HttpStatusCode.TooManyRequests, outroCliente);
+    }
 }
 
 public class EntradaPublicaTests : IClassFixture<CatalogoApiFactory>
