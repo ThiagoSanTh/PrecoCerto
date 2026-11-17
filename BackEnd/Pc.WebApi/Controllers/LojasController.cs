@@ -7,7 +7,6 @@ using Pc.Dominio.Entities.Estabelecimentos;
 using Pc.Dominio.Validacoes;
 using Pc.Servico.Excecoes;
 using Pc.Servico.Interfaces;
-using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Estabelecimentos;
 using Pc.WebApi.Extensions;
 using Pc.WebApi.Helpers;
@@ -170,10 +169,21 @@ namespace Pc.WebApi.Controllers
             if (lojaExistente is null)
                 return NotFound("Loja não encontrada.");
 
-            if (!Authz.OwnsLoja(this, id) && !User.IsAdmin())
+            if (!User.IsAdmin() && lojaExistente.UsuarioId != User.GetUserId())
+                return Forbid();
+
+            if (dto.UsuarioId.HasValue && dto.UsuarioId != lojaExistente.UsuarioId && !User.IsAdmin())
+                return Forbid();
+
+            if (dto.UsuarioId.HasValue && dto.UsuarioId != lojaExistente.UsuarioId)
             {
-                if (lojaExistente.UsuarioId != User.GetUserId())
-                    return Forbid();
+                var destino = await _usuarioServico.ObterPorIdAsync(dto.UsuarioId.Value);
+                if (destino is null)
+                    return BadRequest("Usuário de destino não encontrado.");
+
+                var outraLoja = await _lojaServico.ObterPorUsuarioIdAsync(dto.UsuarioId.Value);
+                if (outraLoja is not null && outraLoja.Id != lojaExistente.Id)
+                    return Conflict("Este usuário já possui uma loja.");
             }
 
             if (!string.IsNullOrWhiteSpace(dto.Cnpj) && !CnpjValidator.IsValido(dto.Cnpj))
