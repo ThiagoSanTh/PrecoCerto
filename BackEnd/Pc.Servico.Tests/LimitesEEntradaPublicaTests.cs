@@ -48,6 +48,25 @@ public class LimitePorIpTests : IClassFixture<CatalogoApiFactory>
         Assert.NotEqual(HttpStatusCode.TooManyRequests, outro);
     }
 
+    [Fact]
+    public async Task Limite_estourado_devolve_retry_after_e_mensagem()
+    {
+        using var client = _factory.CreateClient();
+        HttpResponseMessage? ultima = null;
+        for (var i = 0; i < 11; i++)
+        {
+            ultima = await client.PostAsync(
+                "/api/Auth/login",
+                new StringContent("{}", Encoding.UTF8, "application/json"));
+        }
+
+        Assert.NotNull(ultima);
+        Assert.Equal(HttpStatusCode.TooManyRequests, ultima!.StatusCode);
+        Assert.True(ultima.Headers.RetryAfter?.Delta is { } espera && espera > TimeSpan.Zero);
+        var corpo = await ultima.Content.ReadAsStringAsync();
+        Assert.Contains("Muitas requisições", corpo, StringComparison.Ordinal);
+    }
+
     internal static async Task<HttpStatusCode> Enviar(
         CatalogoApiFactory factory,
         string metodo,
@@ -267,5 +286,30 @@ public class EntradaPublicaTests : IClassFixture<CatalogoApiFactory>
         var resposta = await _client.GetAsync("/api/HistoricoPesquisa/sugestoes?termo=%00");
         Assert.NotEqual(HttpStatusCode.InternalServerError, resposta.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, resposta.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("/api/HistoricoPesquisa/sugestoes")]
+    [InlineData("/api/HistoricoPesquisa/sugestoes?termo=")]
+    [InlineData("/api/HistoricoPesquisa/sugestoes?termo=%20")]
+    [InlineData("/api/HistoricoPesquisa/sugestoes?termo=%09")]
+    [InlineData("/api/HistoricoPesquisa/sugestoes?termo=%0A")]
+    [InlineData("/api/HistoricoPesquisa/sugestoes?termo=%0D%0A")]
+    public async Task Sugestao_sem_termo_devolve_lista_vazia(string rota)
+    {
+        var resposta = await _client.GetAsync(rota);
+        var texto = (await resposta.Content.ReadAsStringAsync()).Trim();
+        Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
+        Assert.Equal("[]", texto);
+    }
+
+    [Fact]
+    public async Task LojaId_invalido_vem_em_portugues()
+    {
+        var resposta = await _client.GetAsync("/api/Feed?lojaId=abc");
+        var texto = await resposta.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.BadRequest, resposta.StatusCode);
+        Assert.DoesNotContain("is not valid", texto, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("não é válido", texto, StringComparison.Ordinal);
     }
 }

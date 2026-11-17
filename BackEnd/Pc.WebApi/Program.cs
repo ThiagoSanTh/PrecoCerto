@@ -74,6 +74,30 @@ builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    })
+    .AddMvcOptions(options =>
+    {
+        var mensagens = options.ModelBindingMessageProvider;
+        mensagens.SetAttemptedValueIsInvalidAccessor((valor, campo) =>
+            $"O valor '{valor}' não é válido para {campo}.");
+        mensagens.SetNonPropertyAttemptedValueIsInvalidAccessor(valor =>
+            $"O valor '{valor}' não é válido.");
+        mensagens.SetUnknownValueIsInvalidAccessor(campo =>
+            $"O valor informado não é válido para {campo}.");
+        mensagens.SetValueIsInvalidAccessor(campo =>
+            $"O valor não é válido para {campo}.");
+        mensagens.SetNonPropertyUnknownValueIsInvalidAccessor(() =>
+            "O valor informado não é válido.");
+        mensagens.SetValueMustBeANumberAccessor(campo =>
+            $"O campo {campo} deve ser um número.");
+        mensagens.SetNonPropertyValueMustBeANumberAccessor(() =>
+            "O campo deve ser um número.");
+        mensagens.SetMissingBindRequiredValueAccessor(campo =>
+            $"O campo {campo} é obrigatório.");
+        mensagens.SetMissingKeyOrValueAccessor(() =>
+            "É preciso informar um valor.");
+        mensagens.SetMissingRequestBodyRequiredValueAccessor(() =>
+            "O corpo da requisição é obrigatório.");
     });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -224,6 +248,18 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        var http = context.HttpContext.Response;
+        http.StatusCode = StatusCodes.Status429TooManyRequests;
+        var segundos = 60;
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out TimeSpan retryAfter))
+            segundos = Math.Max(1, (int)Math.Ceiling(retryAfter.TotalSeconds));
+        http.Headers.RetryAfter = segundos.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        await http.WriteAsJsonAsync(
+            new { message = "Muitas requisições. Tente novamente em instantes." },
+            cancellationToken);
+    };
     options.AddPolicy("login", ctx => JanelaPorIp(ctx, "login", 10));
     options.AddPolicy("catalogo", ctx => JanelaPorIp(ctx, "catalogo", 120));
     options.AddPolicy("api", ctx => JanelaPorIp(ctx, "api", 300));

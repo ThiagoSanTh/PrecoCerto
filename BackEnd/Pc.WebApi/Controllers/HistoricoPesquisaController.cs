@@ -141,7 +141,10 @@ namespace Pc.WebApi.Controllers
             if (termo is not null && termo.Contains('\0'))
                 return BadRequest(new { message = "Termo inválido." });
 
-            var sugestoes = await _historicoPesquisaServico.ObterSugestoesAsync(termo ?? string.Empty);
+            if (string.IsNullOrWhiteSpace(termo))
+                return Ok(Array.Empty<object>());
+
+            var sugestoes = await _historicoPesquisaServico.ObterSugestoesAsync(termo);
             var autenticado = User.Identity?.IsAuthenticated == true;
 
             var resposta = sugestoes
