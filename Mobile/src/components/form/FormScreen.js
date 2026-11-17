@@ -12,7 +12,7 @@ import { touchTarget } from './formStyles';
 import { useFormStyles } from '../../hooks/useFormStyles';
 import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import { useTheme } from '../../context/ThemeContext';
-import ScreenShell from '../layout/ScreenShell';
+import ScreenShell, { authCanvasColor } from '../layout/ScreenShell';
 import FormErrorBanner from './FormErrorBanner';
 
 export default function FormScreen({
@@ -35,8 +35,16 @@ export default function FormScreen({
   onErrorAction,
 }) {
   const s = useFormStyles();
-  const { colors } = useTheme();
-  const { contentFullWidth, isPhone, keyboardBehavior, bodyHorizontalPadding, insets } = useLayoutProfile();
+  const { colors, isDark } = useTheme();
+  const {
+    contentFullWidth,
+    isPhone,
+    isWeb,
+    isDesktopWeb,
+    keyboardBehavior,
+    bodyHorizontalPadding,
+    insets,
+  } = useLayoutProfile();
   const shellVariant = webVariant === 'auth' ? 'auth' : 'default';
   const isAuthLayout = shellVariant === 'auth';
   const showHeader = !hideHeader;
@@ -112,7 +120,16 @@ export default function FormScreen({
       style={[
         s.safe,
         webSafeTopStyle,
-        { backgroundColor: isAuthLayout ? 'transparent' : colors.background },
+        {
+          backgroundColor: isAuthLayout
+            ? authCanvasColor({
+                isWeb,
+                isDesktopWeb,
+                isDark,
+                background: colors.background,
+              })
+            : colors.background,
+        },
       ]}
       edges={safeEdges}
     >
