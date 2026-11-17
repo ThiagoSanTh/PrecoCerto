@@ -8,6 +8,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { touchTarget } from './formStyles';
 import { useFormStyles } from '../../hooks/useFormStyles';
 import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import { useTheme } from '../../context/ThemeContext';
@@ -130,11 +131,23 @@ export default function FormScreen({
               ]}
             >
               {onBack ? (
-                <Pressable onPress={onBack} hitSlop={12}>
+                <Pressable
+                  onPress={onBack}
+                  hitSlop={12}
+                  style={touchTarget}
+                  accessibilityRole="button"
+                  accessibilityLabel={backLabel}
+                >
                   <Text style={s.backLink}>← {backLabel}</Text>
                 </Pressable>
               ) : null}
-              <Text style={[s.title, { color: colors.text }]}>{title}</Text>
+              <Text
+                style={[s.title, { color: colors.text }]}
+                accessibilityRole="header"
+                aria-level={1}
+              >
+                {title}
+              </Text>
               {subtitle ? (
                 <Text style={[s.subtitle, { color: colors.textMuted }]}>{subtitle}</Text>
               ) : null}

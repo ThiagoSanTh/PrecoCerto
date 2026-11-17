@@ -158,6 +158,12 @@ export default function ForgotPasswordScreen({ navigation }) {
 
         <FormField
 
+          id="recuperar-email"
+
+          name="email"
+
+          autoComplete="email"
+
           label="E-mail"
 
           value={email}
@@ -179,6 +185,11 @@ export default function ForgotPasswordScreen({ navigation }) {
         <>
 
           <FormField
+            id="recuperar-token"
+            name="token"
+            autoComplete="one-time-code"
+            spellCheck={false}
+            autoCorrect={false}
             label="Token"
             value={token}
             onChangeText={setToken}
@@ -189,6 +200,9 @@ export default function ForgotPasswordScreen({ navigation }) {
 
           <FormField
             ref={novaSenhaRef}
+            id="recuperar-nova-senha"
+            name="new-password"
+            autoComplete="new-password"
             label="Nova senha"
             value={novaSenha}
             onChangeText={setNovaSenha}

@@ -30,6 +30,7 @@
       ]
     },
     "web": {
+      "lang": "pt-BR",
       "favicon": "./assets/favicon.png",
       "name": "Preço Certo",
       "shortName": "Preço Certo",
