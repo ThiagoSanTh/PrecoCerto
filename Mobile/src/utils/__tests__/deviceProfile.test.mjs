@@ -97,6 +97,22 @@ test('adapta Tablet Nativo em Paisagem (1080x810): ativa sidebar 256px, split-vi
   assert.equal(p.minTouchTarget, 44);
 });
 
+test('repassa safe area sem mudar a classe do aparelho', () => {
+  const p = computeDeviceLayoutProfile({
+    platformOS: 'ios',
+    width: 390,
+    height: 844,
+    topInset: 47,
+    bottomInset: 34,
+    leftInset: 0,
+    rightInset: 0,
+  });
+
+  assert.equal(p.platform, 'ios');
+  assert.equal(p.deviceCategory, 'phone');
+  assert.deepEqual(p.insets, { top: 47, bottom: 34, left: 0, right: 0 });
+});
+
 test('detecta Desktop Web (1440x900) com mouse/hover, split-view e table-view ativos', () => {
   const p = computeDeviceLayoutProfile({
     platformOS: 'web',

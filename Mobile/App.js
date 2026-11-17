@@ -11,11 +11,24 @@ import { fonts } from './src/theme';
 const GOOGLE_FONTS_ID = 'preco-certo-google-fonts';
 const GOOGLE_FONTS_HREF =
   'https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700&display=swap';
-const VIEWPORT_STYLE_ID = 'preco-certo-viewport-safe-area';
 
 function ThemedStatusBar() {
   const { isDark } = useTheme();
   return <StatusBar style={isDark ? 'light' : 'dark'} />;
+}
+
+function ThemedApp() {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
+      <ThemedStatusBar />
+      <AuthProvider>
+        <ChatBadgeProvider>
+          <Routes />
+        </ChatBadgeProvider>
+      </AuthProvider>
+    </View>
+  );
 }
 
 export default function App() {
@@ -28,44 +41,6 @@ export default function App() {
       link.rel = 'stylesheet';
       link.href = GOOGLE_FONTS_HREF;
       document.head.appendChild(link);
-    }
-
-    const viewportMeta = document.querySelector('meta[name="viewport"]');
-    if (viewportMeta) {
-      const content = viewportMeta.getAttribute('content') || '';
-      if (!content.includes('viewport-fit=cover')) {
-        viewportMeta.setAttribute(
-          'content',
-          `${content}, viewport-fit=cover`.replace(/^,\s*/, '')
-        );
-      }
-    }
-
-    if (!document.getElementById(VIEWPORT_STYLE_ID)) {
-      const style = document.createElement('style');
-      style.id = VIEWPORT_STYLE_ID;
-      style.textContent = `
-        html, body, #root {
-          margin: 0;
-          padding: 0;
-          overflow: hidden;
-          overscroll-behavior: none;
-        }
-        html, body { height: 100%; }
-        #root {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: var(--app-height, 100dvh);
-          overflow: hidden;
-        }
-        :focus-visible {
-          outline: 2px solid var(--focus-ring, #0A5E4D);
-          outline-offset: 2px;
-        }
-      `;
-      document.head.appendChild(style);
     }
 
     const applyVisualViewport = () => {
@@ -90,16 +65,9 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <View style={styles.root}>
-        <ThemeProvider>
-          <ThemedStatusBar />
-          <AuthProvider>
-            <ChatBadgeProvider>
-              <Routes />
-            </ChatBadgeProvider>
-          </AuthProvider>
-        </ThemeProvider>
-      </View>
+      <ThemeProvider>
+        <ThemedApp />
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

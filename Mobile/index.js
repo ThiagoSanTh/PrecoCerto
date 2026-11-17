@@ -2,6 +2,7 @@ import { registerRootComponent } from 'expo';
 import { Platform } from 'react-native';
 
 import App from './App';
+import { applyDocumentChrome, ensureWebViewport, readSavedTheme } from './src/theme/webChrome';
 
 const SW_MIGRATION_KEY = '@sw-migration-v3';
 
@@ -41,6 +42,8 @@ async function prepararServiceWorkerWeb() {
 
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
   document.documentElement.lang = 'pt-BR';
+  applyDocumentChrome(readSavedTheme());
+  ensureWebViewport();
 }
 
 prepararServiceWorkerWeb();
