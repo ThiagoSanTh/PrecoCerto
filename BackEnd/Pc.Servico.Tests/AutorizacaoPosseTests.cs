@@ -194,6 +194,107 @@ namespace Pc.Servico.Tests
         }
 
         [Fact]
+        public async Task Lojista_nao_transfere_o_dono_da_propria_loja()
+        {
+            var loja1 = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            var dono = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+            var outro = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+            var lojas = new Mock<ILojaServico>();
+            lojas.Setup(s => s.ObterPorIdAsync(loja1)).ReturnsAsync(new Loja
+            {
+                Id = loja1,
+                UsuarioId = dono,
+                NomeFantasia = "Loja 1"
+            });
+
+            var controller = new LojasController(
+                lojas.Object,
+                Mock.Of<IClienteServico>(),
+                Mock.Of<IConsultaCnpjServico>(),
+                Mock.Of<IIdCodificador>());
+            Autenticar(controller, dono, "Lojista", loja1);
+
+            var resultado = await controller.Atualizar(loja1, new LojaCriarDto
+            {
+                NomeFantasia = "Loja 1",
+                UsuarioId = outro
+            });
+
+            Assert.IsType<ForbidResult>(resultado);
+            lojas.Verify(s => s.AtualizarAsync(It.IsAny<Loja>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Lojista_atualiza_a_propria_loja_sem_trocar_o_dono()
+        {
+            var loja1 = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            var dono = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+            Loja? salva = null;
+            var lojas = new Mock<ILojaServico>();
+            lojas.Setup(s => s.ObterPorIdAsync(loja1)).ReturnsAsync(new Loja
+            {
+                Id = loja1,
+                UsuarioId = dono,
+                NomeFantasia = "Loja 1"
+            });
+            lojas.Setup(s => s.AtualizarAsync(It.IsAny<Loja>()))
+                .Callback<Loja>(l => salva = l)
+                .Returns(Task.CompletedTask);
+
+            var controller = new LojasController(
+                lojas.Object,
+                Mock.Of<IClienteServico>(),
+                Mock.Of<IConsultaCnpjServico>(),
+                Mock.Of<IIdCodificador>());
+            Autenticar(controller, dono, "Lojista", loja1);
+
+            var resultado = await controller.Atualizar(loja1, new LojaCriarDto
+            {
+                NomeFantasia = "Loja atualizada",
+                UsuarioId = dono
+            });
+
+            Assert.IsType<NoContentResult>(resultado);
+            Assert.Equal(dono, salva!.UsuarioId);
+            Assert.Equal("Loja atualizada", salva.NomeFantasia);
+        }
+
+        [Fact]
+        public async Task Admin_pode_transferir_o_dono_da_loja()
+        {
+            var loja1 = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            var dono = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+            var novoDono = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+            Loja? salva = null;
+            var lojas = new Mock<ILojaServico>();
+            lojas.Setup(s => s.ObterPorIdAsync(loja1)).ReturnsAsync(new Loja
+            {
+                Id = loja1,
+                UsuarioId = dono,
+                NomeFantasia = "Loja 1"
+            });
+            lojas.Setup(s => s.AtualizarAsync(It.IsAny<Loja>()))
+                .Callback<Loja>(l => salva = l)
+                .Returns(Task.CompletedTask);
+
+            var controller = new LojasController(
+                lojas.Object,
+                Mock.Of<IClienteServico>(),
+                Mock.Of<IConsultaCnpjServico>(),
+                Mock.Of<IIdCodificador>());
+            Autenticar(controller, Guid.Parse("99999999-9999-9999-9999-999999999999"), "Admin", null);
+
+            var resultado = await controller.Atualizar(loja1, new LojaCriarDto
+            {
+                NomeFantasia = "Loja 1",
+                UsuarioId = novoDono
+            });
+
+            Assert.IsType<NoContentResult>(resultado);
+            Assert.Equal(novoDono, salva!.UsuarioId);
+        }
+
+        [Fact]
         public async Task Cliente_nao_lista_avaliacoes_de_outro()
         {
             var outro = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");

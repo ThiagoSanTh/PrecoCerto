@@ -176,6 +176,9 @@ namespace Pc.WebApi.Controllers
                     return Forbid();
             }
 
+            if (dto.UsuarioId.HasValue && dto.UsuarioId != lojaExistente.UsuarioId && !User.IsAdmin())
+                return Forbid();
+
             if (!string.IsNullOrWhiteSpace(dto.Cnpj) && !CnpjValidator.IsValido(dto.Cnpj))
                 return BadRequest("CNPJ inválido.");
 
