@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +23,14 @@ export default function AuthSplitLayout({
 }) {
   const { isDesktopWeb } = useLayoutProfile();
   const { colors } = useTheme();
+  const frameH = useRef(0);
+  const contentH = useRef(0);
+  const [centerContent, setCenterContent] = useState(true);
+
+  const syncScrollAnchor = () => {
+    const fits = contentH.current <= frameH.current + 1;
+    setCenterContent((prev) => (prev === fits ? prev : fits));
+  };
 
   return (
     <SafeAreaView
@@ -87,9 +96,20 @@ export default function AuthSplitLayout({
 
         <ScrollView
           style={styles.formPane}
-          contentContainerStyle={styles.formScrollContent}
+          contentContainerStyle={[
+            styles.formScrollContent,
+            !centerContent && styles.formScrollContentTop,
+          ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          onLayout={(e) => {
+            frameH.current = e.nativeEvent.layout.height;
+            syncScrollAnchor();
+          }}
+          onContentSizeChange={(_w, h) => {
+            contentH.current = h;
+            syncScrollAnchor();
+          }}
         >
           <View style={styles.formBox}>
             {!isDesktopWeb ? (
@@ -98,7 +118,11 @@ export default function AuthSplitLayout({
               </View>
             ) : null}
 
-            <Text style={[styles.formTitle, { color: colors.text }]}>
+            <Text
+              style={[styles.formTitle, { color: colors.text }]}
+              accessibilityRole="header"
+              aria-level={1}
+            >
               {title}
             </Text>
             {subtitle ? (
@@ -177,6 +201,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
+  },
+  formScrollContentTop: {
+    justifyContent: 'flex-start',
   },
   formBox: {
     width: '100%',

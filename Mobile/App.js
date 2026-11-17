@@ -46,17 +46,46 @@ export default function App() {
       style.id = VIEWPORT_STYLE_ID;
       style.textContent = `
         html, body, #root {
-          height: 100%;
-          height: 100dvh;
-          min-height: 100dvh;
           margin: 0;
           padding: 0;
           overflow: hidden;
           overscroll-behavior: none;
         }
+        html, body { height: 100%; }
+        #root {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: var(--app-height, 100dvh);
+          overflow: hidden;
+        }
+        :focus-visible {
+          outline: 2px solid var(--focus-ring, #0A5E4D);
+          outline-offset: 2px;
+        }
       `;
       document.head.appendChild(style);
     }
+
+    const applyVisualViewport = () => {
+      const vv = window.visualViewport;
+      const height = vv?.height || window.innerHeight;
+      const offset = vv?.offsetTop || 0;
+      document.documentElement.style.setProperty('--app-height', `${Math.round(height)}px`);
+      const root = document.getElementById('root');
+      if (root) root.style.top = `${Math.round(offset)}px`;
+    };
+
+    applyVisualViewport();
+    window.visualViewport?.addEventListener('resize', applyVisualViewport);
+    window.visualViewport?.addEventListener('scroll', applyVisualViewport);
+    window.addEventListener('resize', applyVisualViewport);
+    return () => {
+      window.visualViewport?.removeEventListener('resize', applyVisualViewport);
+      window.visualViewport?.removeEventListener('scroll', applyVisualViewport);
+      window.removeEventListener('resize', applyVisualViewport);
+    };
   }, []);
 
   return (
@@ -80,9 +109,8 @@ const styles = StyleSheet.create({
     flex: 1,
     ...(Platform.OS === 'web'
       ? {
-          height: '100dvh',
-          minHeight: '100dvh',
-          maxHeight: '100dvh',
+          height: '100%',
+          minHeight: 0,
           width: '100%',
           overflow: 'hidden',
           fontFamily: fonts.sans,

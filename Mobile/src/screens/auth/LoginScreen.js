@@ -4,11 +4,13 @@ import { useState, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { login as authLogin } from '../../services/authService';
 import { mapApiError } from '../../utils/apiErrorUtils';
+import { isEmailValido } from '../../utils/validacaoUtils';
 import { useAuth, podeUsarModoLoja } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { FormField, PrimaryButton } from '../../components/form';
 import AuthSplitLayout from '../../components/ui/AuthSplitLayout';
 import { fonts } from '../../theme';
+import { touchTarget } from '../../components/form/formStyles';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -23,6 +25,11 @@ export default function LoginScreen({ navigation }) {
     if (loading) return;
     if (!email || !senha) {
       setError({ title: 'Campos obrigatórios', message: 'Preencha todos os campos.' });
+      return;
+    }
+
+    if (!isEmailValido(email)) {
+      setError({ title: 'E-mail inválido', message: 'Informe um e-mail válido.' });
       return;
     }
 
@@ -52,6 +59,9 @@ export default function LoginScreen({ navigation }) {
       error={error}
     >
       <FormField
+        id="login-email"
+        name="email"
+        autoComplete="email"
         label="E-mail"
         placeholder="voce@email.com"
         value={email}
@@ -69,8 +79,11 @@ export default function LoginScreen({ navigation }) {
 
       <FormField
         ref={senhaRef}
+        id="login-senha"
+        name="password"
+        autoComplete="current-password"
         label="Senha"
-        placeholder="••••••••"
+        placeholder="Sua senha"
         value={senha}
         onChangeText={(v) => {
           setSenha(v);
@@ -89,6 +102,7 @@ export default function LoginScreen({ navigation }) {
           accessibilityRole="button"
           accessibilityLabel="Esqueci a senha"
           hitSlop={8}
+          style={touchTarget}
         >
           <Text style={[styles.forgotLink, { color: colors.primary }]}>
             Esqueci a senha
@@ -111,6 +125,7 @@ export default function LoginScreen({ navigation }) {
           onPress={() => navigation.navigate('Cadastro')}
           accessibilityRole="button"
           accessibilityLabel="Criar nova conta"
+          style={touchTarget}
         >
           <Text style={[styles.switchLink, { color: colors.primary }]}>
             Criar conta

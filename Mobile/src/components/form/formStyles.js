@@ -99,12 +99,12 @@ export function createFormStyles(scale = 1, colors = defaultColors) {
       borderRadius: radii.lg,
       paddingHorizontal: 14,
       paddingVertical: Platform.OS === 'ios' ? 13 : 11,
-      fontSize: scaleFont(15, scale),
+      // Safari no iPhone dá zoom ao focar inputs com font-size < 16px.
+      fontSize: Platform.OS === 'web' ? Math.max(16, scaleFont(15, scale)) : scaleFont(15, scale),
       fontFamily: fonts.sans,
       minHeight: 46,
       color: colors.text,
       backgroundColor: colors.inputBackground,
-      ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : null),
     },
     row: {
       flexDirection: 'row',
@@ -320,3 +320,10 @@ export function createFormStyles(scale = 1, colors = defaultColors) {
 
 /** Estilos base (escala 1.0) — compatibilidade com imports estáticos. */
 export const formStyles = createFormStyles(1);
+
+/** Área de toque mínima sem alterar o tamanho da fonte do rótulo. */
+export const touchTarget = {
+  minHeight: 44,
+  minWidth: 44,
+  justifyContent: 'center',
+};

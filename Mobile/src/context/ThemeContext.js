@@ -35,6 +35,10 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     if (typeof document !== 'undefined' && document.documentElement) {
       document.documentElement.style.colorScheme = tema === 'dark' ? 'dark' : 'light';
+      document.documentElement.style.setProperty(
+        '--focus-ring',
+        tema === 'dark' ? '#5EEAD4' : '#0A5E4D'
+      );
     }
   }, [tema]);
 

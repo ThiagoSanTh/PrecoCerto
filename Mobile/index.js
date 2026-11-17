@@ -39,6 +39,10 @@ async function prepararServiceWorkerWeb() {
   });
 }
 
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  document.documentElement.lang = 'pt-BR';
+}
+
 prepararServiceWorkerWeb();
 
 registerRootComponent(App);
