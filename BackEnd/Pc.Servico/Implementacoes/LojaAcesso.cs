@@ -20,17 +20,13 @@ namespace Pc.Servico.Implementacoes
             if (usuarioId == Guid.Empty || lojaId == Guid.Empty)
                 return false;
 
-            var lojaTask = _lojas.ObterPorIdAsync(lojaId);
-            var usuarioTask = _usuarios.ObterPorIdAsync(usuarioId);
-            await Task.WhenAll(lojaTask, usuarioTask);
-
-            var loja = await lojaTask;
+            var loja = await _lojas.ObterPorIdAsync(lojaId);
             if (loja is null)
                 return false;
             if (loja.UsuarioId == usuarioId)
                 return true;
 
-            var usuario = await usuarioTask;
+            var usuario = await _usuarios.ObterPorIdAsync(usuarioId);
             return usuario is { Papel: PapelUsuario.Vendedor, LojaVinculadaId: var vinculada }
                 && vinculada == loja.Id;
         }

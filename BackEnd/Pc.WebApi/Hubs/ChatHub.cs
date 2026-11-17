@@ -15,17 +15,20 @@ namespace Pc.WebApi.Hubs
         private readonly IIdCodificador _idCodificador;
         private readonly ChatNotificacaoHelper _notificacao;
         private readonly ILojaAcesso _lojaAcesso;
+        private readonly PresencaChat? _presenca;
 
         public ChatHub(
             IConversaServico conversaServico,
             IIdCodificador idCodificador,
             ChatNotificacaoHelper notificacao,
-            ILojaAcesso lojaAcesso)
+            ILojaAcesso lojaAcesso,
+            PresencaChat? presenca = null)
         {
             _conversaServico = conversaServico;
             _idCodificador = idCodificador;
             _notificacao = notificacao;
             _lojaAcesso = lojaAcesso;
+            _presenca = presenca;
         }
 
         public async Task ConectarUsuario()
@@ -35,6 +38,7 @@ namespace Pc.WebApi.Hubs
                 throw new HubException("Usuário inválido.");
 
             await Groups.AddToGroupAsync(Context.ConnectionId, $"usuario:{userId.Value}");
+            _presenca?.Ligar(Context.ConnectionId, userId.Value);
 
             var papel = ObterPapel(Context.User!);
             if (papel is PapelUsuario.Lojista or PapelUsuario.Vendedor)
@@ -44,6 +48,7 @@ namespace Pc.WebApi.Hubs
                     throw new HubException("Acesso negado.");
 
                 await Groups.AddToGroupAsync(Context.ConnectionId, $"loja:{lojaId.Value}");
+                _presenca?.Loja(Context.ConnectionId, lojaId.Value);
             }
             else
             {
@@ -81,7 +86,16 @@ namespace Pc.WebApi.Hubs
                 throw new HubException("Acesso negado.");
 
             await Groups.AddToGroupAsync(Context.ConnectionId, conversaCodigo);
+            var conversa = await _conversaServico.ObterPorIdAsync(conversaId);
+            if (conversa != null)
+                _presenca?.Conversa(Context.ConnectionId, conversa.LojaId, conversaCodigo);
             await _conversaServico.MarcarComoRecebidasAsync(conversaId, userId.Value);
+        }
+
+        public override Task OnDisconnectedAsync(Exception? exception)
+        {
+            _presenca?.Desligar(Context.ConnectionId);
+            return base.OnDisconnectedAsync(exception);
         }
 
         private PapelUsuario ObterPapel(System.Security.Claims.ClaimsPrincipal user)

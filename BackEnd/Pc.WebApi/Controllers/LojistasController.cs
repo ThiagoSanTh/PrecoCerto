@@ -7,6 +7,7 @@ using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Comum;
 using Pc.WebApi.DTOs.Usuarios;
 using Pc.WebApi.Extensions;
+using Pc.WebApi.Hubs;
 using Pc.WebApi.Services;
 
 namespace Pc.WebApi.Controllers
@@ -23,15 +24,18 @@ namespace Pc.WebApi.Controllers
         private readonly IClienteServico _usuarioServico;
         private readonly IIdCodificador _idCodificador;
         private readonly ILojaAcesso _lojaAcesso;
+        private readonly PresencaChat? _presenca;
 
         public LojistasController(
             IClienteServico usuarioServico,
             IIdCodificador idCodificador,
-            ILojaAcesso lojaAcesso)
+            ILojaAcesso lojaAcesso,
+            PresencaChat? presenca = null)
         {
             _usuarioServico = usuarioServico;
             _idCodificador = idCodificador;
             _lojaAcesso = lojaAcesso;
+            _presenca = presenca;
         }
 
         [HttpGet("{id:guid}")]
@@ -134,6 +138,9 @@ namespace Pc.WebApi.Controllers
             {
                 return BadRequest(ex.Message);
             }
+
+            if (_presenca != null)
+                await _presenca.RevogarAsync(usuarioId, lojaId);
 
             return NoContent();
         }
