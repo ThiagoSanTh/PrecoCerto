@@ -7,12 +7,12 @@ import {
   Platform,
   StyleSheet,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { touchTarget } from './formStyles';
 import { useFormStyles } from '../../hooks/useFormStyles';
 import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import { useTheme } from '../../context/ThemeContext';
-import ScreenShell from '../layout/ScreenShell';
+import ScreenShell, { authCanvasColor } from '../layout/ScreenShell';
 import FormErrorBanner from './FormErrorBanner';
 
 export default function FormScreen({
@@ -35,9 +35,16 @@ export default function FormScreen({
   onErrorAction,
 }) {
   const s = useFormStyles();
-  const { colors } = useTheme();
-  const { contentFullWidth, isPhone, keyboardBehavior, bodyHorizontalPadding } = useLayoutProfile();
-  const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
+  const {
+    contentFullWidth,
+    isPhone,
+    isWeb,
+    isDesktopWeb,
+    keyboardBehavior,
+    bodyHorizontalPadding,
+    insets,
+  } = useLayoutProfile();
   const shellVariant = webVariant === 'auth' ? 'auth' : 'default';
   const isAuthLayout = shellVariant === 'auth';
   const showHeader = !hideHeader;
@@ -56,8 +63,8 @@ export default function FormScreen({
     ? ['top', 'bottom', 'left', 'right']
     : ['top', 'left', 'right'];
   const webSafeTopStyle =
-    Platform.OS === 'web' && isPhone
-      ? { paddingTop: 'max(env(safe-area-inset-top, 0px), 10px)' }
+    Platform.OS === 'web' && isPhone && insets.top === 0
+      ? { paddingTop: 10 }
       : null;
 
   const rawInnerContent = (
@@ -113,7 +120,16 @@ export default function FormScreen({
       style={[
         s.safe,
         webSafeTopStyle,
-        { backgroundColor: isAuthLayout ? 'transparent' : colors.background },
+        {
+          backgroundColor: isAuthLayout
+            ? authCanvasColor({
+                isWeb,
+                isDesktopWeb,
+                isDark,
+                background: colors.background,
+              })
+            : colors.background,
+        },
       ]}
       edges={safeEdges}
     >

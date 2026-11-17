@@ -1,4 +1,5 @@
 import { Platform, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { computeDeviceLayoutProfile } from '../utils/deviceProfile';
 
 function readWebEnvironment() {
@@ -28,12 +29,17 @@ function readWebEnvironment() {
 
 export function useLayoutProfile() {
   const { width, height } = useWindowDimensions();
+  const safeInsets = useSafeAreaInsets();
   const webEnv = readWebEnvironment();
 
   return computeDeviceLayoutProfile({
     platformOS: Platform.OS,
     width,
     height,
+    topInset: safeInsets.top,
+    bottomInset: safeInsets.bottom,
+    leftInset: safeInsets.left,
+    rightInset: safeInsets.right,
     ...webEnv,
   });
 }
