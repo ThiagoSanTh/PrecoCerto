@@ -56,7 +56,7 @@ export default function StoreCatalogScreen({ route, navigation }) {
     }
     try {
       const [res, ehFavLoja] = await Promise.all([
-        listarFavoritosCliente(clienteId, 1, 200),
+        listarFavoritosCliente(clienteId, 1, 100),
         lojaId
           ? verificarFavorito(clienteId, null, lojaId).catch(() => false)
           : Promise.resolve(false),
@@ -97,6 +97,15 @@ export default function StoreCatalogScreen({ route, navigation }) {
         );
         setError(null);
       } catch (err) {
+        if (pagina === 1 && !append && err?.response?.status === 401) {
+          setProdutos([]);
+          setHasNext(false);
+          setError({
+            title: 'Catálogo indisponível',
+            message: 'Não foi possível carregar os produtos desta loja agora.',
+          });
+          return;
+        }
         if (pagina === 1 && !append) setError(mapApiError(err));
       } finally {
         loader(false);

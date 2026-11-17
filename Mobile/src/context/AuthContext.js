@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { atualizarLocalizacao } from '../services/clienteService';
 import { obterLocalizacaoAtual } from '../services/locationService';
+import { onAuthFailure } from '../navigation/authIntent';
 import { clearToken, getToken } from '../services/tokenStorage';
 import { invalidarCache } from '../services/feedCache';
 import {
@@ -118,6 +119,13 @@ export function AuthProvider({ children }) {
     setAppModeState(aplicarModo(MODO_CLIENTE, null));
     ultimoGpsSyncEmRef.current = 0;
   }
+
+  const logoutRef = useRef(logout);
+  logoutRef.current = logout;
+
+  useEffect(() => onAuthFailure(() => {
+    logoutRef.current();
+  }), []);
 
   const sincronizarGpsCliente = useCallback(async (clienteIdOverride = null, { force = false } = {}) => {
     const id = clienteIdOverride ?? sessionRef.current?.perfil?.id;

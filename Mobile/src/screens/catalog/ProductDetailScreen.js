@@ -3,6 +3,7 @@ import {
   View,
   Text,
   Alert,
+  Pressable,
   Share,
   ActivityIndicator,
   StyleSheet,
@@ -30,6 +31,7 @@ import {
   verificarFavorito,
 } from '../../services/favoritoService';
 import { useAuth } from '../../context/AuthContext';
+import { irParaLogin, setPendingAuthAction } from '../../navigation/authIntent';
 import { abrirConversa } from '../../services/chatService';
 import { navegarParaChat } from '../../navigation/chatNavigation';
 import { nomeProduto, produtoPertenceALoja } from '../../utils/produtoUtils';
@@ -161,6 +163,13 @@ export default function ProductDetailScreen({ route, navigation }) {
       try {
         prod = await buscarProdutoPorId(productId);
       } catch (err) {
+        if (err?.response?.status === 401) {
+          setLoadError({
+            title: 'Produto indisponível',
+            message: 'Não foi possível carregar este produto agora.',
+          });
+          return;
+        }
         setLoadError(mapApiError(err, { title: 'Produto não encontrado' }));
         return;
       }
@@ -380,9 +389,25 @@ export default function ProductDetailScreen({ route, navigation }) {
     }
   }
 
+  function exigirLoginParaCompra() {
+    setPendingAuthAction({
+      type: 'comprar',
+      screen: 'ProductDetail',
+      item: {
+        id: productId,
+        lojaId: produto?.lojaId ?? oferta?.lojaId ?? null,
+        lojaNome: produto?.lojaNomeFantasia || oferta?.nomeLoja || null,
+        lojaCodigoPublico:
+          oferta?.codigoLoja || produto?.lojaCodigoPublico || produto?.lojaId || null,
+        nome: produto ? nomeProduto(produto) : null,
+      },
+    });
+    irParaLogin(navigation);
+  }
+
   async function handleChatLoja() {
     if (!clienteId) {
-      Alert.alert('Atenção', 'Faça login como cliente para conversar com a loja.');
+      exigirLoginParaCompra();
       return;
     }
     if (!produto) return;
@@ -560,6 +585,23 @@ export default function ProductDetailScreen({ route, navigation }) {
         </View>
       ) : (
         <View style={styles.infoBlock}>
+          {!clienteId ? (
+            <Pressable
+              onPress={exigirLoginParaCompra}
+              accessibilityRole="button"
+              accessibilityLabel="Comprar"
+              style={({ pressed, focused }) => [
+                styles.comprarBtn,
+                { backgroundColor: colors.primary },
+                pressed && { opacity: 0.88 },
+                focused && styles.focusRing,
+              ]}
+            >
+              <Text style={[styles.comprarBtnText, { color: colors.primaryForeground }]}>
+                Comprar
+              </Text>
+            </Pressable>
+          ) : null}
           {produto.marca ? (
             <Text style={[styles.marca, isWeb && styles.marcaWeb, { color: colors.textMuted }]}>
               {produto.marca}
@@ -688,5 +730,25 @@ const styles = StyleSheet.create({
   },
   botaoExcluir: {
     borderColor: '#dc2626',
+  },
+  comprarBtn: {
+    minHeight: 44,
+    minWidth: 44,
+    marginTop: 16,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'flex-start',
+  },
+  comprarBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  focusRing: {
+    outlineWidth: 3,
+    outlineStyle: 'solid',
+    outlineColor: '#0F172A',
+    outlineOffset: 2,
   },
 });

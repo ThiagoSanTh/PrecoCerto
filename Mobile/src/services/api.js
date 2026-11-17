@@ -2,6 +2,9 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import { getToken, clearToken } from './tokenStorage';
 import { getContextoOperacional } from '../utils/modoUsuario';
+import { deveEncaminharAoLogin } from './apiAccess';
+import { emitAuthFailure, peekPendingAuthAction, setPendingAuthAction } from '../navigation/authIntent';
+import { navigationRef } from '../navigation/navigationRef';
 
 const LOCAL_API_PORT = 5132;
 const LOCALHOST_PC = `http://localhost:${LOCAL_API_PORT}/api`;
@@ -87,10 +90,31 @@ const api = axios.create({
   },
 });
 
+function semAuthorization(headers) {
+  if (!headers) return;
+  if (typeof headers.delete === 'function') {
+    headers.delete('Authorization');
+    return;
+  }
+  delete headers.Authorization;
+}
+
+function redirecionarLoginSePrecisar() {
+  if (!navigationRef.isReady()) return;
+  const name = navigationRef.getCurrentRoute()?.name;
+  if (!name || name === 'Login' || name === 'Cadastro' || name === 'EsqueciSenha') return;
+  if (!peekPendingAuthAction()) {
+    setPendingAuthAction({ type: 'route', name });
+  }
+  navigationRef.navigate('Login');
+}
+
 api.interceptors.request.use(async (config) => {
   const token = await getToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  } else {
+    semAuthorization(config.headers);
   }
   config.headers['X-Contexto-Operacional'] = getContextoOperacional();
   return config;
@@ -99,15 +123,10 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const url = error.config?.url || '';
-    const isAuthRoute =
-      url.includes('/Auth/login') ||
-      url.includes('/Clientes/login') ||
-      url.includes('/Lojistas/login') ||
-      url.includes('/registrar');
-
-    if (error.response?.status === 401 && !isAuthRoute) {
+    if (deveEncaminharAoLogin(error.response?.status, error.config)) {
       await clearToken();
+      emitAuthFailure();
+      redirecionarLoginSePrecisar();
     }
     return Promise.reject(error);
   }

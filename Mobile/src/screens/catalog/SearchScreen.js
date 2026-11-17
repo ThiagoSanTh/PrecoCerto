@@ -30,6 +30,11 @@ import { navegarParaChat } from '../../navigation/chatNavigation';
 import { obterLocalizacaoAtual } from '../../services/locationService';
 import { obterClima, normalizarCoordenadasClima } from '../../services/weatherService';
 import { useAuth } from '../../context/AuthContext';
+import {
+  irParaLogin,
+  setPendingAuthAction,
+  clearPendingAuthAction,
+} from '../../navigation/authIntent';
 import { useTheme } from '../../context/ThemeContext';
 import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import { mapApiError } from '../../utils/apiErrorUtils';
@@ -86,6 +91,7 @@ export default function SearchScreen() {
   const [page, setPage] = useState(1);
   const [hasNext, setHasNext] = useState(false);
   const [feedError, setFeedError] = useState(null);
+  const [catalogoIndisponivel, setCatalogoIndisponivel] = useState(false);
   const [favoritosIds, setFavoritosIds] = useState(() => new Set());
   const [clima, setClima] = useState({ status: 'loading', data: null });
   const [gpsResolvido, setGpsResolvido] = useState(false);
@@ -157,7 +163,7 @@ export default function SearchScreen() {
       return;
     }
     try {
-      const res = await listarFavoritosCliente(clienteId, 1, 200);
+      const res = await listarFavoritosCliente(clienteId, 1, 100);
       const ids = new Set(
         (res.items || [])
           .map((f) => String(f.produtoId))
@@ -204,13 +210,22 @@ export default function SearchScreen() {
           append ? [...prev, ...resultado.items] : resultado.items
         );
         setFeedError(null);
+        setCatalogoIndisponivel(false);
         feedErroLogadoRef.current = false;
       } catch (error) {
+        if (pagina === 1 && !append && error?.response?.status === 401) {
+          setProdutos([]);
+          setHasNext(false);
+          setFeedError(null);
+          setCatalogoIndisponivel(true);
+          return;
+        }
         if (!feedErroLogadoRef.current) {
           console.error('carregar feed:', error.message);
           feedErroLogadoRef.current = true;
         }
         if (pagina === 1 && !append) {
+          setCatalogoIndisponivel(false);
           setFeedError(mapApiError(error));
         }
       } finally {
@@ -463,12 +478,36 @@ export default function SearchScreen() {
     }
   }
 
+  function pedirCompra(item, screen = 'Search') {
+    if (!item || session) return;
+    setPendingAuthAction({
+      type: 'comprar',
+      screen,
+      item: {
+        id: item.id,
+        lojaId: item.lojaId ?? null,
+        lojaNome: item.lojaNome ?? null,
+        nome: item.nome ?? null,
+      },
+    });
+    irParaLogin(navigation);
+  }
+
+  const compraTratadaRef = useRef(null);
+
+  useEffect(() => {
+    const pendente = route.params?.retomarCompra;
+    if (!session || !pendente?.id) return undefined;
+    const chave = String(pendente.id);
+    if (compraTratadaRef.current === chave) return undefined;
+    compraTratadaRef.current = chave;
+    setSelectedId(pendente.id);
+    navigation.setParams?.({ retomarCompra: undefined });
+    return undefined;
+  }, [session, route.params?.retomarCompra, navigation]);
+
   async function handleAbrirChatItem(item) {
-    if (!item) return;
-    if (!clienteId) {
-      Alert.alert('Chat', 'Faça login como cliente para conversar com a loja.');
-      return;
-    }
+    if (!item || !clienteId) return;
     const loja = lojas.find((l) => String(l.id ?? l.Id) === String(item.lojaId));
     const lojaCodigo =
       item.lojaCodigoPublico ||
@@ -688,6 +727,25 @@ export default function SearchScreen() {
                   color={ehFavorito ? colors.danger : colors.textMuted}
                 />
               </Pressable>
+            ) : !session ? (
+              <Pressable
+                onPress={(e) => {
+                  e?.stopPropagation?.();
+                  pedirCompra(item);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Comprar"
+                style={({ pressed, focused }) => [
+                  styles.comprarBtn,
+                  { backgroundColor: colors.primary },
+                  pressed && { opacity: 0.88 },
+                  focused && styles.focusRing,
+                ]}
+              >
+                <Text style={[styles.comprarBtnText, { color: colors.primaryForeground }]}>
+                  Comprar
+                </Text>
+              </Pressable>
             ) : null}
           </View>
         </View>
@@ -851,22 +909,40 @@ export default function SearchScreen() {
             </Pressable>
           ) : null}
 
-          <Pressable
-            onPress={() => handleAbrirChatItem(selectedItem)}
-            disabled={abrindoChatId === String(selectedItem.id)}
-            style={[
-              styles.iconActionBtn,
-              { borderColor: colors.border, backgroundColor: colors.surface },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Conversar com a loja"
-          >
-            <Ionicons
-              name="chatbubble-ellipses-outline"
-              size={17}
-              color={colors.text}
-            />
-          </Pressable>
+          {session ? (
+            <Pressable
+              onPress={() => handleAbrirChatItem(selectedItem)}
+              disabled={abrindoChatId === String(selectedItem.id)}
+              style={[
+                styles.iconActionBtn,
+                { borderColor: colors.border, backgroundColor: colors.surface },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Conversar com a loja"
+            >
+              <Ionicons
+                name="chatbubble-ellipses-outline"
+                size={17}
+                color={colors.text}
+              />
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={() => pedirCompra(selectedItem)}
+              accessibilityRole="button"
+              accessibilityLabel="Comprar"
+              style={({ pressed, focused }) => [
+                styles.comprarBtn,
+                { backgroundColor: colors.primary },
+                pressed && { opacity: 0.88 },
+                focused && styles.focusRing,
+              ]}
+            >
+              <Text style={[styles.comprarBtnText, { color: colors.primaryForeground }]}>
+                Comprar
+              </Text>
+            </Pressable>
+          )}
         </View>
       </View>
     );
@@ -917,19 +993,43 @@ export default function SearchScreen() {
     return (
       <View style={[styles.controlsSection, compactMapMode && styles.controlsSectionCompact]}>
         {/* Header Location + Title */}
-        {!compactMapMode ? (
+        {!compactMapMode || !session ? (
           <View style={styles.headerTop}>
-            <View style={{ flex: 1 }}>
-              <View style={styles.locationRow}>
-                <Ionicons name="navigate" size={13} color={colors.primary} />
-                <Text style={[styles.locationText, { color: colors.primary }]}>
-                  {cidadeHeader}
+            {!compactMapMode ? (
+              <View style={{ flex: 1 }}>
+                <View style={styles.locationRow}>
+                  <Ionicons name="navigate" size={13} color={colors.primary} />
+                  <Text style={[styles.locationText, { color: colors.primary }]}>
+                    {cidadeHeader}
+                  </Text>
+                </View>
+                <Text style={[styles.heroTitle, { color: colors.text }]}>
+                  O que você procura hoje?
                 </Text>
               </View>
-              <Text style={[styles.heroTitle, { color: colors.text }]}>
-                O que você procura hoje?
-              </Text>
-            </View>
+            ) : (
+              <View style={{ flex: 1 }} />
+            )}
+            {!session ? (
+              <Pressable
+                onPress={() => {
+                  clearPendingAuthAction();
+                  irParaLogin(navigation);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Entrar"
+                style={({ pressed, focused }) => [
+                  styles.entrarBtn,
+                  { backgroundColor: colors.primary },
+                  pressed && { opacity: 0.88 },
+                  focused && styles.focusRing,
+                ]}
+              >
+                <Text style={[styles.entrarBtnText, { color: colors.primaryForeground }]}>
+                  Entrar
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
         ) : null}
 
@@ -1212,9 +1312,11 @@ export default function SearchScreen() {
               <ListCardText
                 style={[styles.emptyText, { color: colors.textMuted }]}
               >
-                {termoAtivo
-                  ? 'Nenhuma oferta encontrada para essa busca.'
-                  : 'Nenhum produto cadastrado ainda.'}
+                {catalogoIndisponivel
+                  ? 'Não foi possível carregar os produtos agora. Você pode continuar no mapa ou tentar de novo em instantes.'
+                  : termoAtivo
+                    ? 'Nenhuma oferta encontrada para essa busca.'
+                    : 'Nenhum produto cadastrado ainda.'}
               </ListCardText>
             )
           }
@@ -1287,6 +1389,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 12,
+  },
+  entrarBtn: {
+    minHeight: 44,
+    minWidth: 44,
+    paddingHorizontal: 16,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  entrarBtnText: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  comprarBtn: {
+    minHeight: 44,
+    minWidth: 44,
+    marginTop: 8,
+    paddingHorizontal: 12,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  comprarBtnText: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  focusRing: {
+    outlineWidth: 3,
+    outlineStyle: 'solid',
+    outlineColor: '#0F172A',
+    outlineOffset: 2,
   },
   locationRow: {
     flexDirection: 'row',

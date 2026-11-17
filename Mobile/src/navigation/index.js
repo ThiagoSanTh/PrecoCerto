@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { Platform } from 'react-native';
-import { DefaultTheme, NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
+import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { peekPendingAuthAction, setPendingAuthAction } from './authIntent';
 import { linkingScreens, PUBLIC_ROUTE_NAMES } from './linking';
+import { navigationRef } from './navigationRef';
 
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
@@ -25,7 +27,6 @@ import NotFoundScreen from '../screens/auth/NotFoundScreen';
 import AppRoutes from './AppRoutes';
 
 const Stack = createNativeStackNavigator();
-const navigationRef = createNavigationContainerRef();
 
 const linking = {
   prefixes: [typeof window !== 'undefined' ? window.location.origin : 'preco-certo://'],
@@ -44,8 +45,6 @@ function withSession(Screen) {
 
 const GuardedCreateStore = withSession(CreateStoreScreen);
 const GuardedCreateProduct = withSession(CreateProductScreen);
-const GuardedProductDetail = withSession(ProductDetailScreen);
-const GuardedStoreCatalog = withSession(StoreCatalogScreen);
 const GuardedCreateOferta = withSession(CreateOfertaScreen);
 const GuardedVendedores = withSession(VendedoresScreen);
 const GuardedChangePassword = withSession(ChangePasswordScreen);
@@ -53,7 +52,6 @@ const GuardedEditProfile = withSession(EditProfileScreen);
 const GuardedEditEmail = withSession(EditEmailScreen);
 const GuardedChat = withSession(ChatScreen);
 const GuardedAiChat = withSession(AiChatScreen);
-const GuardedHome = withSession(AppRoutes);
 
 export default function Routes() {
   const { session, loading } = useAuth();
@@ -84,6 +82,9 @@ export default function Routes() {
     if (loading || !navigationRef.isReady()) return;
     const name = navigationRef.getCurrentRoute()?.name;
     if (name && !session && !PUBLIC_ROUTE_NAMES.has(name)) {
+      if (!peekPendingAuthAction()) {
+        setPendingAuthAction({ type: 'route', name });
+      }
       navigationRef.reset({ index: 0, routes: [{ name: 'Login' }] });
     }
   }, [loading, session]);
@@ -100,15 +101,15 @@ export default function Routes() {
       onReady={guard}
       onStateChange={guard}
     >
-      <Stack.Navigator initialRouteName="Login">
+      <Stack.Navigator initialRouteName="Home">
         <Stack.Screen name="Login" component={LoginScreen} options={hiddenHeader} />
         <Stack.Screen name="Cadastro" component={RegisterScreen} options={hiddenHeader} />
         <Stack.Screen name="EsqueciSenha" component={ForgotPasswordScreen} options={hiddenHeader} />
         <Stack.Screen name="NotFound" component={NotFoundScreen} options={hiddenHeader} />
         <Stack.Screen name="CreateStore" component={GuardedCreateStore} options={hiddenHeader} />
         <Stack.Screen name="CreateProduct" component={GuardedCreateProduct} options={hiddenHeader} />
-        <Stack.Screen name="ProductDetail" component={GuardedProductDetail} options={hiddenHeader} />
-        <Stack.Screen name="StoreCatalog" component={GuardedStoreCatalog} options={hiddenHeader} />
+        <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={hiddenHeader} />
+        <Stack.Screen name="StoreCatalog" component={StoreCatalogScreen} options={hiddenHeader} />
         <Stack.Screen name="CreateOferta" component={GuardedCreateOferta} options={hiddenHeader} />
         <Stack.Screen name="Vendedores" component={GuardedVendedores} options={hiddenHeader} />
         <Stack.Screen name="ChangePassword" component={GuardedChangePassword} options={hiddenHeader} />
@@ -116,7 +117,7 @@ export default function Routes() {
         <Stack.Screen name="EditEmail" component={GuardedEditEmail} options={hiddenHeader} />
         <Stack.Screen name="Chat" component={GuardedChat} options={hiddenHeader} />
         <Stack.Screen name="AiChat" component={GuardedAiChat} options={hiddenHeader} />
-        <Stack.Screen name="Home" component={GuardedHome} options={hiddenHeader} />
+        <Stack.Screen name="Home" component={AppRoutes} options={hiddenHeader} />
       </Stack.Navigator>
     </NavigationContainer>
   );
