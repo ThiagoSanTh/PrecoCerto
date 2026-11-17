@@ -200,46 +200,36 @@ builder.Services.AddResponseCompression(options =>
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    // Só o hop que o proxy acrescenta (o da direita). Um cliente direto não
+    // escolhe o IP do balde mandando X-Forwarded-For.
+    options.ForwardLimit = 1;
     options.KnownNetworks.Clear();
     options.KnownProxies.Clear();
+    // A Railway não publica um CIDR estável. O guia deles confia em redes
+    // privadas e em 100.0.0.0/8. Loopback cobre o dev local. ULA cobre IPv6.
+    Rede("127.0.0.0", 8);
+    Rede("10.0.0.0", 8);
+    Rede("172.16.0.0", 12);
+    Rede("192.168.0.0", 16);
+    Rede("100.0.0.0", 8);
+    Rede("::1", 128);
+    Rede("fc00::", 7);
+
+    void Rede(string prefixo, int bits) =>
+        options.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(
+            System.Net.IPAddress.Parse(prefixo), bits));
 });
 
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    options.AddFixedWindowLimiter("login", limiter =>
-    {
-        limiter.Window = TimeSpan.FromMinutes(1);
-        limiter.PermitLimit = 10;
-        limiter.QueueLimit = 0;
-    });
-    options.AddFixedWindowLimiter("catalogo", limiter =>
-    {
-        limiter.Window = TimeSpan.FromMinutes(1);
-        limiter.PermitLimit = 120;
-        limiter.QueueLimit = 0;
-    });
-    options.AddFixedWindowLimiter("api", limiter =>
-    {
-        limiter.Window = TimeSpan.FromMinutes(1);
-        limiter.PermitLimit = 300;
-        limiter.QueueLimit = 0;
-    });
-    options.AddFixedWindowLimiter("ia", limiter =>
-    {
-        limiter.Window = TimeSpan.FromMinutes(1);
-        limiter.PermitLimit = 30;
-        limiter.QueueLimit = 0;
-    });
-    options.AddFixedWindowLimiter("rag", limiter =>
-    {
-        limiter.Window = TimeSpan.FromMinutes(1);
-        limiter.PermitLimit = 20;
-        limiter.QueueLimit = 0;
-    });
+    options.AddPolicy("login", ctx => JanelaPorIp(ctx, "login", 10));
+    options.AddPolicy("catalogo", ctx => JanelaPorIp(ctx, "catalogo", 120));
+    options.AddPolicy("api", ctx => JanelaPorIp(ctx, "api", 300));
+    options.AddPolicy("ia", ctx => JanelaPorIp(ctx, "ia", 30));
+    options.AddPolicy("rag", ctx => JanelaPorIp(ctx, "rag", 20));
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
     {
-        var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         var path = context.Request.Path.Value ?? string.Empty;
         if (path.Equals("/health", StringComparison.OrdinalIgnoreCase)
             || path.StartsWith("/api/health", StringComparison.OrdinalIgnoreCase))
@@ -249,33 +239,14 @@ builder.Services.AddRateLimiter(options =>
         if (path.Contains("/Auth/login", StringComparison.OrdinalIgnoreCase)
             || path.Contains("/Clientes/login", StringComparison.OrdinalIgnoreCase))
         {
-            return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
-            {
-                Window = TimeSpan.FromMinutes(1),
-                PermitLimit = 10,
-                QueueLimit = 0
-            });
+            return JanelaPorIp(context, "login", 10);
         }
 
         if (path.StartsWith("/api/IA", StringComparison.OrdinalIgnoreCase))
-        {
-            return RateLimitPartition.GetFixedWindowLimiter($"ia:{ip}", _ => new FixedWindowRateLimiterOptions
-            {
-                Window = TimeSpan.FromMinutes(1),
-                PermitLimit = 30,
-                QueueLimit = 0
-            });
-        }
+            return JanelaPorIp(context, "ia", 30);
 
         if (path.StartsWith("/api/Rag", StringComparison.OrdinalIgnoreCase))
-        {
-            return RateLimitPartition.GetFixedWindowLimiter($"rag:{ip}", _ => new FixedWindowRateLimiterOptions
-            {
-                Window = TimeSpan.FromMinutes(1),
-                PermitLimit = 20,
-                QueueLimit = 0
-            });
-        }
+            return JanelaPorIp(context, "rag", 20);
 
         if (path.StartsWith("/api/Feed", StringComparison.OrdinalIgnoreCase)
             || path.StartsWith("/api/Produtos", StringComparison.OrdinalIgnoreCase)
@@ -285,22 +256,26 @@ builder.Services.AddRateLimiter(options =>
             || path.StartsWith("/api/Avaliacoes", StringComparison.OrdinalIgnoreCase)
             || path.StartsWith("/api/HistoricoPesquisa/sugestoes", StringComparison.OrdinalIgnoreCase))
         {
-            return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
-            {
-                Window = TimeSpan.FromMinutes(1),
-                PermitLimit = 120,
-                QueueLimit = 0
-            });
+            return JanelaPorIp(context, "catalogo", 120);
         }
 
-        return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
-        {
-            Window = TimeSpan.FromMinutes(1),
-            PermitLimit = 300,
-            QueueLimit = 0
-        });
+        return JanelaPorIp(context, "api", 300);
     });
 });
+
+static RateLimitPartition<string> JanelaPorIp(HttpContext context, string faixa, int limite)
+{
+    var ip = context.Connection.RemoteIpAddress;
+    if (ip is not null && ip.IsIPv4MappedToIPv6)
+        ip = ip.MapToIPv4();
+    var chave = $"{faixa}:{ip?.ToString() ?? "unknown"}";
+    return RateLimitPartition.GetFixedWindowLimiter(chave, _ => new FixedWindowRateLimiterOptions
+    {
+        Window = TimeSpan.FromMinutes(1),
+        PermitLimit = limite,
+        QueueLimit = 0
+    });
+}
 
 builder.Services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
@@ -529,6 +504,19 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 var app = builder.Build();
 
 app.UseForwardedHeaders();
+
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next(context);
+    }
+    catch (Pc.Dominio.Comum.PaginacaoInvalidaException)
+    {
+        context.Response.StatusCode = StatusCodes.Status400BadRequest;
+        await context.Response.WriteAsJsonAsync(new { message = "Página inválida." });
+    }
+});
 
 // CORS antes de redirecionamentos — preflight OPTIONS não pode receber 301/302.
 app.UseCors("AppPolicy");

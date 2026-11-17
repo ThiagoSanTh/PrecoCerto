@@ -136,9 +136,12 @@ namespace Pc.WebApi.Controllers
         [HttpGet("sugestoes")]
         [AllowAnonymous]
         [EnableRateLimiting("catalogo")]
-        public async Task<IActionResult> ObterSugestoes([FromQuery] string termo)
+        public async Task<IActionResult> ObterSugestoes([FromQuery] string? termo)
         {
-            var sugestoes = await _historicoPesquisaServico.ObterSugestoesAsync(termo);
+            if (termo is not null && termo.Contains('\0'))
+                return BadRequest(new { message = "Termo inválido." });
+
+            var sugestoes = await _historicoPesquisaServico.ObterSugestoesAsync(termo ?? string.Empty);
             var autenticado = User.Identity?.IsAuthenticated == true;
 
             var resposta = sugestoes

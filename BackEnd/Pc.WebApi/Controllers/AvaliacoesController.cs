@@ -95,6 +95,9 @@ namespace Pc.WebApi.Controllers
         [EnableRateLimiting("catalogo")]
         public async Task<IActionResult> ListarPorLoja(Guid lojaId)
         {
+            if (lojaId == Guid.Empty)
+                return BadRequest(new { message = "LojaId é obrigatório." });
+
             var avaliacoes = await _avaliacaoServico.ListarPorLojaAsync(lojaId);
             return Ok(avaliacoes.Select(RespostaAvaliacao));
         }
@@ -132,6 +135,9 @@ namespace Pc.WebApi.Controllers
         [EnableRateLimiting("catalogo")]
         public async Task<IActionResult> ObterMediaAvaliacao(Guid lojaId)
         {
+            if (lojaId == Guid.Empty)
+                return BadRequest(new { message = "LojaId é obrigatório." });
+
             var (media, quantidade) = await _avaliacaoServico.ObterResumoAvaliacaoAsync(lojaId);
 
             return Ok(new { media, quantidade });
