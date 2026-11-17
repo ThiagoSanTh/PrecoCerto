@@ -15,7 +15,7 @@ namespace Pc.WebApi.Controllers
     /// </summary>
     [ApiController]
     [Route("api/IA")]
-    [AllowAnonymous]
+    [Authorize]
     [EnableRateLimiting("ia")]
     public class IAController : ControllerBase
     {

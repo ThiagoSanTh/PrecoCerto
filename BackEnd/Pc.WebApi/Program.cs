@@ -43,11 +43,12 @@ builder.Host.UseSerilog((context, services, configuration) =>
     }
 });
 
+// Testing usa o TestServer; prender a porta aqui derruba o host de integração.
 if (builder.Environment.IsDevelopment())
 {
     builder.WebHost.UseUrls("http://0.0.0.0:5132");
 }
-else
+else if (!builder.Environment.IsEnvironment("Testing"))
 {
     var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
     builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
@@ -280,7 +281,9 @@ builder.Services.AddRateLimiter(options =>
             || path.StartsWith("/api/Produtos", StringComparison.OrdinalIgnoreCase)
             || path.StartsWith("/api/Lojas", StringComparison.OrdinalIgnoreCase)
             || path.StartsWith("/api/Ofertas", StringComparison.OrdinalIgnoreCase)
-            || path.StartsWith("/api/Weather", StringComparison.OrdinalIgnoreCase))
+            || path.StartsWith("/api/Weather", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("/api/Avaliacoes", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("/api/HistoricoPesquisa/sugestoes", StringComparison.OrdinalIgnoreCase))
         {
             return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
             {
@@ -549,3 +552,5 @@ app.MapControllers();
 app.MapHub<Pc.WebApi.Hubs.ChatHub>("/hubs/chat");
 
 app.Run();
+
+public partial class Program { }
