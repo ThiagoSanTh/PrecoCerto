@@ -408,10 +408,11 @@ namespace Pc.Servico.Tests
             produtos.Setup(s => s.ObterPorIdAsync(It.IsAny<Guid>()))
                 .ReturnsAsync(new Produto { NomeProduto = "Arroz", LojaId = loja1 });
 
+            var lojas = LojaDe(loja1, novoDono);
             var controller = new ProdutosController(
                 produtos.Object,
                 Mock.Of<IIdCodificador>(),
-                LojaDe(loja1, novoDono).Object);
+                AcessoDaLoja(lojas));
             Autenticar(controller, exDono, "Lojista", loja1);
 
             var resultado = await controller.Adicionar(new ProdutoCriarDto
@@ -722,8 +723,18 @@ namespace Pc.Servico.Tests
             new(
                 ofertas.Object,
                 Mock.Of<IIdCodificador>(),
-                (lojas ?? new Mock<ILojaServico>()).Object,
-                (produtos ?? new Mock<IProdutoServico>()).Object);
+                (produtos ?? new Mock<IProdutoServico>()).Object,
+                AcessoDaLoja(lojas ?? new Mock<ILojaServico>()));
+
+        private static LojaAcesso AcessoDaLoja(Mock<ILojaServico> lojas)
+        {
+            var repo = new Mock<ILojaRepositorio>();
+            repo.Setup(r => r.ObterPorIdAsync(It.IsAny<Guid>()))
+                .Returns<Guid>(id => lojas.Object.ObterPorIdAsync(id) ?? Task.FromResult<Loja?>(null));
+            var usuarios = new Mock<IClienteRepositorio>();
+            usuarios.Setup(r => r.ObterPorIdAsync(It.IsAny<Guid>())).ReturnsAsync((Usuario?)null);
+            return new LojaAcesso(repo.Object, usuarios.Object);
+        }
 
         private static Mock<ILojaServico> LojaDe(Guid lojaId, Guid donoId)
         {

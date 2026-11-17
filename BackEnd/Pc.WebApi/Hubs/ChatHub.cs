@@ -14,15 +14,18 @@ namespace Pc.WebApi.Hubs
         private readonly IConversaServico _conversaServico;
         private readonly IIdCodificador _idCodificador;
         private readonly ChatNotificacaoHelper _notificacao;
+        private readonly ILojaAcesso _lojaAcesso;
 
         public ChatHub(
             IConversaServico conversaServico,
             IIdCodificador idCodificador,
-            ChatNotificacaoHelper notificacao)
+            ChatNotificacaoHelper notificacao,
+            ILojaAcesso lojaAcesso)
         {
             _conversaServico = conversaServico;
             _idCodificador = idCodificador;
             _notificacao = notificacao;
+            _lojaAcesso = lojaAcesso;
         }
 
         public async Task ConectarUsuario()
@@ -37,8 +40,10 @@ namespace Pc.WebApi.Hubs
             if (papel is PapelUsuario.Lojista or PapelUsuario.Vendedor)
             {
                 var lojaId = Context.User?.GetLojaId();
-                if (lojaId.HasValue)
-                    await Groups.AddToGroupAsync(Context.ConnectionId, $"loja:{lojaId.Value}");
+                if (!lojaId.HasValue || !await Authz.PertenceAsync(Context.User!, lojaId.Value, _lojaAcesso))
+                    throw new HubException("Acesso negado.");
+
+                await Groups.AddToGroupAsync(Context.ConnectionId, $"loja:{lojaId.Value}");
             }
             else
             {
@@ -70,7 +75,7 @@ namespace Pc.WebApi.Hubs
                 throw new HubException("Conversa inválida.");
 
             var pode = await _conversaServico.UsuarioPodeAcessarAsync(
-                conversaId, userId.Value, ObterPapel(Context.User!), Context.User?.GetLojaId());
+                conversaId, userId.Value, ObterPapel(Context.User!));
 
             if (!pode)
                 throw new HubException("Acesso negado.");

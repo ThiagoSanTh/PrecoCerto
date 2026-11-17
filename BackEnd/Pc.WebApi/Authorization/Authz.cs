@@ -1,5 +1,6 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
-using Pc.Dominio.Entities.Estabelecimentos;
+using Pc.Servico.Interfaces;
 using Pc.WebApi.Extensions;
 
 namespace Pc.WebApi.Authorization
@@ -18,26 +19,20 @@ namespace Pc.WebApi.Authorization
             return controller.Forbid();
         }
 
-        public static bool OwnsLoja(ControllerBase controller, Guid lojaId) =>
-            controller.User.IsAdmin() ||
-            ((controller.User.IsLojista() || controller.User.IsVendedor())
-                && controller.User.GetLojaId() == lojaId);
-
         /// <summary>
-        /// Posse de escrita: admin passa; lojista precisa ser o UsuarioId salvo
-        /// (o claim lojaId do token pode estar velho por até 24h); vendedor segue o claim.
+        /// Admin passa. Os demais precisam do vínculo atual no banco
+        /// (dono por Loja.UsuarioId, vendedor por LojaVinculadaId). O claim lojaId não basta.
         /// </summary>
-        public static bool OwnsLojaPersistida(ControllerBase controller, Loja? loja)
+        public static Task<bool> PertenceAsync(ClaimsPrincipal user, Guid lojaId, ILojaAcesso acesso)
         {
-            if (controller.User.IsAdmin())
-                return true;
-            if (loja is null)
-                return false;
+            if (user.IsAdmin())
+                return Task.FromResult(true);
 
-            if (controller.User.IsLojista())
-                return loja.UsuarioId == controller.User.GetUserId();
+            var userId = user.GetUserId();
+            if (!userId.HasValue)
+                return Task.FromResult(false);
 
-            return controller.User.IsVendedor() && controller.User.GetLojaId() == loja.Id;
+            return acesso.PertenceAsync(userId.Value, lojaId);
         }
     }
 }

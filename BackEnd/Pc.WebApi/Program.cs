@@ -469,6 +469,7 @@ builder.Services.AddScoped<IOfertaServico, OfertaServico>();
 // Serviços — Usuários
 builder.Services.AddScoped<IValidadorEmail, ValidadorEmailServico>();
 builder.Services.AddScoped<IClienteServico, ClienteServico>();
+builder.Services.AddScoped<ILojaAcesso, LojaAcesso>();
 builder.Services.AddScoped<IAdminServico, AdminServico>();
 
 // Serviços — Interações

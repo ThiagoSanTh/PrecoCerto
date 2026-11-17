@@ -22,11 +22,16 @@ namespace Pc.WebApi.Controllers
     {
         private readonly IClienteServico _usuarioServico;
         private readonly IIdCodificador _idCodificador;
+        private readonly ILojaAcesso _lojaAcesso;
 
-        public LojistasController(IClienteServico usuarioServico, IIdCodificador idCodificador)
+        public LojistasController(
+            IClienteServico usuarioServico,
+            IIdCodificador idCodificador,
+            ILojaAcesso lojaAcesso)
         {
             _usuarioServico = usuarioServico;
             _idCodificador = idCodificador;
+            _lojaAcesso = lojaAcesso;
         }
 
         [HttpGet("{id:guid}")]
@@ -76,7 +81,7 @@ namespace Pc.WebApi.Controllers
         [Authorize(Roles = "Admin,Lojista")]
         public async Task<IActionResult> ListarVendedores(Guid lojaId)
         {
-            if (!Authz.OwnsLoja(this, lojaId))
+            if (!await Authz.PertenceAsync(User, lojaId, _lojaAcesso))
                 return Forbid();
 
             var vendedores = await _usuarioServico.ListarVendedoresPorLojaAsync(lojaId);
@@ -88,7 +93,7 @@ namespace Pc.WebApi.Controllers
         [Authorize(Roles = "Admin,Lojista")]
         public async Task<IActionResult> PromoverVendedor(Guid lojaId, [FromBody] PromoverVendedorDto dto)
         {
-            if (!Authz.OwnsLoja(this, lojaId))
+            if (!await Authz.PertenceAsync(User, lojaId, _lojaAcesso))
                 return Forbid();
 
             Usuario? alvo = null;
@@ -118,12 +123,12 @@ namespace Pc.WebApi.Controllers
         [Authorize(Roles = "Admin,Lojista")]
         public async Task<IActionResult> RemoverVendedor(Guid lojaId, Guid usuarioId)
         {
-            if (!Authz.OwnsLoja(this, lojaId))
+            if (!await Authz.PertenceAsync(User, lojaId, _lojaAcesso))
                 return Forbid();
 
             try
             {
-                await _usuarioServico.RemoverVendedorAsync(usuarioId);
+                await _usuarioServico.RemoverVendedorAsync(usuarioId, lojaId);
             }
             catch (Exception ex)
             {

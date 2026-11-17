@@ -3,14 +3,24 @@ using Pc.Dominio.Entities.Interacoes;
 using Pc.Dominio.Enums;
 using Pc.Repositorio.Interfaces;
 using Pc.Servico.Implementacoes;
+using Pc.Servico.Interfaces;
 using Xunit;
 
 namespace Pc.Servico.Tests
 {
     public class ConversaModoClienteTests
     {
-        private static ConversaServico CriarServico(IConversaRepositorio repo) =>
-            new(repo, Mock.Of<ILojaRepositorio>(), Mock.Of<IProdutoRepositorio>(), Mock.Of<IOfertaRepositorio>());
+        private static ConversaServico CriarServico(IConversaRepositorio repo)
+        {
+            var acesso = new Mock<ILojaAcesso>();
+            acesso.Setup(a => a.PertenceAsync(It.IsAny<Guid>(), It.IsAny<Guid>())).ReturnsAsync(false);
+            return new(
+                repo,
+                Mock.Of<ILojaRepositorio>(),
+                Mock.Of<IProdutoRepositorio>(),
+                Mock.Of<IOfertaRepositorio>(),
+                acesso.Object);
+        }
 
         [Fact]
         public async Task Staff_acessa_thread_em_que_e_o_cliente_mesmo_com_papel_de_loja()
@@ -26,7 +36,7 @@ namespace Pc.Servico.Tests
             repo.Setup(r => r.ObterPorIdAsync(conversa.Id)).ReturnsAsync(conversa);
 
             var pode = await CriarServico(repo.Object).UsuarioPodeAcessarAsync(
-                conversa.Id, usuarioId, PapelUsuario.Vendedor, Guid.NewGuid());
+                conversa.Id, usuarioId, PapelUsuario.Vendedor);
 
             Assert.True(pode);
         }
@@ -44,7 +54,7 @@ namespace Pc.Servico.Tests
             repo.Setup(r => r.ObterPorIdAsync(conversa.Id)).ReturnsAsync(conversa);
 
             var pode = await CriarServico(repo.Object).UsuarioPodeAcessarAsync(
-                conversa.Id, Guid.NewGuid(), PapelUsuario.Lojista, Guid.NewGuid());
+                conversa.Id, Guid.NewGuid(), PapelUsuario.Lojista);
 
             Assert.False(pode);
         }

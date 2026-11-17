@@ -9,7 +9,7 @@ namespace Pc.Servico.Interfaces
         Task<Conversa> AbrirComLojaAsync(Guid clienteId, Guid lojaId);
         Task<Conversa?> ObterPorIdAsync(Guid conversaId);
         Task<List<Mensagem>> ListarMensagensAsync(
-            Guid conversaId, Guid usuarioId, PapelUsuario papel, Guid? lojaId,
+            Guid conversaId, Guid usuarioId, PapelUsuario papel,
             DateTime? apos, DateTime? antes = null, int pageSize = 50);
         Task<Mensagem> EnviarMensagemAsync(Guid conversaId, Guid remetenteId, PapelUsuario remetentePapel, string texto);
         Task<Mensagem> EnviarInteresseProdutoAsync(Guid conversaId, Guid clienteId, Guid produtoId);
@@ -19,6 +19,6 @@ namespace Pc.Servico.Interfaces
         Task<bool> TemNaoLidasAsync(Guid usuarioId, PapelUsuario papel, Guid? lojaId, DateTime? desde = null);
         Task<Dictionary<Guid, int>> ContarNaoLidasPorConversasAsync(Guid usuarioId, PapelUsuario papel, Guid? lojaId);
         Task<Dictionary<Guid, string>> ObterUltimasMensagensTextoAsync(IEnumerable<Guid> conversaIds);
-        Task<bool> UsuarioPodeAcessarAsync(Guid conversaId, Guid usuarioId, PapelUsuario papel, Guid? lojaId);
+        Task<bool> UsuarioPodeAcessarAsync(Guid conversaId, Guid usuarioId, PapelUsuario papel);
     }
 }

@@ -264,6 +264,9 @@ namespace Pc.Servico.Implementacoes
             if (usuario.Papel == PapelUsuario.Lojista)
                 throw new Exception("Lojistas não podem ser promovidos a vendedores.");
 
+            if (usuario.LojaVinculadaId is Guid lojaAtual && lojaAtual != lojaId)
+                throw new Exception("Vendedor pertence a outra loja.");
+
             usuario.Papel = PapelUsuario.Vendedor;
             usuario.Tipo = TipoUsuario.Vendedor;
             usuario.LojaVinculadaId = lojaId;
@@ -271,14 +274,14 @@ namespace Pc.Servico.Implementacoes
             await _clienteRepositorio.AtualizarAsync(usuario);
         }
 
-        public async Task RemoverVendedorAsync(Guid usuarioId)
+        public async Task RemoverVendedorAsync(Guid usuarioId, Guid lojaId)
         {
             var usuario = await _clienteRepositorio.ObterPorIdAsync(usuarioId);
             if (usuario == null)
                 throw new Exception("Usuário não encontrado.");
 
-            if (usuario.Papel != PapelUsuario.Vendedor)
-                throw new Exception("Usuário não é um vendedor.");
+            if (usuario.Papel != PapelUsuario.Vendedor || usuario.LojaVinculadaId != lojaId)
+                throw new Exception("Vendedor não pertence a esta loja.");
 
             usuario.Papel = PapelUsuario.Cliente;
             usuario.Tipo = TipoUsuario.Cliente;

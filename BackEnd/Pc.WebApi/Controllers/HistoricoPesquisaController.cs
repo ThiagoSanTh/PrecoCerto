@@ -15,13 +15,17 @@ namespace Pc.WebApi.Controllers
     public class HistoricoPesquisaController : ControllerBase
     {
         private readonly IHistoricoPesquisaServico _historicoPesquisaServico;
+        private readonly ILojaAcesso _lojaAcesso;
 
         /// <summary>
         /// Injeta o serviço de histórico
         /// </summary>
-        public HistoricoPesquisaController(IHistoricoPesquisaServico historicoPesquisaServico)
+        public HistoricoPesquisaController(
+            IHistoricoPesquisaServico historicoPesquisaServico,
+            ILojaAcesso lojaAcesso)
         {
             _historicoPesquisaServico = historicoPesquisaServico;
+            _lojaAcesso = lojaAcesso;
         }
 
         /// <summary>
@@ -197,7 +201,7 @@ namespace Pc.WebApi.Controllers
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> ObterRelatorioLoja(Guid lojaId)
         {
-            if (!Authz.OwnsLoja(this, lojaId))
+            if (!await Authz.PertenceAsync(User, lojaId, _lojaAcesso))
                 return Forbid();
 
             var relatorio = await _historicoPesquisaServico.ObterRelatorioLojaAsync(lojaId);
