@@ -5,6 +5,7 @@ using Moq;
 using Pc.Dominio.Entities.Catalogo;
 using Pc.Dominio.Entities.Estabelecimentos;
 using Pc.Dominio.Entities.Interacoes;
+using Pc.Dominio.Entities.Usuarios;
 using Pc.Repositorio.Interfaces;
 using Pc.Servico.Excecoes;
 using Pc.Servico.Implementacoes;
@@ -95,8 +96,9 @@ namespace Pc.Servico.Tests
                 .Callback<Oferta>(o => salva = o)
                 .Returns(Task.CompletedTask);
 
-            var controller = Ofertas(ofertas);
-            Autenticar(controller, Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd"), "Lojista", loja1);
+            var dono = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+            var controller = Ofertas(ofertas, LojaDe(loja1, dono), ProdutoDe(produtoId, loja1));
+            Autenticar(controller, dono, "Lojista", loja1);
 
             var resultado = await controller.Atualizar(ofertaId, new OfertaCriarDto
             {
@@ -277,9 +279,11 @@ namespace Pc.Servico.Tests
                 .Callback<Loja>(l => salva = l)
                 .Returns(Task.CompletedTask);
 
+            var usuarios = new Mock<IClienteServico>();
+            usuarios.Setup(s => s.ObterPorIdAsync(novoDono)).ReturnsAsync(new Usuario { Id = novoDono });
             var controller = new LojasController(
                 lojas.Object,
-                Mock.Of<IClienteServico>(),
+                usuarios.Object,
                 Mock.Of<IConsultaCnpjServico>(),
                 Mock.Of<IIdCodificador>());
             Autenticar(controller, Guid.Parse("99999999-9999-9999-9999-999999999999"), "Admin", null);
@@ -292,6 +296,307 @@ namespace Pc.Servico.Tests
 
             Assert.IsType<NoContentResult>(resultado);
             Assert.Equal(novoDono, salva!.UsuarioId);
+        }
+
+        [Fact]
+        public async Task Ex_dono_nao_altera_oferta_com_token_antigo()
+        {
+            var loja1 = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            var exDono = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+            var novoDono = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+            var ofertaId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+            var produtoId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+            var ofertas = new Mock<IOfertaServico>();
+            ofertas.Setup(s => s.ObterPorIdAsync(ofertaId)).ReturnsAsync(new Oferta
+            {
+                Id = ofertaId,
+                LojaId = loja1,
+                ProdutoId = produtoId,
+                Preco = 9.90m
+            });
+
+            var controller = Ofertas(ofertas, LojaDe(loja1, novoDono), ProdutoDe(produtoId, loja1));
+            Autenticar(controller, exDono, "Lojista", loja1);
+
+            var resultado = await controller.Atualizar(ofertaId, new OfertaCriarDto
+            {
+                ProdutoId = produtoId,
+                LojaId = loja1,
+                Preco = 0.01m
+            });
+
+            Assert.IsType<ForbidResult>(resultado);
+            ofertas.Verify(s => s.AtualizarAsync(It.IsAny<Oferta>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Ex_dono_nao_cria_oferta_nem_apaga_com_token_antigo()
+        {
+            var loja1 = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            var exDono = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+            var novoDono = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+            var ofertaId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+            var produtoId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+            var ofertas = new Mock<IOfertaServico>();
+            ofertas.Setup(s => s.ObterPorIdAsync(ofertaId)).ReturnsAsync(new Oferta
+            {
+                Id = ofertaId,
+                LojaId = loja1,
+                ProdutoId = produtoId
+            });
+            ofertas.Setup(s => s.AdicionarAsync(It.IsAny<Oferta>())).ReturnsAsync(new Oferta
+            {
+                Id = ofertaId,
+                LojaId = loja1,
+                ProdutoId = produtoId,
+                Preco = 1m
+            });
+
+            var controller = Ofertas(ofertas, LojaDe(loja1, novoDono), ProdutoDe(produtoId, loja1));
+            Autenticar(controller, exDono, "Lojista", loja1);
+
+            var criada = await controller.Adicionar(new OfertaCriarDto
+            {
+                ProdutoId = produtoId,
+                LojaId = loja1,
+                Preco = 1m
+            });
+            var apagada = await controller.Remover(ofertaId);
+
+            Assert.IsType<ForbidResult>(criada);
+            Assert.IsType<ForbidResult>(apagada);
+            ofertas.Verify(s => s.AdicionarAsync(It.IsAny<Oferta>()), Times.Never);
+            ofertas.Verify(s => s.RemoverAsync(It.IsAny<Guid>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Ex_dono_nao_altera_loja_com_token_antigo()
+        {
+            var loja1 = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            var exDono = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+            var novoDono = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+            var lojas = new Mock<ILojaServico>();
+            lojas.Setup(s => s.ObterPorIdAsync(loja1)).ReturnsAsync(new Loja
+            {
+                Id = loja1,
+                UsuarioId = novoDono,
+                NomeFantasia = "Loja 1"
+            });
+
+            var controller = new LojasController(
+                lojas.Object,
+                Mock.Of<IClienteServico>(),
+                Mock.Of<IConsultaCnpjServico>(),
+                Mock.Of<IIdCodificador>());
+            Autenticar(controller, exDono, "Lojista", loja1);
+
+            var resultado = await controller.Atualizar(loja1, new LojaCriarDto { NomeFantasia = "Invadida" });
+
+            Assert.IsType<ForbidResult>(resultado);
+            lojas.Verify(s => s.AtualizarAsync(It.IsAny<Loja>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Ex_dono_nao_cria_produto_com_token_antigo()
+        {
+            var loja1 = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            var exDono = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+            var novoDono = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+            var produtos = new Mock<IProdutoServico>();
+            produtos.Setup(s => s.AdicionarAsync(It.IsAny<Produto>()))
+                .ReturnsAsync(new Produto { Id = Guid.NewGuid(), NomeProduto = "Arroz", LojaId = loja1 });
+            produtos.Setup(s => s.ObterPorIdAsync(It.IsAny<Guid>()))
+                .ReturnsAsync(new Produto { NomeProduto = "Arroz", LojaId = loja1 });
+
+            var controller = new ProdutosController(
+                produtos.Object,
+                Mock.Of<IIdCodificador>(),
+                LojaDe(loja1, novoDono).Object);
+            Autenticar(controller, exDono, "Lojista", loja1);
+
+            var resultado = await controller.Adicionar(new ProdutoCriarDto
+            {
+                NomeProduto = "Arroz",
+                LojaId = loja1,
+                Preco = 0.01m
+            });
+
+            Assert.IsType<ForbidResult>(resultado);
+            produtos.Verify(s => s.AdicionarAsync(It.IsAny<Produto>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Oferta_rejeita_produto_de_outra_loja()
+        {
+            var loja1 = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            var loja2 = Guid.Parse("22222222-2222-2222-2222-222222222222");
+            var dono = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+            var produtoId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+            var ofertaId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+            var ofertas = new Mock<IOfertaServico>();
+            ofertas.Setup(s => s.AdicionarAsync(It.IsAny<Oferta>())).ReturnsAsync(new Oferta
+            {
+                Id = ofertaId,
+                LojaId = loja1,
+                ProdutoId = produtoId,
+                Preco = 2m
+            });
+            ofertas.Setup(s => s.ObterPorIdAsync(ofertaId)).ReturnsAsync(new Oferta
+            {
+                Id = ofertaId,
+                LojaId = loja1,
+                ProdutoId = produtoId,
+                Preco = 2m
+            });
+
+            var controller = Ofertas(ofertas, LojaDe(loja1, dono), ProdutoDe(produtoId, loja2));
+            Autenticar(controller, dono, "Lojista", loja1);
+            var dto = new OfertaCriarDto { ProdutoId = produtoId, LojaId = loja1, Preco = 2m };
+
+            var criada = await controller.Adicionar(dto);
+            var atualizada = await controller.Atualizar(ofertaId, dto);
+
+            Assert.IsType<BadRequestObjectResult>(criada);
+            Assert.IsType<BadRequestObjectResult>(atualizada);
+            ofertas.Verify(s => s.AdicionarAsync(It.IsAny<Oferta>()), Times.Never);
+            ofertas.Verify(s => s.AtualizarAsync(It.IsAny<Oferta>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Oferta_rejeita_produto_inexistente()
+        {
+            var loja1 = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            var dono = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+            var produtoId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+            var ofertaId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+            var ofertas = new Mock<IOfertaServico>();
+            ofertas.Setup(s => s.AdicionarAsync(It.IsAny<Oferta>())).ReturnsAsync(new Oferta
+            {
+                Id = ofertaId,
+                LojaId = loja1,
+                ProdutoId = produtoId,
+                Preco = 2m
+            });
+            ofertas.Setup(s => s.ObterPorIdAsync(ofertaId)).ReturnsAsync(new Oferta
+            {
+                Id = ofertaId,
+                LojaId = loja1,
+                Preco = 2m
+            });
+
+            var controller = Ofertas(ofertas, LojaDe(loja1, dono));
+            Autenticar(controller, dono, "Lojista", loja1);
+
+            var resultado = await controller.Adicionar(new OfertaCriarDto
+            {
+                ProdutoId = produtoId,
+                LojaId = loja1,
+                Preco = 2m
+            });
+
+            Assert.IsType<NotFoundObjectResult>(resultado);
+            ofertas.Verify(s => s.AdicionarAsync(It.IsAny<Oferta>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Admin_nao_transfere_loja_para_usuario_inexistente()
+        {
+            var loja1 = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            var dono = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+            var fantasma = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+            var lojas = new Mock<ILojaServico>();
+            lojas.Setup(s => s.ObterPorIdAsync(loja1)).ReturnsAsync(new Loja
+            {
+                Id = loja1,
+                UsuarioId = dono,
+                NomeFantasia = "Loja 1"
+            });
+            var usuarios = new Mock<IClienteServico>();
+            usuarios.Setup(s => s.ObterPorIdAsync(fantasma)).ReturnsAsync((Usuario?)null);
+
+            var controller = new LojasController(
+                lojas.Object,
+                usuarios.Object,
+                Mock.Of<IConsultaCnpjServico>(),
+                Mock.Of<IIdCodificador>());
+            Autenticar(controller, Guid.Parse("99999999-9999-9999-9999-999999999999"), "Admin", null);
+
+            var resultado = await controller.Atualizar(loja1, new LojaCriarDto
+            {
+                NomeFantasia = "Loja 1",
+                UsuarioId = fantasma
+            });
+
+            Assert.IsType<BadRequestObjectResult>(resultado);
+            lojas.Verify(s => s.AtualizarAsync(It.IsAny<Loja>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Admin_nao_transfere_loja_para_quem_ja_tem_loja()
+        {
+            var loja1 = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            var loja2 = Guid.Parse("22222222-2222-2222-2222-222222222222");
+            var dono = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+            var ocupado = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+            var lojas = new Mock<ILojaServico>();
+            lojas.Setup(s => s.ObterPorIdAsync(loja1)).ReturnsAsync(new Loja
+            {
+                Id = loja1,
+                UsuarioId = dono,
+                NomeFantasia = "Loja 1"
+            });
+            lojas.Setup(s => s.ObterPorUsuarioIdAsync(ocupado)).ReturnsAsync(new Loja
+            {
+                Id = loja2,
+                UsuarioId = ocupado
+            });
+            var usuarios = new Mock<IClienteServico>();
+            usuarios.Setup(s => s.ObterPorIdAsync(ocupado)).ReturnsAsync(new Usuario { Id = ocupado });
+
+            var controller = new LojasController(
+                lojas.Object,
+                usuarios.Object,
+                Mock.Of<IConsultaCnpjServico>(),
+                Mock.Of<IIdCodificador>());
+            Autenticar(controller, Guid.Parse("99999999-9999-9999-9999-999999999999"), "Admin", null);
+
+            var resultado = await controller.Atualizar(loja1, new LojaCriarDto
+            {
+                NomeFantasia = "Loja 1",
+                UsuarioId = ocupado
+            });
+
+            Assert.IsType<ConflictObjectResult>(resultado);
+            lojas.Verify(s => s.AtualizarAsync(It.IsAny<Loja>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Lista_avaliacoes_sem_token_retorna_401()
+        {
+            var controller = Avaliacoes(new Mock<IAvaliacaoServico>());
+            controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext()
+            };
+
+            var resultado = await controller.ListarPorCliente(Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"));
+
+            Assert.IsType<UnauthorizedResult>(resultado);
+        }
+
+        [Fact]
+        public async Task Admin_lista_avaliacoes_de_cliente_vazio_retorna_400()
+        {
+            var avaliacoes = new Mock<IAvaliacaoServico>();
+            avaliacoes.Setup(s => s.ListarPorClienteAsync(Guid.Empty))
+                .ThrowsAsync(new Exception("ClienteId é obrigatório."));
+            var controller = Avaliacoes(avaliacoes);
+            Autenticar(controller, Guid.Parse("99999999-9999-9999-9999-999999999999"), "Admin", null);
+
+            var resultado = await controller.ListarPorCliente(Guid.Empty);
+
+            Assert.IsType<BadRequestObjectResult>(resultado);
+            avaliacoes.Verify(s => s.ListarPorClienteAsync(It.IsAny<Guid>()), Times.Never);
         }
 
         [Fact]
@@ -410,8 +715,39 @@ namespace Pc.Servico.Tests
             Assert.Equal(dono, Assert.IsType<AvaliacaoRespostaDto>(doAdmin.Value).ClienteId);
         }
 
-        private static OfertasController Ofertas(Mock<IOfertaServico> ofertas) =>
-            new(ofertas.Object, Mock.Of<IIdCodificador>());
+        private static OfertasController Ofertas(
+            Mock<IOfertaServico> ofertas,
+            Mock<ILojaServico>? lojas = null,
+            Mock<IProdutoServico>? produtos = null) =>
+            new(
+                ofertas.Object,
+                Mock.Of<IIdCodificador>(),
+                (lojas ?? new Mock<ILojaServico>()).Object,
+                (produtos ?? new Mock<IProdutoServico>()).Object);
+
+        private static Mock<ILojaServico> LojaDe(Guid lojaId, Guid donoId)
+        {
+            var lojas = new Mock<ILojaServico>();
+            lojas.Setup(s => s.ObterPorIdAsync(lojaId)).ReturnsAsync(new Loja
+            {
+                Id = lojaId,
+                UsuarioId = donoId,
+                NomeFantasia = "Loja"
+            });
+            return lojas;
+        }
+
+        private static Mock<IProdutoServico> ProdutoDe(Guid produtoId, Guid lojaId)
+        {
+            var produtos = new Mock<IProdutoServico>();
+            produtos.Setup(s => s.ObterPorIdAsync(produtoId)).ReturnsAsync(new Produto
+            {
+                Id = produtoId,
+                LojaId = lojaId,
+                NomeProduto = "Arroz"
+            });
+            return produtos;
+        }
 
         private static AvaliacoesController Avaliacoes(Mock<IAvaliacaoServico> avaliacoes) =>
             new(avaliacoes.Object);

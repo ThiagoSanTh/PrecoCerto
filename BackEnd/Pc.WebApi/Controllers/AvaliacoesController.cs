@@ -115,8 +115,14 @@ namespace Pc.WebApi.Controllers
         [HttpGet("cliente/{clienteId:guid}")]
         public async Task<IActionResult> ListarPorCliente(Guid clienteId)
         {
+            if (User?.Identity?.IsAuthenticated != true)
+                return Unauthorized();
+
             var denied = Authz.ForbidUnlessSelfOrAdmin(this, clienteId);
             if (denied != null) return denied;
+
+            if (clienteId == Guid.Empty)
+                return BadRequest("ClienteId é obrigatório.");
 
             var avaliacoes = await _avaliacaoServico.ListarPorClienteAsync(clienteId);
 
