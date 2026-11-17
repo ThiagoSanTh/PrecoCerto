@@ -136,21 +136,11 @@ namespace Pc.WebApi.Controllers
                 if (admin is not null)
                     return await LoginAdminAsync(dto);
 
-                return Unauthorized(new
-                {
-                    code = "EMAIL_NOT_FOUND",
-                    message = "Este e-mail não existe. Por favor, insira um e-mail válido."
-                });
+                return CredenciaisInvalidas();
             }
 
             if (result.Erro == LoginErroCodigo.SenhaIncorreta)
-            {
-                return Unauthorized(new
-                {
-                    code = "WRONG_PASSWORD",
-                    message = "Senha incorreta."
-                });
-            }
+                return CredenciaisInvalidas();
 
             var usuario = result.Usuario!;
             var tipoJwt = LoginLojaResolver.ResolverTipoJwt(usuario);
@@ -240,6 +230,13 @@ namespace Pc.WebApi.Controllers
             Ativo = a.Ativo,
             DataCriacao = a.DataCriacao
         };
+
+        private static UnauthorizedObjectResult CredenciaisInvalidas() =>
+            new(new
+            {
+                code = "INVALID_CREDENTIALS",
+                message = "E-mail ou senha incorretos."
+            });
 
         private static bool EhFalhaDeBanco(Exception ex)
         {

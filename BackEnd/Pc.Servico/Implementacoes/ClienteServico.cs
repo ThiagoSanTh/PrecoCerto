@@ -14,6 +14,9 @@ namespace Pc.Servico.Implementacoes
     /// </summary>
     public class ClienteServico : IClienteServico
     {
+        private const string HashFicticio =
+            "$2a$12$CBUL9OLbcu6PF0Nw1KIGQOfwfPBdz/PeITOcy8Qo55.ygW11oGbXW";
+
         private readonly IClienteRepositorio _clienteRepositorio;
         private readonly IPasswordHasher _passwordHasher;
         private readonly IValidadorEmail _validadorEmail;
@@ -72,7 +75,11 @@ namespace Pc.Servico.Implementacoes
             var cliente = await _clienteRepositorio.ObterPorEmailAsync(EmailValidator.Normalizar(email));
 
             if (cliente == null)
+            {
+                // Custo 12, igual ao hash real, para não distinguir e-mail inexistente pelo tempo.
+                _passwordHasher.Verify(senha, HashFicticio);
                 return LoginValidacaoResult.EmailNaoEncontrado();
+            }
 
             if (!await VerificarSenhaAsync(cliente, senha))
                 return LoginValidacaoResult.SenhaIncorreta();

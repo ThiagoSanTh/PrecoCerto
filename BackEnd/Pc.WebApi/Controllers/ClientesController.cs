@@ -104,23 +104,8 @@ namespace Pc.WebApi.Controllers
 
             var result = await _clienteServico.ValidarLoginDetalhadoAsync(dto.Email, dto.Senha);
 
-            if (result.Erro == LoginErroCodigo.EmailNaoEncontrado)
-            {
-                return Unauthorized(new
-                {
-                    code = "EMAIL_NOT_FOUND",
-                    message = "Este e-mail não existe. Por favor, insira um e-mail válido."
-                });
-            }
-
-            if (result.Erro == LoginErroCodigo.SenhaIncorreta)
-            {
-                return Unauthorized(new
-                {
-                    code = "WRONG_PASSWORD",
-                    message = "Senha incorreta."
-                });
-            }
+            if (result.Erro is LoginErroCodigo.EmailNaoEncontrado or LoginErroCodigo.SenhaIncorreta)
+                return CredenciaisInvalidas();
 
             var cliente = result.Usuario!;
 
@@ -258,6 +243,13 @@ namespace Pc.WebApi.Controllers
             await _clienteServico.RemoverAsync(id);
             return NoContent();
         }
+
+        private static UnauthorizedObjectResult CredenciaisInvalidas() =>
+            new(new
+            {
+                code = "INVALID_CREDENTIALS",
+                message = "E-mail ou senha incorretos."
+            });
 
         private ClienteRespostaDto MapResposta(Usuario c) => new()
         {
