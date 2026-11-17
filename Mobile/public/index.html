@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>%WEB_TITLE%</title>
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+      html, body, #root {
+        background: var(--app-canvas, #F4F7F5);
+      }
+    </style>
+  </head>
+
+  <body>
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('@theme');
+          var dark = saved === 'dark';
+          var color = dark ? '#0F1D22' : '#F4F7F5';
+          var root = document.documentElement;
+          root.style.setProperty('--app-canvas', color);
+          root.style.setProperty('--focus-ring', dark ? '#5EEAD4' : '#0A5E4D');
+          root.style.backgroundColor = color;
+          root.style.colorScheme = dark ? 'dark' : 'light';
+          if (document.body) document.body.style.backgroundColor = color;
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (!meta) {
+            meta = document.createElement('meta');
+            meta.setAttribute('name', 'theme-color');
+            document.head.appendChild(meta);
+          }
+          meta.setAttribute('content', color);
+        } catch (e) {}
+      })();
+    </script>
+    <!-- Use static rendering with Expo Router to support running without JavaScript. -->
+    <noscript>
+      You need to enable JavaScript to run this app.
+    </noscript>
+    <!-- The root element for your Expo app. -->
+    <div id="root"></div>
+  </body>
+</html>

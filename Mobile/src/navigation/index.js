@@ -1,8 +1,9 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { Platform } from 'react-native';
-import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
+import { DefaultTheme, NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { linkingScreens, PUBLIC_ROUTE_NAMES } from './linking';
 
 import LoginScreen from '../screens/auth/LoginScreen';
@@ -56,6 +57,28 @@ const GuardedHome = withSession(AppRoutes);
 
 export default function Routes() {
   const { session, loading } = useAuth();
+  const { colors, isDark } = useTheme();
+  const navigationTheme = useMemo(() => ({
+    ...DefaultTheme,
+    dark: isDark,
+    colors: {
+      ...DefaultTheme.colors,
+      primary: colors.primary,
+      background: colors.background,
+      card: colors.surface,
+      text: colors.text,
+      border: colors.border,
+      notification: colors.destructive,
+    },
+  }), [
+    isDark,
+    colors.primary,
+    colors.background,
+    colors.surface,
+    colors.text,
+    colors.border,
+    colors.destructive,
+  ]);
 
   const guard = useCallback(() => {
     if (loading || !navigationRef.isReady()) return;
@@ -72,6 +95,7 @@ export default function Routes() {
   return (
     <NavigationContainer
       ref={navigationRef}
+      theme={navigationTheme}
       linking={Platform.OS === 'web' ? linking : undefined}
       onReady={guard}
       onStateChange={guard}

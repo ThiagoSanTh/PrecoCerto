@@ -1,4 +1,3 @@
-import { StatusBar } from 'expo-status-bar';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useState, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
@@ -132,8 +131,6 @@ export default function LoginScreen({ navigation }) {
           </Text>
         </Pressable>
       </View>
-
-      <StatusBar style="auto" />
     </AuthSplitLayout>
   );
 }

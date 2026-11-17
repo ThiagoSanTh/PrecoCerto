@@ -21,7 +21,7 @@ export default function AuthSplitLayout({
   onErrorAction,
   children,
 }) {
-  const { isDesktopWeb } = useLayoutProfile();
+  const { isDesktopWeb, insets } = useLayoutProfile();
   const { colors } = useTheme();
   const frameH = useRef(0);
   const contentH = useRef(0);
@@ -35,14 +35,18 @@ export default function AuthSplitLayout({
   return (
     <SafeAreaView
       style={[styles.safe, { backgroundColor: colors.background }]}
-      edges={['top', 'bottom', 'left', 'right']}
+      edges={{ top: 'off', bottom: 'off', left: 'additive', right: 'additive' }}
     >
       <View style={[styles.container, isDesktopWeb && styles.containerSplit]}>
         {isDesktopWeb ? (
           <View
             style={[
               styles.heroPanel,
-              { backgroundColor: colors.ink },
+              {
+                backgroundColor: colors.ink,
+                paddingTop: 48 + insets.top,
+                paddingBottom: 48 + insets.bottom,
+              },
               Platform.OS === 'web'
                 ? {
                     backgroundImage:
@@ -99,6 +103,10 @@ export default function AuthSplitLayout({
           contentContainerStyle={[
             styles.formScrollContent,
             !centerContent && styles.formScrollContentTop,
+            {
+              paddingTop: 24 + insets.top,
+              paddingBottom: 24 + insets.bottom,
+            },
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
