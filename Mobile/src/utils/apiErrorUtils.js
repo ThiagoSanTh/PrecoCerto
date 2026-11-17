@@ -1,5 +1,4 @@
 const ERROR_MESSAGES = {
-  EMAIL_NOT_FOUND: 'Este e-mail não existe. Por favor, insira um e-mail válido.',
   EMAIL_ALREADY_REGISTERED:
     'Este e-mail já está registrado no nosso sistema. Por favor, faça login.',
   WRONG_PASSWORD: 'Senha incorreta.',
@@ -79,10 +78,6 @@ export function mapApiError(error, context = {}) {
       actionLabel: 'Ir para login',
       code,
     };
-  }
-
-  if (code === 'EMAIL_NOT_FOUND') {
-    return { title: 'E-mail não encontrado', message: ERROR_MESSAGES.EMAIL_NOT_FOUND, code };
   }
 
   if (code === 'WRONG_PASSWORD') {
