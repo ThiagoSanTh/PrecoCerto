@@ -1,4 +1,19 @@
+import { COORDENADAS_SAQUAREMA } from './mapaUtils.js';
+
 const RAIO_TERRA_KM = 6371;
+
+/** GPS, senão o perfil, senão Saquarema. Sem arredondar — o clima arredonda à parte. */
+export function coordenadasDoCliente(perfil, gps) {
+  const lat = Number(gps?.latitude ?? perfil?.latitudeAtual);
+  const lng = Number(gps?.longitude ?? perfil?.longitudeAtual);
+  if (Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0)) {
+    return { latitude: lat, longitude: lng };
+  }
+  return {
+    latitude: COORDENADAS_SAQUAREMA.latitude,
+    longitude: COORDENADAS_SAQUAREMA.longitude,
+  };
+}
 
 function coordenadaValida(lat, lng) {
   const nLat = Number(lat);

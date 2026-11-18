@@ -392,11 +392,30 @@ export function buildLojasMapHtml(dadosMapa) {
     }
 
     /* Pins das lojas na paleta oficial (#0F1D22 ink, #0E7C66 primary, #B6F035 highlight) */
+    .leaflet-bottom { margin-bottom: 168px; }
+    .leaflet-control-attribution { max-width: calc(100% - 24px); }
     .pin-wrap {
       position: relative;
       display: flex;
        flex-direction: column;
       align-items: center;
+    }
+    .pin-count {
+      position: absolute;
+      top: 0;
+      right: 4px;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 4px;
+      border-radius: 9px;
+      background: #0E7C66;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 18px;
+      text-align: center;
+      border: 1.5px solid #fff;
+      font-variant-numeric: tabular-nums;
     }
     .pin-price-tag {
       background: #0F1D22;
@@ -678,7 +697,7 @@ export function buildLojasMapHtml(dadosMapa) {
       }
     });
 
-    var destaques = { lojaIds: null, produtosPorLoja: {}, imagemPinPorLoja: {}, buscaAtiva: false };
+    var destaques = { lojaIds: null, produtosPorLoja: {}, imagemPinPorLoja: {}, contagemPorLoja: {}, buscaAtiva: false };
     var markers = {};
     var lojaSelecionadaId = null;
     var routeLayerGroup = L.layerGroup().addTo(map);
@@ -731,7 +750,12 @@ export function buildLojasMapHtml(dadosMapa) {
       } else {
         circleHtml = '<div class="' + classe + '">' + m.inicial + '</div>';
       }
-      return '<div class="pin-wrap">' + precoTag + circleHtml + '</div>';
+      var qtd = 0;
+      if (destaques.contagemPorLoja) {
+        qtd = Number(destaques.contagemPorLoja[String(m.id)] || 0);
+      }
+      var badge = qtd > 1 ? '<span class="pin-count">' + qtd + '</span>' : '';
+      return '<div class="pin-wrap">' + precoTag + circleHtml + badge + '</div>';
     }
 
     function criarIcon(m, comDestaque, imagemUrl, isSelecionada) {
@@ -1046,6 +1070,7 @@ export function buildLojasMapHtml(dadosMapa) {
         lojaIds: payload && payload.lojaIds ? payload.lojaIds : null,
         produtosPorLoja: (payload && payload.produtosPorLoja) || {},
         imagemPinPorLoja: (payload && payload.imagemPinPorLoja) || {},
+        contagemPorLoja: (payload && payload.contagemPorLoja) || {},
         buscaAtiva: Boolean(payload && payload.buscaAtiva)
       };
 

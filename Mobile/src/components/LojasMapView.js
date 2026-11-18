@@ -3,6 +3,7 @@ import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
 import MapView, { Marker, Polyline, UrlTile, PROVIDER_DEFAULT } from 'react-native-maps';
 import { obterLocalizacaoAtual } from '../services/locationService';
 import { normalizarLojaParaMapa } from '../utils/leafletMapHtml';
+import { separarCoordenadasCoincidentes } from '../utils/mapaPinUtils';
 import { SAQUAREMA_CENTER } from '../utils/mapaUtils';
 import { styles as appStyles } from '../theme';
 
@@ -42,7 +43,7 @@ function formatarDistancia(cliente, loja) {
   return `${km.toFixed(1).replace('.', ',')} km`;
 }
 
-function PinLoja({ loja, destaque, imagemUrl }) {
+function PinLoja({ loja, destaque, imagemUrl, quantidade }) {
   const size = destaque ? 52 : 40;
   return (
     <View
@@ -53,6 +54,11 @@ function PinLoja({ loja, destaque, imagemUrl }) {
         imagemUrl && styles.pinImg,
       ]}
     >
+      {quantidade > 1 ? (
+        <View style={styles.pinCount}>
+          <Text style={styles.pinCountTexto}>{quantidade}</Text>
+        </View>
+      ) : null}
       {imagemUrl ? (
         <Image source={{ uri: imagemUrl }} style={styles.pinImagem} />
       ) : (
@@ -72,6 +78,7 @@ export default function LojasMapView({
   rotaAtiva = true,
   produtosPorLoja = {},
   imagemPinPorLoja = {},
+  contagemPorLoja = {},
   buscaAtiva = false,
   onProductPress,
   onStorePress,
@@ -108,14 +115,16 @@ export default function LojasMapView({
 
   const lojasNoMapa = useMemo(
     () =>
-      (lojas || [])
-        .map(normalizarLojaParaMapa)
-        .filter(
-          (l) =>
-            Number.isFinite(l.lat) &&
-            Number.isFinite(l.lng) &&
-            !(l.lat === 0 && l.lng === 0)
-        ),
+      separarCoordenadasCoincidentes(
+        (lojas || [])
+          .map(normalizarLojaParaMapa)
+          .filter(
+            (l) =>
+              Number.isFinite(l.lat) &&
+              Number.isFinite(l.lng) &&
+              !(l.lat === 0 && l.lng === 0)
+          )
+      ),
     [lojas]
   );
 
@@ -221,7 +230,12 @@ export default function LojasMapView({
                   onStoreSelect?.(loja.id);
                 }}
               >
-                <PinLoja loja={loja} destaque={destaque} imagemUrl={imagemUrl} />
+                <PinLoja
+                  loja={loja}
+                  destaque={destaque}
+                  imagemUrl={imagemUrl}
+                  quantidade={Number(contagemPorLoja?.[loja.id] || 0)}
+                />
               </Marker>
             );
           })}
@@ -277,6 +291,19 @@ const styles = StyleSheet.create({
   pinImagem: { width: '100%', height: '100%' },
   pinTexto: { color: '#fff', fontWeight: 'bold', fontSize: 17 },
   pinTextoDestaque: { fontSize: 22 },
+  pinCount: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#0E7C66',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  pinCountTexto: { color: '#fff', fontSize: 11, fontWeight: '700' },
   atribuicao: {
     position: 'absolute',
     right: 4,

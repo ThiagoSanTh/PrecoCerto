@@ -1,5 +1,5 @@
-import { nomeProduto } from './produtoUtils';
-import { formatarPrecoBrl } from './mapaUtils';
+import { nomeProduto } from './produtoUtils.js';
+import { formatarPrecoBrl } from './mapaUtils.js';
 
 function normalizarTexto(texto) {
   return String(texto ?? '')
@@ -95,5 +95,38 @@ export function montarMapaBuscaPorLoja(produtos, termo, maxPorPin = 4) {
     imagemPinPorLoja[lojaId] = escolhido?.imagemUrl ?? null;
   });
 
-  return { produtosPorLoja, imagemPinPorLoja };
+  const contagemPorLoja = {};
+  Object.entries(grupos).forEach(([lojaId, itens]) => {
+    contagemPorLoja[lojaId] = itens.length;
+  });
+
+  return { produtosPorLoja, imagemPinPorLoja, contagemPorLoja };
+}
+
+/** Lojas no mesmo ponto (geocode da cidade) empilham num marcador só. */
+export function separarCoordenadasCoincidentes(marcadores) {
+  const grupos = new Map();
+  (marcadores || []).forEach((m) => {
+    if (!Number.isFinite(m?.lat) || !Number.isFinite(m?.lng)) return;
+    const key = `${m.lat.toFixed(5)},${m.lng.toFixed(5)}`;
+    if (!grupos.has(key)) grupos.set(key, []);
+    grupos.get(key).push(m);
+  });
+
+  const saida = [];
+  grupos.forEach((grupo) => {
+    if (grupo.length === 1) {
+      saida.push(grupo[0]);
+      return;
+    }
+    grupo.forEach((m, i) => {
+      const ang = (2 * Math.PI * i) / grupo.length;
+      saida.push({
+        ...m,
+        lat: m.lat + 0.00035 * Math.cos(ang),
+        lng: m.lng + 0.00035 * Math.sin(ang),
+      });
+    });
+  });
+  return saida;
 }

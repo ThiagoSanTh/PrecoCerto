@@ -8,6 +8,7 @@ import {
   prepararDadosMapaLojas,
   sanitizarLojasParaHtml,
 } from '../utils/leafletMapHtml';
+import { separarCoordenadasCoincidentes } from '../utils/mapaPinUtils';
 import { styles as appStyles } from '../theme';
 
 /**
@@ -24,6 +25,7 @@ export default function LojasMapView({
   focoRotaKey = 0,
   produtosPorLoja = {},
   imagemPinPorLoja = {},
+  contagemPorLoja = {},
   buscaAtiva = false,
   onProductPress,
   onStorePress,
@@ -63,14 +65,16 @@ export default function LojasMapView({
 
   const lojasNoMapa = useMemo(
     () =>
-      (lojas || [])
-        .map(normalizarLojaParaMapa)
-        .filter(
-          (l) =>
-            Number.isFinite(l.lat) &&
-            Number.isFinite(l.lng) &&
-            !(l.lat === 0 && l.lng === 0)
-        ),
+      separarCoordenadasCoincidentes(
+        (lojas || [])
+          .map(normalizarLojaParaMapa)
+          .filter(
+            (l) =>
+              Number.isFinite(l.lat) &&
+              Number.isFinite(l.lng) &&
+              !(l.lat === 0 && l.lng === 0)
+          )
+      ),
     [lojas]
   );
 
@@ -103,10 +107,11 @@ export default function LojasMapView({
         lojaIds: lojaIdsDestaque,
         produtosPorLoja,
         imagemPinPorLoja,
+        contagemPorLoja,
         buscaAtiva: Boolean(buscaAtiva),
       },
     });
-  }, [lojaIdsDestaque, produtosPorLoja, imagemPinPorLoja, buscaAtiva]);
+  }, [lojaIdsDestaque, produtosPorLoja, imagemPinPorLoja, contagemPorLoja, buscaAtiva]);
 
   const enviarCliente = useCallback(() => {
     if (!mapaProntoRef.current || !localizacaoCliente) return;
