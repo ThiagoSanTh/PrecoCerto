@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 using Pc.Dominio.Entities.Catalogo;
 using Pc.Dominio.Entities.Estabelecimentos;
@@ -183,7 +184,9 @@ namespace Pc.Servico.Tests
                 lojas.Object,
                 Mock.Of<IClienteServico>(),
                 Mock.Of<IConsultaCnpjServico>(),
-                Mock.Of<IIdCodificador>());
+                Mock.Of<IIdCodificador>(),
+                null,
+                AcessoDaLoja(lojas));
             Autenticar(controller, Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"), "Lojista", loja2);
 
             var resultado = await controller.Atualizar(loja1, new LojaCriarDto
@@ -214,7 +217,9 @@ namespace Pc.Servico.Tests
                 lojas.Object,
                 Mock.Of<IClienteServico>(),
                 Mock.Of<IConsultaCnpjServico>(),
-                Mock.Of<IIdCodificador>());
+                Mock.Of<IIdCodificador>(),
+                null,
+                AcessoDaLoja(lojas));
             Autenticar(controller, dono, "Lojista", loja1);
 
             var resultado = await controller.Atualizar(loja1, new LojaCriarDto
@@ -225,6 +230,106 @@ namespace Pc.Servico.Tests
 
             Assert.IsType<ForbidResult>(resultado);
             lojas.Verify(s => s.AtualizarAsync(It.IsAny<Loja>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Dono_inativo_nao_atualiza_a_loja()
+        {
+            var loja1 = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            var dono = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+            var lojas = new Mock<ILojaServico>();
+            lojas.Setup(s => s.ObterPorIdAsync(loja1)).ReturnsAsync(new Loja
+            {
+                Id = loja1,
+                UsuarioId = dono,
+                NomeFantasia = "Loja 1"
+            });
+            lojas.Setup(s => s.AtualizarAsync(It.IsAny<Loja>())).Returns(Task.CompletedTask);
+            var lojaRepo = new Mock<ILojaRepositorio>();
+            lojaRepo.Setup(r => r.ObterPorIdAsync(loja1)).ReturnsAsync(new Loja
+            {
+                Id = loja1,
+                UsuarioId = dono,
+                NomeFantasia = "Loja 1"
+            });
+            var pessoas = new Mock<IClienteRepositorio>();
+            pessoas.Setup(r => r.ObterPorIdAsync(dono)).ReturnsAsync((Usuario?)null);
+            var acesso = new LojaAcesso(lojaRepo.Object, pessoas.Object);
+
+            var controller = new LojasController(
+                lojas.Object,
+                Mock.Of<IClienteServico>(),
+                Mock.Of<IConsultaCnpjServico>(),
+                Mock.Of<IIdCodificador>(),
+                null,
+                acesso);
+            Autenticar(controller, dono, "Lojista", loja1);
+
+            var resultado = await controller.Atualizar(loja1, new LojaCriarDto { NomeFantasia = "Ainda minha" });
+
+            Assert.IsType<ForbidResult>(resultado);
+            lojas.Verify(s => s.AtualizarAsync(It.IsAny<Loja>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Usuario_inativo_nao_abre_loja()
+        {
+            var usuarioId = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+            var lojas = new Mock<ILojaServico>();
+            lojas.Setup(s => s.AdicionarAsync(It.IsAny<Loja>())).ReturnsAsync((Loja l) => l);
+            lojas.Setup(s => s.ObterPorUsuarioIdAsync(usuarioId)).ReturnsAsync((Loja?)null);
+            var usuarios = new Mock<IClienteServico>();
+            usuarios.Setup(s => s.ObterPorIdAsync(usuarioId)).ReturnsAsync((Usuario?)null);
+            usuarios.Setup(s => s.DefinirComoLojistaAsync(usuarioId))
+                .ThrowsAsync(new Exception("Usuário não encontrado."));
+            var cnpj = new Mock<IConsultaCnpjServico>();
+            cnpj.Setup(s => s.ConsultarAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new CnpjConsultaResultado
+                {
+                    RazaoSocial = "Loja LTDA",
+                    NomeFantasia = "Loja",
+                    SituacaoCadastral = "ATIVA"
+                });
+            var controller = new LojasController(
+                lojas.Object,
+                usuarios.Object,
+                cnpj.Object,
+                Mock.Of<IIdCodificador>());
+            Autenticar(controller, usuarioId, "Cliente", null);
+
+            var resultado = await controller.Adicionar(new LojaCriarDto
+            {
+                NomeFantasia = "Loja",
+                Cnpj = "11222333000181"
+            });
+
+            Assert.IsType<ForbidResult>(resultado);
+            lojas.Verify(s => s.AdicionarAsync(It.IsAny<Loja>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Apagar_loja_concorrente_responde_404()
+        {
+            var loja1 = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            var lojas = new Mock<ILojaServico>();
+            lojas.Setup(s => s.ObterPorIdAsync(loja1)).ReturnsAsync(new Loja
+            {
+                Id = loja1,
+                NomeFantasia = "Loja 1"
+            });
+            lojas.Setup(s => s.RemoverAsync(loja1)).ThrowsAsync(new DbUpdateConcurrencyException());
+            var controller = new LojasController(
+                lojas.Object,
+                Mock.Of<IClienteServico>(),
+                Mock.Of<IConsultaCnpjServico>(),
+                Mock.Of<IIdCodificador>(),
+                null,
+                AcessoDaLoja(lojas));
+            Autenticar(controller, Guid.Parse("99999999-9999-9999-9999-999999999999"), "Admin", null);
+
+            var resultado = await controller.Remover(loja1);
+
+            Assert.IsType<NotFoundObjectResult>(resultado);
         }
 
         [Fact]
@@ -248,7 +353,9 @@ namespace Pc.Servico.Tests
                 lojas.Object,
                 Mock.Of<IClienteServico>(),
                 Mock.Of<IConsultaCnpjServico>(),
-                Mock.Of<IIdCodificador>());
+                Mock.Of<IIdCodificador>(),
+                null,
+                AcessoDaLoja(lojas));
             Autenticar(controller, dono, "Lojista", loja1);
 
             var resultado = await controller.Atualizar(loja1, new LojaCriarDto
@@ -388,7 +495,9 @@ namespace Pc.Servico.Tests
                 lojas.Object,
                 Mock.Of<IClienteServico>(),
                 Mock.Of<IConsultaCnpjServico>(),
-                Mock.Of<IIdCodificador>());
+                Mock.Of<IIdCodificador>(),
+                null,
+                AcessoDaLoja(lojas));
             Autenticar(controller, exDono, "Lojista", loja1);
 
             var resultado = await controller.Atualizar(loja1, new LojaCriarDto { NomeFantasia = "Invadida" });

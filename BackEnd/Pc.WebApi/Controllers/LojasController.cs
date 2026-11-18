@@ -8,6 +8,7 @@ using Pc.Dominio.Enums;
 using Pc.Dominio.Validacoes;
 using Pc.Servico.Excecoes;
 using Pc.Servico.Interfaces;
+using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Estabelecimentos;
 using Pc.WebApi.Extensions;
 using Pc.WebApi.Helpers;
@@ -25,19 +26,22 @@ namespace Pc.WebApi.Controllers
         private readonly IConsultaCnpjServico _consultaCnpj;
         private readonly IIdCodificador _idCodificador;
         private readonly PresencaChat? _presenca;
+        private readonly ILojaAcesso? _lojaAcesso;
 
         public LojasController(
             ILojaServico lojaServico,
             IClienteServico usuarioServico,
             IConsultaCnpjServico consultaCnpj,
             IIdCodificador idCodificador,
-            PresencaChat? presenca = null)
+            PresencaChat? presenca = null,
+            ILojaAcesso? lojaAcesso = null)
         {
             _lojaServico = lojaServico;
             _usuarioServico = usuarioServico;
             _consultaCnpj = consultaCnpj;
             _idCodificador = idCodificador;
             _presenca = presenca;
+            _lojaAcesso = lojaAcesso;
         }
 
         [HttpGet]
@@ -113,6 +117,10 @@ namespace Pc.WebApi.Controllers
             if (usuarioId is null || usuarioId == Guid.Empty)
                 return BadRequest("Usuário inválido.");
 
+            var dono = await _usuarioServico.ObterPorIdAsync(usuarioId.Value);
+            if (dono is null)
+                return Forbid();
+
             var lojaDoUsuario = await _lojaServico.ObterPorUsuarioIdAsync(usuarioId.Value);
             if (lojaDoUsuario is not null)
             {
@@ -176,7 +184,7 @@ namespace Pc.WebApi.Controllers
 
             var donoAnterior = lojaExistente.UsuarioId;
 
-            if (!User.IsAdmin() && lojaExistente.UsuarioId != User.GetUserId())
+            if (!User.IsAdmin() && (_lojaAcesso is null || !await Authz.PertenceAsync(User, id, _lojaAcesso)))
                 return Forbid();
 
             if (dto.UsuarioId.HasValue && dto.UsuarioId != lojaExistente.UsuarioId && !User.IsAdmin())
@@ -236,7 +244,15 @@ namespace Pc.WebApi.Controllers
             if (lojaExistente is null)
                 return NotFound("Loja não encontrada.");
 
-            await _lojaServico.RemoverAsync(id);
+            try
+            {
+                await _lojaServico.RemoverAsync(id);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return NotFound("Loja não encontrada.");
+            }
+
             if (_presenca != null)
                 await _presenca.RevogarLojaAsync(id);
             return NoContent();
