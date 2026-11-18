@@ -7,7 +7,7 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
-import { useCallback, useState, useMemo } from 'react';
+import { useCallback, useState, useMemo, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { listarProdutos } from '../../services/productService';
@@ -23,12 +23,27 @@ import { produtoPertenceALoja } from '../../utils/produtoUtils';
 import { formatarPrecoBrl } from '../../utils/mapaUtils';
 import {
   calcularIndicadoresProdutosLoja,
+  textoAtencaoEstoque,
   calcularCompetitividadePrecos,
   cruzarTermosMaisProcuradosComCatalogo,
 } from '../../utils/insights';
 import { FormScreen, PrimaryButton, ListCardText } from '../../components/form';
 import { PageHeader, SurfaceCard, PillBadge } from '../../components/ui/DesignPrimitives';
 import { fonts, radii } from '../../theme';
+
+async function listarOfertasDaLoja(lojaId) {
+  const items = [];
+  let page = 1;
+  let hasNext = true;
+  while (hasNext) {
+    const pagina = await listarOfertas(page, 100, lojaId);
+    const lote = pagina.items || [];
+    items.push(...lote);
+    hasNext = Boolean(pagina.hasNext) && lote.length > 0;
+    page += 1;
+  }
+  return { items };
+}
 
 export default function MerchantDashboardScreen({ navigation }) {
   const { session, isLojista } = useAuth();
@@ -44,26 +59,49 @@ export default function MerchantDashboardScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [iaInsights, setIaInsights] = useState([]);
   const [carregandoIa, setCarregandoIa] = useState(false);
+  const [erroPainel, setErroPainel] = useState(false);
+  const [totalProdutos, setTotalProdutos] = useState(null);
+  const [produtosVistos, setProdutosVistos] = useState(false);
+  const [ofertasVistas, setOfertasVistas] = useState(false);
+  const produtosVistosRef = useRef(false);
+  const ofertasVistasRef = useRef(false);
 
   const carregarDados = useCallback(async () => {
     if (!lojaId) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    if (!produtosVistosRef.current && !ofertasVistasRef.current) setLoading(true);
     try {
       const [lojaRes, prodRes, ofertasRes, relRes] = await Promise.all([
         obterLoja(lojaId).catch(() => null),
-        listarProdutos(lojaId, 1, 100).catch(() => ({ items: [] })),
-        listarOfertas(1, 200).catch(() => ({ items: [] })),
+        listarProdutos(lojaId, 1, 100).then(
+          (v) => ({ ok: true, v }),
+          () => ({ ok: false, v: null })
+        ),
+        listarOfertasDaLoja(lojaId).then(
+          (v) => ({ ok: true, v }),
+          () => ({ ok: false, v: null })
+        ),
         obterRelatorioPesquisasLoja(lojaId).catch(() => []),
       ]);
 
-      const prods = (prodRes?.items || []).filter((p) => produtoPertenceALoja(p, lojaId));
       setLoja(lojaRes);
-      setMeusProdutos(prods);
-      setTodasOfertas(ofertasRes?.items || []);
       setRelatorioTermos(Array.isArray(relRes) ? relRes : []);
+      if (prodRes.ok) {
+        const prods = (prodRes.v?.items || []).filter((p) => produtoPertenceALoja(p, lojaId));
+        const total = Number(prodRes.v?.total);
+        setMeusProdutos(prods);
+        setTotalProdutos(Number.isFinite(total) ? total : prods.length);
+        produtosVistosRef.current = true;
+        setProdutosVistos(true);
+      }
+      if (ofertasRes.ok) {
+        setTodasOfertas(ofertasRes.v?.items || []);
+        ofertasVistasRef.current = true;
+        setOfertasVistas(true);
+      }
+      setErroPainel(!prodRes.ok || !ofertasRes.ok);
     } finally {
       setLoading(false);
     }
@@ -191,6 +229,12 @@ export default function MerchantDashboardScreen({ navigation }) {
     );
   }
 
+  const temConcorrencia = useMemo(
+    () => todasOfertas.some((o) => o?.lojaId && String(o.lojaId) !== String(lojaId)),
+    [todasOfertas, lojaId]
+  );
+  const produtosSemDado = erroPainel && !produtosVistos;
+  const ofertasSemDado = erroPainel && !ofertasVistas;
   const kpis = [
     {
       label: 'Buscas pela sua loja',
@@ -201,26 +245,34 @@ export default function MerchantDashboardScreen({ navigation }) {
     },
     {
       label: 'Produtos ativos',
-      value: indicadores.ativos.toLocaleString('pt-BR'),
-      badge: `${ofertasDaLojaAtivas} ofertas`,
+      value: produtosSemDado
+        ? '—'
+        : (totalProdutos ?? indicadores.ativos).toLocaleString('pt-BR'),
+      badge: ofertasSemDado ? '—' : `${ofertasDaLojaAtivas} ofertas`,
       icon: 'cube-outline',
       positive: true,
     },
-    {
-      label: 'Em 1º lugar no preço',
-      value: `${indicadores.percentualPrimeiroLugar}%`,
-      badge: 'Catálogo',
-      icon: 'trending-up-outline',
-      positive: indicadores.percentualPrimeiroLugar >= 50,
-    },
+    temConcorrencia
+      ? {
+          label: 'Em 1º lugar no preço',
+          value: `${indicadores.percentualPrimeiroLugar}%`,
+          badge: 'Catálogo',
+          icon: 'trending-up-outline',
+          positive: indicadores.percentualPrimeiroLugar >= 50,
+        }
+      : null,
     {
       label: 'Atenção no estoque',
-      value: String(indicadores.estoqueBaixo + indicadores.semEstoque),
-      badge: `${indicadores.semEstoque} sem estoque`,
+      ...textoAtencaoEstoque(
+        indicadores.estoqueBaixo,
+        indicadores.semEstoque,
+        produtosSemDado,
+        ofertasSemDado
+      ),
       icon: 'alert-circle-outline',
       positive: indicadores.semEstoque === 0,
     },
-  ];
+  ].filter(Boolean);
 
   const isWide = isDesktopWeb || isTabletWeb;
 
@@ -268,10 +320,15 @@ export default function MerchantDashboardScreen({ navigation }) {
           }
         />
 
-        {loading ? (
+        {loading && !produtosVistos && !ofertasVistas ? (
           <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 36 }} />
         ) : (
           <>
+            {erroPainel ? (
+              <Text style={[styles.avisoPainel, { color: colors.textMuted }]}>
+                Não foi possível atualizar o painel agora.
+              </Text>
+            ) : null}
             <View style={[styles.kpiGrid, isWide && styles.kpiGridWide]}>
               {kpis.map((k) => (
                 <SurfaceCard key={k.label} style={[styles.kpiCard, isWide && styles.kpiCardWide]}>
@@ -619,6 +676,11 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sans,
     fontSize: 12,
     marginTop: 3,
+  },
+  avisoPainel: {
+    fontFamily: fonts.sans,
+    fontSize: 13,
+    marginBottom: 12,
   },
   middleGrid: {
     gap: 14,

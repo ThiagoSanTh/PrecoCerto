@@ -218,16 +218,7 @@ namespace Pc.WebApi.Controllers
         private PapelUsuario ObterPapel() =>
             ContextoOperacional.ResolverPapel(User, ContextoOperacional.Ler(Request));
 
-        private async Task<IActionResult?> ExigirVinculoDeStaffAsync(PapelUsuario papel)
-        {
-            if (papel is not (PapelUsuario.Lojista or PapelUsuario.Vendedor))
-                return null;
-
-            var lojaId = User.GetLojaId();
-            if (!lojaId.HasValue || !await Authz.PertenceAsync(User, lojaId.Value, _lojaAcesso))
-                return Forbid();
-
-            return null;
-        }
+        private Task<IActionResult?> ExigirVinculoDeStaffAsync(PapelUsuario papel) =>
+            Authz.ExigirVinculoDeStaffAsync(this, papel, _lojaAcesso);
     }
 }

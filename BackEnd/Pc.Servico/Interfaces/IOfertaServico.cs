@@ -9,7 +9,7 @@ namespace Pc.Servico.Interfaces
         Task<Oferta> AdicionarAsync(Oferta oferta);
         Task<Oferta?> ObterPorIdAsync(Guid id);
         Task<List<Oferta>> ListarAsync();
-        Task<PaginacaoResultado<Oferta>> ListarPaginadoAsync(PaginacaoParametros paginacao);
+        Task<PaginacaoResultado<Oferta>> ListarPaginadoAsync(PaginacaoParametros paginacao, Guid? lojaId = null);
         Task<List<Oferta>> ObterPorProdutoAsync(Guid produtoId);
         Task<List<Oferta>> ListarDisponiveisPorProdutosAsync(IEnumerable<Guid> produtoIds);
         Task AtualizarAsync(Oferta oferta);

@@ -338,8 +338,6 @@ export function calcularIndicadoresProdutosLoja(meusProdutos = [], arg2 = [], ar
       if (meuPreco <= menorMercado + 0.005) {
         primeiroLugarCount += 1;
       }
-    } else if (Number.isFinite(meuPreco) && meuPreco > 0) {
-      primeiroLugarCount += 1;
     }
 
     const precosOrdenados = [
@@ -378,6 +376,16 @@ export function calcularIndicadoresProdutosLoja(meusProdutos = [], arg2 = [], ar
     produtosEnriquecidos,
     ofertasDaLojaPorProduto,
     todasOfertasPorProduto,
+  };
+}
+
+export function textoAtencaoEstoque(estoqueBaixo, semEstoque, produtosSemDado, ofertasSemDado) {
+  if (produtosSemDado || ofertasSemDado) {
+    return { value: '—', badge: '—' };
+  }
+  return {
+    value: String(estoqueBaixo + semEstoque),
+    badge: `${semEstoque} sem estoque`,
   };
 }
 

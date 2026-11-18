@@ -9,6 +9,7 @@ import {
   agruparHistoricoPorDia,
   calcularIndicadoresHistorico,
   calcularIndicadoresProdutosLoja,
+  textoAtencaoEstoque,
   calcularCompetitividadePrecos,
   cruzarTermosMaisProcuradosComCatalogo,
 } from '../insights.js';
@@ -137,6 +138,21 @@ test('calcularIndicadoresProdutosLoja and calcularCompetitividadePrecos compute 
   assert.equal(comp.length, 3);
   const cafe = comp.find((c) => c.produtoId === 'p1');
   assert.ok(cafe.diferencaPercentual < 0);
+});
+
+test('atenção no estoque mostra traço se produtos ou ofertas não carregaram', () => {
+  assert.deepEqual(textoAtencaoEstoque(0, 0, false, true), { value: '—', badge: '—' });
+  assert.deepEqual(textoAtencaoEstoque(0, 0, true, false), { value: '—', badge: '—' });
+  assert.deepEqual(textoAtencaoEstoque(0, 0, false, false), { value: '0', badge: '0 sem estoque' });
+});
+
+test('produto com preço e sem oferta não conta como 1º lugar', () => {
+  const ind = calcularIndicadoresProdutosLoja(
+    [{ id: 'p1', nome: 'Só preço', preco: 10, lojaId: 'L1' }],
+    [],
+    'L1'
+  );
+  assert.equal(ind.percentualPrimeiroLugar, 0);
 });
 
 test('cruzarTermosMaisProcuradosComCatalogo marks whether searched term exists in store catalog', () => {

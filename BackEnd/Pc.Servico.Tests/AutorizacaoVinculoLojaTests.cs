@@ -267,10 +267,89 @@ namespace Pc.Servico.Tests
 
             var erro = await Record.ExceptionAsync(() => hub.ConectarUsuario());
 
-            Assert.IsType<HubException>(erro);
+            var hubErro = Assert.IsType<HubException>(erro);
+            Assert.Equal("Acesso negado.", hubErro.Message);
             grupos.Verify(
                 g => g.AddToGroupAsync(It.IsAny<string>(), $"loja:{LojaA}", It.IsAny<CancellationToken>()),
                 Times.Never);
+        }
+
+        [Theory]
+        [InlineData("Lojista", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")]
+        [InlineData("Vendedor", "dddddddd-dddd-dddd-dddd-dddddddddddd")]
+        public async Task Staff_sem_claim_de_loja_recebe_codigo_para_relogar(string role, string userId)
+        {
+            var conversas = ConversasVazias();
+            var controller = new ConversasController(
+                conversas.Object,
+                new IdsFixos(),
+                Notificacao(),
+                Acesso(LojaA, DonoA));
+            Autenticar(controller, Guid.Parse(userId), role, null);
+
+            var resultado = await controller.Listar();
+
+            var obj = Assert.IsType<ObjectResult>(resultado);
+            Assert.Equal(StatusCodes.Status403Forbidden, obj.StatusCode);
+            var problem = Assert.IsType<ProblemDetails>(obj.Value);
+            Assert.Equal("loja_claim_ausente", problem.Extensions["code"]);
+            Assert.Equal("loja_claim_ausente", controller.Response.Headers["X-Error-Code"].ToString());
+            conversas.Verify(
+                s => s.ListarDoUsuarioAsync(It.IsAny<Guid>(), It.IsAny<PapelUsuario>(), It.IsAny<Guid?>()),
+                Times.Never);
+        }
+
+        [Theory]
+        [InlineData("Lojista", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")]
+        [InlineData("Vendedor", "dddddddd-dddd-dddd-dddd-dddddddddddd")]
+        public async Task Staff_sem_claim_de_loja_no_hub_recebe_codigo(string role, string userId)
+        {
+            var grupos = Grupos();
+            var hub = Hub(Acesso(LojaA, DonoA), grupos, Guid.Parse(userId), role);
+            hub.Context = Contexto(Guid.Parse(userId), role, null);
+
+            var erro = await Record.ExceptionAsync(() => hub.ConectarUsuario());
+
+            var hubErro = Assert.IsType<HubException>(erro);
+            Assert.StartsWith("loja_claim_ausente", hubErro.Message);
+            grupos.Verify(
+                g => g.AddToGroupAsync(It.IsAny<string>(), $"loja:{LojaA}", It.IsAny<CancellationToken>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task Staff_com_claim_loja_vazio_recebe_o_mesmo_codigo()
+        {
+            var conversas = ConversasVazias();
+            var controller = new ConversasController(
+                conversas.Object,
+                new IdsFixos(),
+                Notificacao(),
+                Acesso(LojaA, DonoA));
+            Autenticar(controller, DonoA, "Lojista", Guid.Empty);
+
+            var resultado = await controller.Listar();
+
+            var obj = Assert.IsType<ObjectResult>(resultado);
+            Assert.Equal(StatusCodes.Status403Forbidden, obj.StatusCode);
+            var problem = Assert.IsType<ProblemDetails>(obj.Value);
+            Assert.Equal("loja_claim_ausente", problem.Extensions["code"]);
+            Assert.Equal("loja_claim_ausente", controller.Response.Headers["X-Error-Code"].ToString());
+            conversas.Verify(
+                s => s.ListarDoUsuarioAsync(It.IsAny<Guid>(), It.IsAny<PapelUsuario>(), It.IsAny<Guid?>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task Cliente_com_papel_errado_nao_recebe_codigo_de_claim()
+        {
+            var controller = Lojistas(Mock.Of<IClienteServico>(), Acesso(LojaA, DonoA));
+            Autenticar(controller, Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"), "Cliente", null);
+
+            var resultado = await controller.ListarVendedores(LojaA);
+
+            Assert.IsType<ForbidResult>(resultado);
+            Assert.False(controller.Response.Headers.ContainsKey("X-Error-Code"));
         }
 
         [Fact]
