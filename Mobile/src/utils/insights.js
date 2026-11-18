@@ -379,6 +379,16 @@ export function calcularIndicadoresProdutosLoja(meusProdutos = [], arg2 = [], ar
   };
 }
 
+export function textoAtencaoEstoque(estoqueBaixo, semEstoque, produtosSemDado, ofertasSemDado) {
+  if (produtosSemDado || ofertasSemDado) {
+    return { value: '—', badge: '—' };
+  }
+  return {
+    value: String(estoqueBaixo + semEstoque),
+    badge: `${semEstoque} sem estoque`,
+  };
+}
+
 export function calcularCompetitividadePrecos(meusProdutos = [], todasOfertas = [], lojaId = null) {
   const { ofertasDaLojaPorProduto, todasOfertasPorProduto } = calcularIndicadoresProdutosLoja(
     meusProdutos,

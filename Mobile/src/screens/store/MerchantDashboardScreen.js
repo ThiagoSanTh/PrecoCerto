@@ -23,6 +23,7 @@ import { produtoPertenceALoja } from '../../utils/produtoUtils';
 import { formatarPrecoBrl } from '../../utils/mapaUtils';
 import {
   calcularIndicadoresProdutosLoja,
+  textoAtencaoEstoque,
   calcularCompetitividadePrecos,
   cruzarTermosMaisProcuradosComCatalogo,
 } from '../../utils/insights';
@@ -262,8 +263,12 @@ export default function MerchantDashboardScreen({ navigation }) {
       : null,
     {
       label: 'Atenção no estoque',
-      value: produtosSemDado ? '—' : String(indicadores.estoqueBaixo + indicadores.semEstoque),
-      badge: produtosSemDado ? '—' : `${indicadores.semEstoque} sem estoque`,
+      ...textoAtencaoEstoque(
+        indicadores.estoqueBaixo,
+        indicadores.semEstoque,
+        produtosSemDado,
+        ofertasSemDado
+      ),
       icon: 'alert-circle-outline',
       positive: indicadores.semEstoque === 0,
     },
