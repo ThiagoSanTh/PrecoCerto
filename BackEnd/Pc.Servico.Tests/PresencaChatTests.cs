@@ -124,6 +124,119 @@ namespace Pc.Servico.Tests
         }
 
         [Fact]
+        public async Task Desativar_usuario_tira_a_conexao_da_loja_e_da_conversa()
+        {
+            var removidos = new List<string>();
+            var presenca = Presenca(Grupos(removidos));
+            presenca.Ligar("c1", DonoId);
+            presenca.Loja("c1", DonoId, LojaId);
+            presenca.Conversa("c1", DonoId, LojaId, "conversa-publica");
+            presenca.Loja("c1", DonoId, OutraLoja);
+
+            var usuarios = new Mock<IClienteServico>();
+            usuarios.Setup(s => s.RemoverAsync(DonoId)).Returns(Task.CompletedTask);
+            var controller = new LojistasController(
+                usuarios.Object,
+                Mock.Of<IIdCodificador>(),
+                Mock.Of<ILojaAcesso>(),
+                presenca);
+            Autenticar(controller, NovoDono, "Admin", null);
+
+            var resultado = await controller.Remover(DonoId);
+
+            Assert.IsType<NoContentResult>(resultado);
+            Assert.Contains($"loja:{LojaId}", removidos);
+            Assert.Contains("conversa-publica", removidos);
+            Assert.Contains($"loja:{OutraLoja}", removidos);
+        }
+
+        [Fact]
+        public async Task Desativar_depois_de_religar_ainda_tira_a_conversa()
+        {
+            var removidos = new List<string>();
+            var grupos = Grupos(removidos);
+            var presenca = Presenca(grupos);
+            var hub = Hub(presenca, grupos, DonoId, "Lojista");
+            await hub.EntrarConversa("conversa-publica");
+            await hub.ConectarUsuario();
+
+            var usuarios = new Mock<IClienteServico>();
+            usuarios.Setup(s => s.RemoverAsync(DonoId)).Returns(Task.CompletedTask);
+            var controller = new LojistasController(
+                usuarios.Object,
+                Mock.Of<IIdCodificador>(),
+                Mock.Of<ILojaAcesso>(),
+                presenca);
+            Autenticar(controller, NovoDono, "Admin", null);
+
+            var resultado = await controller.Remover(DonoId);
+
+            Assert.IsType<NoContentResult>(resultado);
+            Assert.Contains("conversa-publica", removidos);
+        }
+
+        [Fact]
+        public async Task Desativar_cliente_tira_a_conversa_do_hub()
+        {
+            var removidos = new List<string>();
+            var presenca = Presenca(Grupos(removidos));
+            presenca.Ligar("c1", DonoId);
+            presenca.Conversa("c1", DonoId, LojaId, "conversa-publica");
+
+            var usuarios = new Mock<IClienteServico>();
+            usuarios.Setup(s => s.RemoverAsync(DonoId)).Returns(Task.CompletedTask);
+            var controller = new ClientesController(
+                usuarios.Object,
+                Mock.Of<Pc.WebApi.Services.IJwtTokenService>(),
+                Mock.Of<Pc.Servico.Interfaces.IEmailService>(),
+                Mock.Of<IIdCodificador>(),
+                presenca);
+
+            var resultado = await controller.Remover(DonoId);
+
+            Assert.IsType<NoContentResult>(resultado);
+            Assert.Contains("conversa-publica", removidos);
+        }
+
+        [Fact]
+        public async Task Remover_loja_tira_dono_e_cliente_dos_grupos()
+        {
+            var removidos = new List<string>();
+            var presenca = Presenca(Grupos(removidos));
+            presenca.Ligar("dono", DonoId);
+            presenca.Loja("dono", DonoId, LojaId);
+            presenca.Conversa("dono", DonoId, LojaId, "conversa-publica");
+            presenca.Ligar("cliente", VendedorId);
+            presenca.Conversa("cliente", VendedorId, LojaId, "conversa-cliente");
+            presenca.Ligar("outra", NovoDono);
+            presenca.Loja("outra", NovoDono, OutraLoja);
+
+            var lojas = new Mock<ILojaServico>();
+            lojas.Setup(s => s.ObterPorIdAsync(LojaId)).ReturnsAsync(new Loja
+            {
+                Id = LojaId,
+                UsuarioId = DonoId,
+                NomeFantasia = "Loja"
+            });
+            lojas.Setup(s => s.RemoverAsync(LojaId)).Returns(Task.CompletedTask);
+            var controller = new LojasController(
+                lojas.Object,
+                Mock.Of<IClienteServico>(),
+                Mock.Of<IConsultaCnpjServico>(),
+                Mock.Of<IIdCodificador>(),
+                presenca);
+            Autenticar(controller, NovoDono, "Admin", null);
+
+            var resultado = await controller.Remover(LojaId);
+
+            Assert.IsType<NoContentResult>(resultado);
+            Assert.Contains($"loja:{LojaId}", removidos);
+            Assert.Contains("conversa-publica", removidos);
+            Assert.Contains("conversa-cliente", removidos);
+            Assert.DoesNotContain($"loja:{OutraLoja}", removidos);
+        }
+
+        [Fact]
         public async Task Conectar_entrar_e_conectar_de_novo_ainda_revoga_a_conversa()
         {
             await SequenciaRevogaConversa(async hub =>
@@ -208,6 +321,15 @@ namespace Pc.Servico.Tests
             });
             var pessoas = new Mock<IClienteRepositorio>();
             pessoas.Setup(r => r.ObterPorIdAsync(It.IsAny<Guid>())).ReturnsAsync((Usuario?)null);
+            pessoas.Setup(r => r.ObterPorIdAsync(DonoId)).ReturnsAsync(new Usuario
+            {
+                Id = DonoId,
+                NomeUsuario = "Dono",
+                Email = "dono@loja.test",
+                Papel = PapelUsuario.Lojista,
+                Tipo = TipoUsuario.Lojista,
+                Ativo = true
+            });
             return new LojaAcesso(lojas.Object, pessoas.Object);
         }
 

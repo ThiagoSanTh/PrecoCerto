@@ -20,17 +20,17 @@ namespace Pc.WebApi.Authorization
         }
 
         /// <summary>
-        /// Admin passa. Os demais precisam do vínculo atual no banco
-        /// (dono por Loja.UsuarioId, vendedor por LojaVinculadaId). O claim lojaId não basta.
+        /// Admin passa só com o papel ativo no banco. Os demais precisam do vínculo
+        /// atual (dono por Loja.UsuarioId, vendedor por LojaVinculadaId). O claim não basta.
         /// </summary>
         public static Task<bool> PertenceAsync(ClaimsPrincipal user, Guid lojaId, ILojaAcesso acesso)
         {
-            if (user.IsAdmin())
-                return Task.FromResult(true);
-
             var userId = user.GetUserId();
             if (!userId.HasValue)
                 return Task.FromResult(false);
+
+            if (user.IsAdmin())
+                return acesso.EhAdminAsync(userId.Value);
 
             return acesso.PertenceAsync(userId.Value, lojaId);
         }

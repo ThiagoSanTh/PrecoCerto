@@ -68,6 +68,40 @@ namespace Pc.Servico.Tests
             Assert.True(await acesso.PertenceAsync(vendedor.Id, loja.Id));
         }
 
+        [Fact]
+        public async Task Dono_inativo_nao_pertence_a_loja()
+        {
+            await using var conexao = new SqliteConnection("Data Source=:memory:");
+            await conexao.OpenAsync();
+            var options = new DbContextOptionsBuilder<AppDbContext>()
+                .UseSqlite(conexao)
+                .Options;
+            await using var ctx = new ContextoSqlite(options);
+            await ctx.Database.EnsureCreatedAsync();
+
+            var dono = new Usuario
+            {
+                NomeUsuario = "Dono",
+                Email = "dono-inativo@loja.test",
+                SenhaHash = "x",
+                Papel = PapelUsuario.Lojista,
+                Tipo = TipoUsuario.Lojista,
+                Ativo = false
+            };
+            var loja = new Loja
+            {
+                NomeFantasia = "Loja",
+                UsuarioId = dono.Id
+            };
+            ctx.Usuarios.Add(dono);
+            ctx.Lojas.Add(loja);
+            await ctx.SaveChangesAsync();
+
+            var acesso = new LojaAcesso(new LojaRepositorio(ctx), new ClienteRepositorio(ctx));
+
+            Assert.False(await acesso.PertenceAsync(dono.Id, loja.Id));
+        }
+
         /// <summary>
         /// Segura a primeira leitura para as duas consultas do WhenAll
         /// se sobreporem no mesmo DbContext.
