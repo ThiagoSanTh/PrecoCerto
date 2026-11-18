@@ -17,6 +17,7 @@ import {
   listarConversasComStale,
 } from '../../services/chatService';
 import { FormScreen } from '../../components/form';
+import { fontSizeInputWeb } from '../../components/form/formStyles';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useChatBadge } from '../../context/ChatBadgeContext';
@@ -194,7 +195,10 @@ export default function ConversasScreen({ navigation }) {
               onChangeText={setBusca}
               placeholder="Buscar conversa"
               placeholderTextColor={colors.placeholder}
-              style={[styles.searchInput, { color: colors.text }]}
+              style={[
+                styles.searchInput,
+                { color: colors.text, fontSize: fontSizeInputWeb(13.5) },
+              ]}
             />
             {busca.length > 0 ? (
               <Pressable onPress={() => setBusca('')} hitSlop={6}>

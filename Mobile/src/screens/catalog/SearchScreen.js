@@ -45,6 +45,7 @@ import LojasMapView from '../../components/LojasMapView';
 import { MODO_LISTA, MODO_MAPA } from '../../components/feed/MapSearchOverlay';
 import WeatherCard from '../../components/feed/WeatherCard';
 import { FormScreen, ListCardText } from '../../components/form';
+import { fontSizeInputWeb, touchTarget } from '../../components/form/formStyles';
 import {
   AiBannerCard,
   PillBadge,
@@ -736,7 +737,7 @@ export default function SearchScreen() {
                   handleFavorito(item);
                 }}
                 hitSlop={8}
-                style={styles.cardFavBtn}
+                style={[styles.cardFavBtn, touchTarget]}
                 accessibilityRole="button"
                 accessibilityLabel={
                   ehFavorito ? 'Remover dos favoritos' : 'Adicionar aos favoritos'
@@ -1069,12 +1070,13 @@ export default function SearchScreen() {
             placeholderTextColor={colors.placeholder}
             onSubmitEditing={handleSearch}
             returnKeyType="search"
-            style={[styles.searchInput, { color: colors.text }]}
+            style={[styles.searchInput, { color: colors.text, fontSize: fontSizeInputWeb(15) }]}
           />
           {termoBusca.length > 0 ? (
             <Pressable
               onPress={() => setTermoBusca('')}
-              style={styles.clearBtn}
+              hitSlop={8}
+              style={[styles.clearBtn, touchTarget]}
               accessibilityRole="button"
               accessibilityLabel="Limpar busca"
             >
@@ -1277,8 +1279,14 @@ export default function SearchScreen() {
                 ? 'loja/oferta encontrada'
                 : 'ofertas encontradas'}
             </Text>
-            <Pressable onPress={alternarOrdenacao} hitSlop={8}>
-              <Text style={[styles.sortTrigger, { color: colors.primary }]}>
+            <Pressable
+              onPress={alternarOrdenacao}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={ordenarPor === 'preco' ? 'Menor preço' : 'Mais perto'}
+              style={styles.sortTrigger}
+            >
+              <Text style={[styles.sortTriggerText, { color: colors.primary }]}>
                 {ordenarPor === 'preco' ? 'Menor preço ▾' : 'Mais perto ▾'}
               </Text>
             </Pressable>
@@ -1506,8 +1514,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   filterOptionPill: {
+    minHeight: 44,
     paddingHorizontal: 12,
     paddingVertical: 6,
+    justifyContent: 'center',
     borderRadius: radii.full,
     borderWidth: 1,
     borderColor: 'transparent',
@@ -1568,6 +1578,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   sortTrigger: {
+    minHeight: 44,
+    minWidth: 44,
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  sortTriggerText: {
     fontFamily: fonts.sansSemiBold,
     fontSize: 12,
     fontWeight: '600',
