@@ -33,6 +33,7 @@ export default function FormScreen({
   maxContentWidth,
   error,
   onErrorAction,
+  bottomOffset = 0,
 }) {
   const s = useFormStyles();
   const { colors, isDark } = useTheme();
@@ -119,6 +120,7 @@ export default function FormScreen({
     <SafeAreaView
       style={[
         s.safe,
+        bottomOffset > 0 ? { marginBottom: bottomOffset, overflow: 'hidden' } : null,
         webSafeTopStyle,
         {
           backgroundColor: isAuthLayout

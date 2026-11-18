@@ -325,5 +325,11 @@ export const formStyles = createFormStyles(1);
 export const touchTarget = {
   minHeight: 44,
   minWidth: 44,
+  alignItems: 'center',
   justifyContent: 'center',
 };
+
+/** Safari no iPhone dá zoom ao focar input com font-size < 16px. */
+export function fontSizeInputWeb(size) {
+  return Platform.OS === 'web' ? Math.max(16, size) : size;
+}

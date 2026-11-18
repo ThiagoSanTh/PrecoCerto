@@ -23,6 +23,7 @@ import {
   PrimaryButton,
   ListCardText,
 } from '../../components/form';
+import { fontSizeInputWeb, touchTarget } from '../../components/form/formStyles';
 import {
   PageHeader,
   PillBadge,
@@ -278,7 +279,10 @@ export default function ProductsScreen({ navigation }) {
               placeholder="Buscar por nome, marca ou código de barras"
               placeholderTextColor={colors.placeholder}
               returnKeyType="search"
-              style={[styles.searchInput, { color: colors.text }]}
+              style={[
+                styles.searchInput,
+                { color: colors.text, fontSize: fontSizeInputWeb(14) },
+              ]}
             />
             {termoBusca.length > 0 ? (
               <Pressable onPress={() => setTermoBusca('')} hitSlop={6}>
@@ -460,8 +464,10 @@ export default function ProductsScreen({ navigation }) {
                           e?.stopPropagation?.();
                           abrirDetalhesOuEditar(p);
                         }}
+                        hitSlop={8}
                         style={[
                           styles.editIconBtn,
+                          touchTarget,
                           { backgroundColor: colors.surfaceSubtle },
                         ]}
                         accessibilityRole="button"
@@ -538,11 +544,22 @@ export default function ProductsScreen({ navigation }) {
                       >
                         {formatarPrecoBrl(p.precoEfetivo)}
                       </Text>
-                      <Ionicons
-                        name="pencil-outline"
-                        size={16}
-                        color={colors.textMuted}
-                      />
+                      <Pressable
+                        onPress={(e) => {
+                          e?.stopPropagation?.();
+                          abrirDetalhesOuEditar(p);
+                        }}
+                        hitSlop={8}
+                        style={[styles.editIconBtn, touchTarget]}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Editar ${nome}`}
+                      >
+                        <Ionicons
+                          name="pencil-outline"
+                          size={18}
+                          color={colors.textMuted}
+                        />
+                      </Pressable>
                     </View>
                   </Pressable>
                 );
@@ -686,8 +703,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   editIconBtn: {
-    width: 32,
-    height: 32,
+    minWidth: 44,
+    minHeight: 44,
     borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',

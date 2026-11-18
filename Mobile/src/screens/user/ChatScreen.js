@@ -23,6 +23,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useChatBadge } from '../../context/ChatBadgeContext';
 import { useTheme } from '../../context/ThemeContext';
 import { FormScreen } from '../../components/form';
+import { fontSizeInputWeb, touchTarget } from '../../components/form/formStyles';
 import { fonts, radii, shadows } from '../../theme';
 
 const PAPEL_POR_TIPO = { cliente: 1, lojista: 2, vendedor: 3 };
@@ -217,6 +218,7 @@ export function ChatThreadPanel({
             onPress={onBack}
             style={[
               styles.backBtn,
+              touchTarget,
               { borderColor: colors.border, backgroundColor: colors.surface },
             ]}
             accessibilityRole="button"
@@ -349,7 +351,7 @@ export function ChatThreadPanel({
             onKeyPress={handleKeyPress}
             blurOnSubmit={false}
             accessibilityLabel="Digite sua mensagem"
-            style={[styles.inputField, { color: colors.text }]}
+            style={[styles.inputField, { color: colors.text, fontSize: fontSizeInputWeb(14) }]}
           />
           <Pressable
             onPress={handleEnviar}
@@ -359,6 +361,7 @@ export function ChatThreadPanel({
             accessibilityState={{ disabled: enviando || !texto.trim() }}
             style={[
               styles.sendBtn,
+              touchTarget,
               {
                 backgroundColor: colors.primary,
                 opacity: enviando || !texto.trim() ? 0.5 : 1,
@@ -410,8 +413,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   backBtn: {
-    width: 36,
-    height: 36,
+    minWidth: 44,
+    minHeight: 44,
     borderRadius: radii.md,
     borderWidth: 1,
     alignItems: 'center',
@@ -506,8 +509,8 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   sendBtn: {
-    width: 38,
-    height: 38,
+    minWidth: 44,
+    minHeight: 44,
     borderRadius: radii.md,
     alignItems: 'center',
     justifyContent: 'center',

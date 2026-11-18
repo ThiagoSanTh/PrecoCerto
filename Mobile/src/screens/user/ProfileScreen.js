@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -17,6 +18,8 @@ import { obterLoja } from '../../services/lojaService';
 import { navigationRef } from '../../navigation/navigationRef';
 import { clearPendingAuthAction } from '../../navigation/authIntent';
 import { FormScreen } from '../../components/form';
+import { touchTarget } from '../../components/form/formStyles';
+import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import { SurfaceCard } from '../../components/ui/DesignPrimitives';
 import { fonts, radii } from '../../theme';
 
@@ -39,6 +42,9 @@ export default function ProfileScreen({ navigation }) {
     sincronizarGpsCliente,
   } = useAuth();
   const { colors, isDark, alternarTema } = useTheme();
+  const { useSidebarNav, insets } = useLayoutProfile();
+  const tabBarAltura = useBottomTabBarHeight();
+  const folgaBase = Math.max(tabBarAltura, 96);
   const perfil = session?.perfil;
   const clienteId = isCliente ? perfil?.id : null;
   const lojaId = perfil?.lojaId || perfil?.lojaVinculadaId || null;
@@ -155,8 +161,9 @@ export default function ProfileScreen({ navigation }) {
       hideHeader
       scrollable
       maxContentWidth={780}
+      bottomOffset={useSidebarNav ? 0 : folgaBase + insets.bottom}
     >
-      <View style={styles.container}>
+      <View style={[styles.container, { paddingBottom: 24 }]}>
         {/* Hero Ink Card */}
         <View style={[styles.heroCard, { backgroundColor: colors.ink }]}>
           <View style={styles.heroTopRow}>
@@ -177,16 +184,10 @@ export default function ProfileScreen({ navigation }) {
             </View>
 
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text
-                style={[styles.userName, { color: colors.inkForeground }]}
-                numberOfLines={1}
-              >
+              <Text style={[styles.userName, { color: colors.inkForeground }]}>
                 {perfil?.nomeUsuario || 'Usuário'}
               </Text>
-              <Text
-                style={[styles.userEmail, { color: colors.inkMuted }]}
-                numberOfLines={1}
-              >
+              <Text style={[styles.userEmail, { color: colors.inkMuted }]}>
                 {perfil?.email || ''}
               </Text>
             </View>
@@ -195,6 +196,7 @@ export default function ProfileScreen({ navigation }) {
               onPress={() => navigation.navigate('EditProfile')}
               style={[
                 styles.heroEditBtn,
+                touchTarget,
                 { backgroundColor: colors.sidebarAccent },
               ]}
               accessibilityRole="button"
@@ -292,13 +294,13 @@ export default function ProfileScreen({ navigation }) {
               </View>
               <Text
                 style={[styles.settingLabel, { color: colors.text }]}
-                numberOfLines={1}
+                numberOfLines={2}
               >
                 {row.label}
               </Text>
               <Text
                 style={[styles.settingValue, { color: colors.textMuted }]}
-                numberOfLines={1}
+                numberOfLines={2}
               >
                 {row.value}
               </Text>
@@ -455,7 +457,6 @@ export default function ProfileScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     gap: 18,
-    paddingBottom: 90,
   },
   heroCard: {
     borderRadius: radii['2xl'],
@@ -489,8 +490,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   heroEditBtn: {
-    width: 38,
-    height: 38,
+    minWidth: 44,
+    minHeight: 44,
     borderRadius: radii.md,
     alignItems: 'center',
     justifyContent: 'center',

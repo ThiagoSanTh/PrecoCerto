@@ -13,6 +13,7 @@ import {
 import { useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { FormScreen } from '../../components/form';
+import { fontSizeInputWeb } from '../../components/form/formStyles';
 import { PillBadge } from '../../components/ui/DesignPrimitives';
 import { useAuth } from '../../context/AuthContext';
 import { irParaLogin, setPendingAuthAction } from '../../navigation/authIntent';
@@ -570,7 +571,7 @@ export default function AiChatScreen({ navigation, route }) {
             onKeyPress={handleKeyPress}
             blurOnSubmit={false}
             accessibilityLabel="Digite sua pergunta para o assistente"
-            style={[styles.inputField, { color: colors.text }]}
+            style={[styles.inputField, { color: colors.text, fontSize: fontSizeInputWeb(14) }]}
           />
           <Pressable
             onPress={handleEnviar}
