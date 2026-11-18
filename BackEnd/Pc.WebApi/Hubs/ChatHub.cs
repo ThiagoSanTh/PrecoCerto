@@ -48,7 +48,7 @@ namespace Pc.WebApi.Hubs
                     throw new HubException("Acesso negado.");
 
                 await Groups.AddToGroupAsync(Context.ConnectionId, $"loja:{lojaId.Value}");
-                _presenca?.Loja(Context.ConnectionId, lojaId.Value);
+                _presenca?.Loja(Context.ConnectionId, userId.Value, lojaId.Value);
             }
             else
             {
@@ -79,16 +79,17 @@ namespace Pc.WebApi.Hubs
             if (!userId.HasValue || !_idCodificador.TentarDecodificar(conversaCodigo, out var conversaId))
                 throw new HubException("Conversa inválida.");
 
+            var papel = ObterPapel(Context.User!);
             var pode = await _conversaServico.UsuarioPodeAcessarAsync(
-                conversaId, userId.Value, ObterPapel(Context.User!));
+                conversaId, userId.Value, papel);
 
             if (!pode)
                 throw new HubException("Acesso negado.");
 
             await Groups.AddToGroupAsync(Context.ConnectionId, conversaCodigo);
             var conversa = await _conversaServico.ObterPorIdAsync(conversaId);
-            if (conversa != null)
-                _presenca?.Conversa(Context.ConnectionId, conversa.LojaId, conversaCodigo);
+            if (conversa != null && papel != PapelUsuario.Cliente)
+                _presenca?.Conversa(Context.ConnectionId, userId.Value, conversa.LojaId, conversaCodigo);
             await _conversaServico.MarcarComoRecebidasAsync(conversaId, userId.Value);
         }
 
