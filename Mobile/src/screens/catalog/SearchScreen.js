@@ -829,6 +829,8 @@ export default function SearchScreen() {
               onPress={() =>
                 selectedItem.lojaId && abrirCatalogoLoja(selectedItem.lojaId)
               }
+              accessibilityRole="button"
+              style={styles.mapCardHit}
             >
               <Text
                 style={[styles.floatingStoreTitle, { color: colors.text }]}
@@ -837,7 +839,11 @@ export default function SearchScreen() {
                 {selectedItem.lojaNome || 'Loja parceira'}
               </Text>
             </Pressable>
-            <Pressable onPress={() => abrirProduto(selectedItem.id, selectedItem)}>
+            <Pressable
+              onPress={() => abrirProduto(selectedItem.id, selectedItem)}
+              accessibilityRole="button"
+              style={styles.mapCardHit}
+            >
               <Text
                 style={[styles.floatingProductSub, { color: colors.textMuted }]}
                 numberOfLines={1}
@@ -1750,10 +1756,14 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: 4,
   },
+  mapCardHit: {
+    minHeight: 44,
+    justifyContent: 'center',
+  },
   collapseMapCardBtn: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1766,12 +1776,14 @@ const styles = StyleSheet.create({
     fontFamily: fonts.display,
     fontSize: 17,
     fontWeight: '700',
-    marginTop: 2,
+    minHeight: 44,
+    lineHeight: 44,
   },
   floatingProductSub: {
     fontFamily: fonts.sans,
     fontSize: 12.5,
-    marginTop: 2,
+    minHeight: 44,
+    lineHeight: 44,
   },
   floatingPrice: {
     fontFamily: fonts.display,
@@ -1790,6 +1802,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
+    minHeight: 44,
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: radii.md,
@@ -1800,8 +1813,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   iconActionBtn: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
     borderRadius: radii.md,
     borderWidth: 1,
     alignItems: 'center',
