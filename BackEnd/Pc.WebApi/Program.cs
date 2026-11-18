@@ -196,7 +196,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             {
                 var accessToken = context.Request.Query["access_token"];
                 var path = context.HttpContext.Request.Path;
-                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/chat"))
+                var upgrade = context.Request.Headers.Upgrade.ToString();
+                if (!string.IsNullOrEmpty(accessToken)
+                    && path.StartsWithSegments("/hubs/chat")
+                    && string.Equals(upgrade, "websocket", StringComparison.OrdinalIgnoreCase))
                     context.Token = accessToken;
                 return Task.CompletedTask;
             }
@@ -261,8 +264,8 @@ builder.Services.AddRateLimiter(options =>
             cancellationToken);
     };
     options.AddPolicy("login", ctx => JanelaPorIp(ctx, "login", 10));
-    options.AddPolicy("catalogo", ctx => JanelaPorIp(ctx, "catalogo", 120));
-    options.AddPolicy("api", ctx => JanelaPorIp(ctx, "api", 300));
+    options.AddPolicy("catalogo", ctx => JanelaPorIp(ctx, "catalogo", 600));
+    options.AddPolicy("api", ctx => JanelaPorIp(ctx, "api", 1200));
     options.AddPolicy("ia", ctx => JanelaPorIp(ctx, "ia", 30));
     options.AddPolicy("rag", ctx => JanelaPorIp(ctx, "rag", 20));
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
@@ -285,6 +288,9 @@ builder.Services.AddRateLimiter(options =>
         if (path.StartsWith("/api/Rag", StringComparison.OrdinalIgnoreCase))
             return JanelaPorIp(context, "rag", 20);
 
+        if (path.StartsWith("/hubs/chat", StringComparison.OrdinalIgnoreCase))
+            return RateLimitPartition.GetNoLimiter("chat");
+
         if (path.StartsWith("/api/Feed", StringComparison.OrdinalIgnoreCase)
             || path.StartsWith("/api/Produtos", StringComparison.OrdinalIgnoreCase)
             || path.StartsWith("/api/Lojas", StringComparison.OrdinalIgnoreCase)
@@ -293,10 +299,10 @@ builder.Services.AddRateLimiter(options =>
             || path.StartsWith("/api/Avaliacoes", StringComparison.OrdinalIgnoreCase)
             || path.StartsWith("/api/HistoricoPesquisa/sugestoes", StringComparison.OrdinalIgnoreCase))
         {
-            return JanelaPorIp(context, "catalogo", 120);
+            return JanelaPorIp(context, "catalogo", 600);
         }
 
-        return JanelaPorIp(context, "api", 300);
+        return JanelaPorIp(context, "api", 1200);
     });
 });
 
@@ -541,6 +547,24 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 var app = builder.Build();
 
 app.UseForwardedHeaders();
+
+var diagnosticoProxy = 0;
+app.Use(async (context, next) =>
+{
+    if (Interlocked.Exchange(ref diagnosticoProxy, 1) == 0)
+    {
+        var log = context.RequestServices.GetRequiredService<ILoggerFactory>()
+            .CreateLogger("PrecoCerto.Proxy");
+        var peerOriginal = context.Request.Headers["X-Original-For"].ToString();
+        log.LogInformation(
+            "Proxy: RemoteIp={RemoteIp} XForwardedForAplicado={Aplicado} PeerOriginal={Peer}",
+            context.Connection.RemoteIpAddress,
+            peerOriginal.Length > 0,
+            peerOriginal);
+    }
+
+    await next(context);
+});
 
 app.Use(async (context, next) =>
 {

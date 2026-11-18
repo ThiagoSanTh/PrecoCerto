@@ -1,8 +1,14 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Net;
+using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using Pc.Dominio.Comum;
+using Pc.WebApi.Configuration;
 using Xunit;
 
 namespace Pc.Servico.Tests;
@@ -22,12 +28,19 @@ public class LimitePorIpTests : IClassFixture<CatalogoApiFactory>
         var ipA = IPAddress.Parse("198.51.100.10");
         var ipB = IPAddress.Parse("203.0.113.7");
 
-        for (var i = 0; i < 120; i++)
-            await Enviar(_factory, "GET", "/api/Feed", ipA);
+        HttpStatusCode noMeio = 0;
+        HttpStatusCode estouro = 0;
+        for (var i = 1; i <= 601; i++)
+        {
+            var status = await Enviar(_factory, "GET", "/api/Feed", ipA);
+            if (i == 121)
+                noMeio = status;
+            estouro = status;
+        }
 
-        var estouro = await Enviar(_factory, "GET", "/api/Feed", ipA);
         var outro = await Enviar(_factory, "GET", "/api/Feed", ipB);
 
+        Assert.NotEqual(HttpStatusCode.TooManyRequests, noMeio);
         Assert.Equal(HttpStatusCode.TooManyRequests, estouro);
         Assert.NotEqual(HttpStatusCode.TooManyRequests, outro);
     }
@@ -157,7 +170,7 @@ public class XForwardedForTests : IClassFixture<CatalogoApiFactory>
         var socket = IPAddress.Parse("203.0.113.50");
         var ok = 0;
         var limitado = 0;
-        for (var i = 1; i <= 310; i++)
+        for (var i = 1; i <= 1201; i++)
         {
             var status = await LimitePorIpTests.Enviar(
                 _factory,
@@ -171,8 +184,8 @@ public class XForwardedForTests : IClassFixture<CatalogoApiFactory>
                 ok++;
         }
 
-        Assert.True(limitado > 0, "as 310 chamadas passaram; o XFF forjado virou um IP novo");
-        Assert.InRange(ok, 1, 300);
+        Assert.True(limitado > 0, "as chamadas passaram; o XFF forjado virou um IP novo");
+        Assert.InRange(ok, 601, 1200);
     }
 
     [Fact]
@@ -180,7 +193,7 @@ public class XForwardedForTests : IClassFixture<CatalogoApiFactory>
     {
         var proxy = IPAddress.Parse("10.1.0.5");
         HttpStatusCode ultimo = 0;
-        for (var i = 0; i < 121; i++)
+        for (var i = 0; i < 601; i++)
         {
             ultimo = await LimitePorIpTests.Enviar(
                 _factory,
@@ -205,7 +218,7 @@ public class XForwardedForTests : IClassFixture<CatalogoApiFactory>
     public async Task Ip_publico_em_100_0_0_0_8_nao_forja_xff()
     {
         var socket = IPAddress.Parse("100.1.2.3");
-        for (var i = 0; i < 120; i++)
+        for (var i = 0; i < 600; i++)
         {
             await LimitePorIpTests.Enviar(
                 _factory, "GET", "/api/Feed", socket, xff: "203.0.113.77");
@@ -222,7 +235,7 @@ public class XForwardedForTests : IClassFixture<CatalogoApiFactory>
     {
         var proxy = IPAddress.Parse("100.64.0.2");
         HttpStatusCode ultimo = 0;
-        for (var i = 0; i < 121; i++)
+        for (var i = 0; i < 601; i++)
         {
             ultimo = await LimitePorIpTests.Enviar(
                 _factory, "GET", "/api/Feed", proxy, xff: "203.0.113.77");
@@ -311,5 +324,79 @@ public class EntradaPublicaTests : IClassFixture<CatalogoApiFactory>
         Assert.Equal(HttpStatusCode.BadRequest, resposta.StatusCode);
         Assert.DoesNotContain("is not valid", texto, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("não é válido", texto, StringComparison.Ordinal);
+    }
+}
+
+/// <summary>O upgrade do chat não pode ser barrado pelo balde da API.</summary>
+public class ChatHubLimiteTests : IClassFixture<CatalogoApiFactory>
+{
+    private readonly CatalogoApiFactory _factory;
+
+    public ChatHubLimiteTests(CatalogoApiFactory factory) => _factory = factory;
+
+    [Fact]
+    public async Task Negotiate_passa_do_teto_antigo_da_api()
+    {
+        var ip = IPAddress.Parse("198.51.100.91");
+        HttpStatusCode ultimo = 0;
+        for (var i = 0; i < 301; i++)
+            ultimo = await LimitePorIpTests.Enviar(_factory, "POST", "/hubs/chat/negotiate", ip);
+
+        Assert.NotEqual(HttpStatusCode.TooManyRequests, ultimo);
+    }
+}
+
+/// <summary>access_token na query só no upgrade de WebSocket.</summary>
+public class ChatHubTokenTests : IClassFixture<CatalogoApiFactory>
+{
+    private readonly CatalogoApiFactory _factory;
+
+    public ChatHubTokenTests(CatalogoApiFactory factory) => _factory = factory;
+
+    [Fact]
+    public async Task Query_token_so_autentica_no_upgrade()
+    {
+        var jwt = _factory.Services.GetRequiredService<IOptions<JwtSettings>>().Value;
+        var token = Emitir(jwt.Secret, jwt.Issuer, jwt.Audience);
+
+        var negotiate = await Enviar(token, upgrade: false);
+        var socket = await Enviar(token, upgrade: true);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, negotiate);
+        Assert.NotEqual(HttpStatusCode.Unauthorized, socket);
+    }
+
+    private async Task<HttpStatusCode> Enviar(string token, bool upgrade)
+    {
+        var ctx = await _factory.Server.SendAsync(c =>
+        {
+            c.Request.Method = upgrade ? "GET" : "POST";
+            c.Request.Path = upgrade ? "/hubs/chat" : "/hubs/chat/negotiate";
+            c.Request.QueryString = new QueryString("?access_token=" + token);
+            c.Connection.RemoteIpAddress = IPAddress.Parse("198.51.100.92");
+            if (upgrade)
+            {
+                c.Request.Headers["Upgrade"] = "websocket";
+                c.Request.Headers["Connection"] = "Upgrade";
+            }
+        });
+        return (HttpStatusCode)ctx.Response.StatusCode;
+    }
+
+    private static string Emitir(string secret, string issuer, string audience)
+    {
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
+        var jwt = new JwtSecurityToken(
+            issuer: string.IsNullOrWhiteSpace(issuer) ? "PrecoCerto" : issuer,
+            audience: string.IsNullOrWhiteSpace(audience) ? "PrecoCertoApp" : audience,
+            claims: new[]
+            {
+                new Claim(JwtRegisteredClaimNames.Sub, "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"),
+                new Claim(ClaimTypes.NameIdentifier, "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"),
+                new Claim(ClaimTypes.Role, "Cliente"),
+            },
+            expires: DateTime.UtcNow.AddHours(1),
+            signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256));
+        return new JwtSecurityTokenHandler().WriteToken(jwt);
     }
 }
