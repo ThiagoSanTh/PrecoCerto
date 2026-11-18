@@ -7,5 +7,8 @@ namespace Pc.Servico.Interfaces
     public interface ILojaAcesso
     {
         Task<bool> PertenceAsync(Guid usuarioId, Guid lojaId);
+
+        /// <summary>Papel Admin ativo no banco. O claim do token não basta.</summary>
+        Task<bool> EhAdminAsync(Guid usuarioId);
     }
 }

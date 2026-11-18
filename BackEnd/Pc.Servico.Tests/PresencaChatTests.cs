@@ -122,6 +122,94 @@ namespace Pc.Servico.Tests
             Assert.DoesNotContain($"loja:{OutraLoja}", removidos);
         }
 
+        [Fact]
+        public async Task Desativar_usuario_tira_a_conexao_da_loja_e_da_conversa()
+        {
+            var removidos = new List<string>();
+            var presenca = Presenca(Grupos(removidos));
+            presenca.Ligar("c1", DonoId);
+            presenca.Loja("c1", LojaId);
+            presenca.Conversa("c1", LojaId, "conversa-publica");
+            presenca.Loja("c1", OutraLoja);
+
+            var usuarios = new Mock<IClienteServico>();
+            usuarios.Setup(s => s.RemoverAsync(DonoId)).Returns(Task.CompletedTask);
+            var controller = new LojistasController(
+                usuarios.Object,
+                Mock.Of<IIdCodificador>(),
+                Mock.Of<ILojaAcesso>(),
+                presenca);
+            Autenticar(controller, NovoDono, "Admin", null);
+
+            var resultado = await controller.Remover(DonoId);
+
+            Assert.IsType<NoContentResult>(resultado);
+            Assert.Contains($"loja:{LojaId}", removidos);
+            Assert.Contains("conversa-publica", removidos);
+            Assert.Contains($"loja:{OutraLoja}", removidos);
+        }
+
+        [Fact]
+        public async Task Desativar_cliente_tira_a_conversa_do_hub()
+        {
+            var removidos = new List<string>();
+            var presenca = Presenca(Grupos(removidos));
+            presenca.Ligar("c1", DonoId);
+            presenca.Conversa("c1", LojaId, "conversa-publica");
+
+            var usuarios = new Mock<IClienteServico>();
+            usuarios.Setup(s => s.RemoverAsync(DonoId)).Returns(Task.CompletedTask);
+            var controller = new ClientesController(
+                usuarios.Object,
+                Mock.Of<Pc.WebApi.Services.IJwtTokenService>(),
+                Mock.Of<Pc.Servico.Interfaces.IEmailService>(),
+                Mock.Of<IIdCodificador>(),
+                presenca);
+
+            var resultado = await controller.Remover(DonoId);
+
+            Assert.IsType<NoContentResult>(resultado);
+            Assert.Contains("conversa-publica", removidos);
+        }
+
+        [Fact]
+        public async Task Remover_loja_tira_dono_e_cliente_dos_grupos()
+        {
+            var removidos = new List<string>();
+            var presenca = Presenca(Grupos(removidos));
+            presenca.Ligar("dono", DonoId);
+            presenca.Loja("dono", LojaId);
+            presenca.Conversa("dono", LojaId, "conversa-publica");
+            presenca.Ligar("cliente", VendedorId);
+            presenca.Conversa("cliente", LojaId, "conversa-cliente");
+            presenca.Ligar("outra", NovoDono);
+            presenca.Loja("outra", OutraLoja);
+
+            var lojas = new Mock<ILojaServico>();
+            lojas.Setup(s => s.ObterPorIdAsync(LojaId)).ReturnsAsync(new Loja
+            {
+                Id = LojaId,
+                UsuarioId = DonoId,
+                NomeFantasia = "Loja"
+            });
+            lojas.Setup(s => s.RemoverAsync(LojaId)).Returns(Task.CompletedTask);
+            var controller = new LojasController(
+                lojas.Object,
+                Mock.Of<IClienteServico>(),
+                Mock.Of<IConsultaCnpjServico>(),
+                Mock.Of<IIdCodificador>(),
+                presenca);
+            Autenticar(controller, NovoDono, "Admin", null);
+
+            var resultado = await controller.Remover(LojaId);
+
+            Assert.IsType<NoContentResult>(resultado);
+            Assert.Contains($"loja:{LojaId}", removidos);
+            Assert.Contains("conversa-publica", removidos);
+            Assert.Contains("conversa-cliente", removidos);
+            Assert.DoesNotContain($"loja:{OutraLoja}", removidos);
+        }
+
         private static LojaAcesso AcessoDono()
         {
             var lojas = new Mock<ILojaRepositorio>();
@@ -133,6 +221,15 @@ namespace Pc.Servico.Tests
             });
             var pessoas = new Mock<IClienteRepositorio>();
             pessoas.Setup(r => r.ObterPorIdAsync(It.IsAny<Guid>())).ReturnsAsync((Usuario?)null);
+            pessoas.Setup(r => r.ObterPorIdAsync(DonoId)).ReturnsAsync(new Usuario
+            {
+                Id = DonoId,
+                NomeUsuario = "Dono",
+                Email = "dono@loja.test",
+                Papel = PapelUsuario.Lojista,
+                Tipo = TipoUsuario.Lojista,
+                Ativo = true
+            });
             return new LojaAcesso(lojas.Object, pessoas.Object);
         }
 

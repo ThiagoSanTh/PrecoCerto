@@ -8,11 +8,13 @@ namespace Pc.Servico.Implementacoes
     {
         private readonly ILojaRepositorio _lojas;
         private readonly IClienteRepositorio _usuarios;
+        private readonly IAdminRepositorio? _admins;
 
-        public LojaAcesso(ILojaRepositorio lojas, IClienteRepositorio usuarios)
+        public LojaAcesso(ILojaRepositorio lojas, IClienteRepositorio usuarios, IAdminRepositorio? admins = null)
         {
             _lojas = lojas;
             _usuarios = usuarios;
+            _admins = admins;
         }
 
         public async Task<bool> PertenceAsync(Guid usuarioId, Guid lojaId)
@@ -23,12 +25,24 @@ namespace Pc.Servico.Implementacoes
             var loja = await _lojas.ObterPorIdAsync(lojaId);
             if (loja is null)
                 return false;
+
+            var usuario = await _usuarios.ObterPorIdAsync(usuarioId);
+            if (usuario is not { Ativo: true })
+                return false;
             if (loja.UsuarioId == usuarioId)
                 return true;
 
-            var usuario = await _usuarios.ObterPorIdAsync(usuarioId);
-            return usuario is { Papel: PapelUsuario.Vendedor, LojaVinculadaId: var vinculada }
-                && vinculada == loja.Id;
+            return usuario.Papel == PapelUsuario.Vendedor
+                && usuario.LojaVinculadaId == loja.Id;
+        }
+
+        public async Task<bool> EhAdminAsync(Guid usuarioId)
+        {
+            if (_admins is null || usuarioId == Guid.Empty)
+                return false;
+
+            var admin = await _admins.ObterPorIdAsync(usuarioId);
+            return admin is { Ativo: true };
         }
     }
 }

@@ -6,6 +6,7 @@ using Pc.Dominio.Entities.Catalogo;
 using Pc.Dominio.Entities.Estabelecimentos;
 using Pc.Dominio.Entities.Interacoes;
 using Pc.Dominio.Entities.Usuarios;
+using Pc.Dominio.Enums;
 using Pc.Repositorio.Interfaces;
 using Pc.Servico.Excecoes;
 using Pc.Servico.Implementacoes;
@@ -572,6 +573,49 @@ namespace Pc.Servico.Tests
         }
 
         [Fact]
+        public async Task Admin_nao_transfere_loja_para_vendedor_de_outra_loja()
+        {
+            var loja1 = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            var loja2 = Guid.Parse("22222222-2222-2222-2222-222222222222");
+            var dono = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+            var vendedor = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+            var lojas = new Mock<ILojaServico>();
+            lojas.Setup(s => s.ObterPorIdAsync(loja1)).ReturnsAsync(new Loja
+            {
+                Id = loja1,
+                UsuarioId = dono,
+                NomeFantasia = "Loja 1"
+            });
+            var usuarios = new Mock<IClienteServico>();
+            usuarios.Setup(s => s.ObterPorIdAsync(vendedor)).ReturnsAsync(new Usuario
+            {
+                Id = vendedor,
+                NomeUsuario = "Vend",
+                Email = "vend@outra.test",
+                Papel = PapelUsuario.Vendedor,
+                Tipo = TipoUsuario.Vendedor,
+                LojaVinculadaId = loja2
+            });
+
+            var controller = new LojasController(
+                lojas.Object,
+                usuarios.Object,
+                Mock.Of<IConsultaCnpjServico>(),
+                Mock.Of<IIdCodificador>());
+            Autenticar(controller, Guid.Parse("99999999-9999-9999-9999-999999999999"), "Admin", null);
+
+            var resultado = await controller.Atualizar(loja1, new LojaCriarDto
+            {
+                NomeFantasia = "Loja 1",
+                UsuarioId = vendedor
+            });
+
+            var erro = Assert.IsType<BadRequestObjectResult>(resultado);
+            Assert.Equal("O novo dono é vendedor de outra loja.", erro.Value);
+            lojas.Verify(s => s.AtualizarAsync(It.IsAny<Loja>()), Times.Never);
+        }
+
+        [Fact]
         public async Task Lista_avaliacoes_sem_token_retorna_401()
         {
             var controller = Avaliacoes(new Mock<IAvaliacaoServico>());
@@ -732,7 +776,16 @@ namespace Pc.Servico.Tests
             repo.Setup(r => r.ObterPorIdAsync(It.IsAny<Guid>()))
                 .Returns<Guid>(id => lojas.Object.ObterPorIdAsync(id) ?? Task.FromResult<Loja?>(null));
             var usuarios = new Mock<IClienteRepositorio>();
-            usuarios.Setup(r => r.ObterPorIdAsync(It.IsAny<Guid>())).ReturnsAsync((Usuario?)null);
+            usuarios.Setup(r => r.ObterPorIdAsync(It.IsAny<Guid>()))
+                .Returns<Guid>(id => Task.FromResult<Usuario?>(new Usuario
+                {
+                    Id = id,
+                    NomeUsuario = "Dono",
+                    Email = "dono@loja.test",
+                    Papel = PapelUsuario.Lojista,
+                    Tipo = TipoUsuario.Lojista,
+                    Ativo = true
+                }));
             return new LojaAcesso(repo.Object, usuarios.Object);
         }
 

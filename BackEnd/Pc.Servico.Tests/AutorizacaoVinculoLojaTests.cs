@@ -315,7 +315,13 @@ namespace Pc.Servico.Tests
             Autenticar(vendedor, VendedorId, "Vendedor", LojaA);
 
             var doAdmin = OfertaPronta();
-            var admin = Ofertas(doAdmin, Acesso(LojaA, DonoA));
+            var admin = Ofertas(doAdmin, Montar(LojaA, DonoA, new Admin
+            {
+                Id = AdminId,
+                NomeUsuario = "Admin",
+                Email = "admin@loja.test",
+                Ativo = true
+            }));
             Autenticar(admin, AdminId, "Admin", null);
 
             Assert.IsType<NoContentResult>(await dono.Atualizar(OfertaId, OfertaDto()));
@@ -324,6 +330,48 @@ namespace Pc.Servico.Tests
             doDono.Verify(s => s.AtualizarAsync(It.IsAny<Oferta>()), Times.Once);
             doVendedor.Verify(s => s.AtualizarAsync(It.IsAny<Oferta>()), Times.Once);
             doAdmin.Verify(s => s.AtualizarAsync(It.IsAny<Oferta>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task Admin_rebaixado_nao_pertence_a_loja()
+        {
+            var admins = new Mock<IAdminRepositorio>();
+            admins.Setup(r => r.ObterPorIdAsync(AdminId)).ReturnsAsync(new Admin
+            {
+                Id = AdminId,
+                NomeUsuario = "Admin",
+                Email = "admin@loja.test",
+                Ativo = false
+            });
+            var acesso = new LojaAcesso(
+                Mock.Of<ILojaRepositorio>(),
+                Mock.Of<IClienteRepositorio>(),
+                admins.Object);
+
+            var pertence = await Authz.PertenceAsync(Principal(AdminId, "Admin", null), LojaA, acesso);
+
+            Assert.False(pertence);
+        }
+
+        [Fact]
+        public async Task Admin_ativo_no_banco_pertence_a_loja()
+        {
+            var admins = new Mock<IAdminRepositorio>();
+            admins.Setup(r => r.ObterPorIdAsync(AdminId)).ReturnsAsync(new Admin
+            {
+                Id = AdminId,
+                NomeUsuario = "Admin",
+                Email = "admin@loja.test",
+                Ativo = true
+            });
+            var acesso = new LojaAcesso(
+                Mock.Of<ILojaRepositorio>(),
+                Mock.Of<IClienteRepositorio>(),
+                admins.Object);
+
+            var pertence = await Authz.PertenceAsync(Principal(AdminId, "Admin", null), LojaA, acesso);
+
+            Assert.True(pertence);
         }
 
         private static Usuario VendedorDe(Guid lojaId) => new()
@@ -356,7 +404,10 @@ namespace Pc.Servico.Tests
         private static ClienteServico Servico(Mock<IClienteRepositorio> repo) =>
             new(repo.Object, Mock.Of<IPasswordHasher>(), Mock.Of<IValidadorEmail>());
 
-        private static LojaAcesso Acesso(Guid lojaId, Guid donoId, params Usuario[] usuarios)
+        private static LojaAcesso Acesso(Guid lojaId, Guid donoId, params Usuario[] usuarios) =>
+            Montar(lojaId, donoId, null, usuarios);
+
+        private static LojaAcesso Montar(Guid lojaId, Guid donoId, Admin? admin, params Usuario[] usuarios)
         {
             var lojas = new Mock<ILojaRepositorio>();
             lojas.Setup(r => r.ObterPorIdAsync(lojaId)).ReturnsAsync(new Loja
@@ -367,9 +418,27 @@ namespace Pc.Servico.Tests
             });
             var pessoas = new Mock<IClienteRepositorio>();
             pessoas.Setup(r => r.ObterPorIdAsync(It.IsAny<Guid>())).ReturnsAsync((Usuario?)null);
+            pessoas.Setup(r => r.ObterPorIdAsync(donoId)).ReturnsAsync(new Usuario
+            {
+                Id = donoId,
+                NomeUsuario = "Dono",
+                Email = "dono@loja.test",
+                Papel = PapelUsuario.Lojista,
+                Tipo = TipoUsuario.Lojista,
+                Ativo = true
+            });
             foreach (var usuario in usuarios)
                 pessoas.Setup(r => r.ObterPorIdAsync(usuario.Id)).ReturnsAsync(usuario);
-            return new LojaAcesso(lojas.Object, pessoas.Object);
+
+            IAdminRepositorio? admins = null;
+            if (admin is not null)
+            {
+                var repo = new Mock<IAdminRepositorio>();
+                repo.Setup(r => r.ObterPorIdAsync(admin.Id)).ReturnsAsync(admin);
+                admins = repo.Object;
+            }
+
+            return new LojaAcesso(lojas.Object, pessoas.Object, admins);
         }
 
         private static LojistasController Lojistas(IClienteServico servico, ILojaAcesso acesso) =>

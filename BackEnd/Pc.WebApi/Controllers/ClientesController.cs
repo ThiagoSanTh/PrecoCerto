@@ -11,6 +11,7 @@ using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Comum;
 using Pc.WebApi.DTOs.Usuarios;
 using Pc.WebApi.Extensions;
+using Pc.WebApi.Hubs;
 using Pc.WebApi.Services;
 
 namespace Pc.WebApi.Controllers
@@ -24,17 +25,20 @@ namespace Pc.WebApi.Controllers
         private readonly IJwtTokenService _jwtTokenService;
         private readonly IEmailService _emailService;
         private readonly IIdCodificador _idCodificador;
+        private readonly PresencaChat? _presenca;
 
         public ClientesController(
             IClienteServico clienteServico,
             IJwtTokenService jwtTokenService,
             IEmailService emailService,
-            IIdCodificador idCodificador)
+            IIdCodificador idCodificador,
+            PresencaChat? presenca = null)
         {
             _clienteServico = clienteServico;
             _jwtTokenService = jwtTokenService;
             _emailService = emailService;
             _idCodificador = idCodificador;
+            _presenca = presenca;
         }
 
         [HttpPost("registrar")]
@@ -241,6 +245,8 @@ namespace Pc.WebApi.Controllers
         public async Task<IActionResult> Remover(Guid id)
         {
             await _clienteServico.RemoverAsync(id);
+            if (_presenca != null)
+                await _presenca.RevogarUsuarioAsync(id);
             return NoContent();
         }
 

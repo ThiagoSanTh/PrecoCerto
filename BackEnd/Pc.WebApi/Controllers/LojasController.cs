@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Pc.Dominio.Entities.Catalogo;
 using Pc.Dominio.Entities.Estabelecimentos;
+using Pc.Dominio.Enums;
 using Pc.Dominio.Validacoes;
 using Pc.Servico.Excecoes;
 using Pc.Servico.Interfaces;
@@ -187,6 +188,11 @@ namespace Pc.WebApi.Controllers
                 if (destino is null)
                     return BadRequest("Usuário de destino não encontrado.");
 
+                if (destino.Papel == PapelUsuario.Vendedor
+                    && destino.LojaVinculadaId is Guid vinculada
+                    && vinculada != lojaExistente.Id)
+                    return BadRequest("O novo dono é vendedor de outra loja.");
+
                 var outraLoja = await _lojaServico.ObterPorUsuarioIdAsync(dto.UsuarioId.Value);
                 if (outraLoja is not null && outraLoja.Id != lojaExistente.Id)
                     return Conflict("Este usuário já possui uma loja.");
@@ -231,6 +237,8 @@ namespace Pc.WebApi.Controllers
                 return NotFound("Loja não encontrada.");
 
             await _lojaServico.RemoverAsync(id);
+            if (_presenca != null)
+                await _presenca.RevogarLojaAsync(id);
             return NoContent();
         }
 

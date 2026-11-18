@@ -159,6 +159,8 @@ namespace Pc.WebApi.Controllers
         public async Task<IActionResult> Remover(Guid id)
         {
             await _usuarioServico.RemoverAsync(id);
+            if (_presenca != null)
+                await _presenca.RevogarUsuarioAsync(id);
             return NoContent();
         }
 
