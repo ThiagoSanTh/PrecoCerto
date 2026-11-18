@@ -20,8 +20,8 @@ export default function StoreTabs() {
           tabBar={(props) => renderTabBar({ ...props, badgeCount })}
           screenOptions={{ headerShown: false }}
         >
-          <Tab.Screen name="Painel" component={MerchantDashboardScreen} options={{ tabBarLabel: 'Painel BI' }} />
-          <Tab.Screen name="Produtos" component={ProductsScreen} options={{ tabBarLabel: 'Meus produtos' }} />
+          <Tab.Screen name="Painel" component={MerchantDashboardScreen} options={{ tabBarLabel: 'Painel' }} />
+          <Tab.Screen name="Produtos" component={ProductsScreen} options={{ tabBarLabel: 'Produtos' }} />
           <Tab.Screen name="Loja" component={StoreScreen} options={{ tabBarLabel: 'Minha loja' }} />
           <Tab.Screen name="IA" component={AiChatScreen} options={{ tabBarLabel: 'Assistente IA' }} />
           <Tab.Screen name="Mensagens" component={MensagensStack} options={{ tabBarLabel: 'Mensagens' }} />

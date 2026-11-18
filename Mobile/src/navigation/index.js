@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { Platform } from 'react-native';
-import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import { DefaultTheme, NavigationContainer, getStateFromPath } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { peekPendingAuthAction, setPendingAuthAction } from './authIntent';
-import { linkingScreens, PUBLIC_ROUTE_NAMES } from './linking';
+import { ajustarCaminho, linkingScreens, PUBLIC_ROUTE_NAMES, tituloDocumento } from './linking';
 import { navigationRef } from './navigationRef';
 
 import LoginScreen from '../screens/auth/LoginScreen';
@@ -31,6 +31,9 @@ const Stack = createNativeStackNavigator();
 const linking = {
   prefixes: [typeof window !== 'undefined' ? window.location.origin : 'preco-certo://'],
   config: { screens: linkingScreens },
+  getStateFromPath(path, options) {
+    return getStateFromPath(ajustarCaminho(path), options);
+  },
 };
 
 const hiddenHeader = { headerShown: false };
@@ -98,6 +101,9 @@ export default function Routes() {
       ref={navigationRef}
       theme={navigationTheme}
       linking={Platform.OS === 'web' ? linking : undefined}
+      documentTitle={{
+        formatter: (options, route) => tituloDocumento(route?.name, options?.title),
+      }}
       onReady={guard}
       onStateChange={guard}
     >
