@@ -2,6 +2,8 @@ import api from './api';
 import { getToken } from './tokenStorage';
 import { obterCache, obterCacheStale, salvarCache, invalidarCache } from './feedCache';
 import { getContextoOperacional } from '../utils/modoUsuario';
+import { ehLojaClaimAusente } from './apiAccess';
+import { lojaClaimBloqueado, observarParadaHub, sinalizarLojaClaimAusente } from './lojaClaim';
 
 const CONVERSAS_TTL_MS = 30_000;
 const HUB_RETRY_BACKOFF_MS = 30_000;
@@ -46,6 +48,22 @@ export function invalidarCacheConversas() {
 
 let hubContexto = null;
 
+function pararHubAtual() {
+  const atual = hubConnection;
+  hubConnection = null;
+  hubStarting = null;
+  hubContexto = null;
+  atual?.stop().catch(() => {});
+}
+
+observarParadaHub(pararHubAtual);
+
+function tratarFalhaHub(erro) {
+  if (!ehLojaClaimAusente(erro)) return false;
+  sinalizarLojaClaimAusente();
+  return true;
+}
+
 async function criarHubConnection(signalR, token) {
   const contexto = encodeURIComponent(getContextoOperacional());
   const connection = new signalR.HubConnectionBuilder()
@@ -65,9 +83,9 @@ async function criarHubConnection(signalR, token) {
   });
 
   connection.onreconnected(() => {
-    connection.invoke('ConectarUsuario').catch(() => {});
+    connection.invoke('ConectarUsuario').catch(tratarFalhaHub);
     if (conversaAtivaCodigo) {
-      connection.invoke('EntrarConversa', conversaAtivaCodigo).catch(() => {});
+      connection.invoke('EntrarConversa', conversaAtivaCodigo).catch(tratarFalhaHub);
     }
     badgeHandlers.onConnected?.({ isReconnect: true });
   });
@@ -80,6 +98,7 @@ async function criarHubConnection(signalR, token) {
 }
 
 async function obterHubCompartilhado() {
+  if (lojaClaimBloqueado()) return null;
   const token = await getToken();
   if (!token) return null;
 
@@ -116,7 +135,8 @@ async function obterHubCompartilhado() {
 
       ultimaFalhaHubEm = 0;
       return hubConnection;
-    } catch {
+    } catch (erro) {
+      if (tratarFalhaHub(erro)) return null;
       ultimaFalhaHubEm = Date.now();
       if (hubConnection) {
         await hubConnection.stop().catch(() => {});
@@ -151,7 +171,8 @@ export async function garantirHubBadge({ onNovaMensagem, onConnected, onDisconne
     await conn.invoke('ConectarUsuario');
     onConnected?.({ isReconnect: false });
     return true;
-  } catch {
+  } catch (erro) {
+    if (tratarFalhaHub(erro)) return false;
     onDisconnected?.();
     return false;
   }
@@ -167,7 +188,8 @@ export async function entrarConversaHub(conversaCodigo, onMensagem) {
   try {
     await conn.invoke('EntrarConversa', conversaCodigo);
     return true;
-  } catch {
+  } catch (erro) {
+    if (tratarFalhaHub(erro)) return false;
     return false;
   }
 }
@@ -262,8 +284,12 @@ export async function enviarMensagem(conversaCodigo, texto) {
     try {
       const dto = await hubConnection.invoke('EnviarMensagem', conversaCodigo, texto);
       if (dto) return dto;
-    } catch {
-      // HTTP abaixo
+    } catch (erro) {
+      if (tratarFalhaHub(erro)) {
+        const silencioso = new Error('loja_claim_ausente');
+        silencioso.lojaClaim = true;
+        throw silencioso;
+      }
     }
   }
 

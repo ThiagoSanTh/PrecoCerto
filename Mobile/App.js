@@ -3,6 +3,7 @@ import { Platform, View, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Routes from './src/navigation';
+import AvisoLojaClaim from './src/components/AvisoLojaClaim';
 import { AuthProvider } from './src/context/AuthContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { ChatBadgeProvider } from './src/context/ChatBadgeContext';
@@ -25,6 +26,7 @@ function ThemedApp() {
       <AuthProvider>
         <ChatBadgeProvider>
           <Routes />
+          <AvisoLojaClaim />
         </ChatBadgeProvider>
       </AuthProvider>
     </View>

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { deveAbrirLoginNo401, deveEncaminharAoLogin, isPedidoPublicoDeCatalogo, pageSizeSeguro } from '../apiAccess.js';
+import { deveAbrirLoginNo401, deveEncaminharAoLogin, ehLojaClaimAusente, isPedidoPublicoDeCatalogo, pageSizeSeguro } from '../apiAccess.js';
+import { lojaClaimBloqueado, observarAvisoLoja, resetLojaClaim, sinalizarLojaClaimAusente } from '../lojaClaim.js';
 
 test('leitura de catálogo, mapa e busca segue sem sessão', () => {
   const publicos = [
@@ -72,6 +73,50 @@ test('401 na vitrine não abre o login', () => {
   assert.equal(deveAbrirLoginNo401(401, conversas, 'ConversasLista'), true);
   assert.equal(deveAbrirLoginNo401(401, { method: 'get', url: '/Feed' }, 'Search'), false);
   assert.equal(deveAbrirLoginNo401(403, conversas, 'Mensagens'), false);
+});
+
+test('loja_claim_ausente vem do corpo, do header ou do hub; 403 sem código não dispara', () => {
+  assert.equal(
+    ehLojaClaimAusente({
+      response: { status: 403, data: { title: 'Forbidden', code: 'loja_claim_ausente' }, headers: {} },
+    }),
+    true
+  );
+  assert.equal(
+    ehLojaClaimAusente({
+      response: {
+        status: 403,
+        data: { title: 'Forbidden' },
+        headers: { 'x-error-code': 'loja_claim_ausente' },
+      },
+    }),
+    true
+  );
+  assert.equal(
+    ehLojaClaimAusente({ message: 'loja_claim_ausente: Seu acesso à loja mudou. Entre de novo.' }),
+    true
+  );
+  assert.equal(ehLojaClaimAusente({ message: 'Acesso negado.' }), false);
+  assert.equal(
+    ehLojaClaimAusente({
+      response: { status: 403, data: { title: 'Forbidden' }, headers: {} },
+    }),
+    false
+  );
+});
+
+test('o aviso de loja claim aparece uma vez e bloqueia o hub', () => {
+  resetLojaClaim();
+  let vezes = 0;
+  const sair = observarAvisoLoja(() => {
+    vezes += 1;
+  });
+  assert.equal(sinalizarLojaClaimAusente(), true);
+  assert.equal(sinalizarLojaClaimAusente(), false);
+  assert.equal(vezes, 1);
+  assert.equal(lojaClaimBloqueado(), true);
+  sair();
+  resetLojaClaim();
 });
 
 test('pageSize não passa de 100', () => {

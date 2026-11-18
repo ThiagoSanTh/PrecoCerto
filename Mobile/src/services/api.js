@@ -2,7 +2,8 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import { getToken, clearToken } from './tokenStorage';
 import { getContextoOperacional } from '../utils/modoUsuario';
-import { deveAbrirLoginNo401, deveEncaminharAoLogin, isPedidoPublicoDeCatalogo } from './apiAccess';
+import { deveAbrirLoginNo401, deveEncaminharAoLogin, ehLojaClaimAusente, isPedidoPublicoDeCatalogo } from './apiAccess';
+import { sinalizarLojaClaimAusente } from './lojaClaim';
 import { emitAuthFailure, peekPendingAuthAction, setPendingAuthAction } from '../navigation/authIntent';
 import { navigationRef } from '../navigation/navigationRef';
 
@@ -124,6 +125,10 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const status = error.response?.status;
+    if (ehLojaClaimAusente(error)) {
+      sinalizarLojaClaimAusente();
+      return Promise.reject(error);
+    }
     if (status === 401 && isPedidoPublicoDeCatalogo(error.config) && !error.config?._semToken) {
       await clearToken();
       emitAuthFailure();
