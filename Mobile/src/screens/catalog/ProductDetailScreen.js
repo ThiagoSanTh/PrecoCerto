@@ -585,7 +585,7 @@ export default function ProductDetailScreen({ route, navigation }) {
         </View>
       ) : (
         <View style={styles.infoBlock}>
-          {!clienteId ? (
+          {!session ? (
             <Pressable
               onPress={exigirLoginParaCompra}
               accessibilityRole="button"

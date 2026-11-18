@@ -1,14 +1,12 @@
-const LEITURA_PUBLICA = [
-  /^\/Feed(?:\/|$)/i,
-  /^\/Lojas(?:\/|$)/i,
-  /^\/Produtos(?:\/|$)/i,
-  /^\/Ofertas(?:\/|$)/i,
-  /^\/Weather(?:\/|$)/i,
-  /^\/Avaliacoes\/loja(?:\/|$)/i,
-  /^\/HistoricoPesquisa\/sugestoes$/i,
-];
-
-const BUSCA_PUBLICA = [/^\/Produtos\/Buscar$/i, /^\/Lojas\/buscar$/i];
+const GET_EXATAS = new Set([
+  '/feed',
+  '/lojas',
+  '/lojas/mapa',
+  '/produtos',
+  '/ofertas',
+  '/weather',
+  '/historicopesquisa/sugestoes',
+]);
 
 export function caminhoDaRequisicao(url = '') {
   const bruto = String(url).split('?')[0].trim();
@@ -28,13 +26,29 @@ export function caminhoDaRequisicao(url = '') {
   return path.replace(/\/+$/, '') || '/';
 }
 
-/** GET de catálogo/mapa e POST de busca. Compra, IA, chat e escrita ficam de fora. */
+function leituraPublicaExata(path) {
+  if (GET_EXATAS.has(path)) return true;
+  if (/^\/lojas\/[^/]+$/.test(path)) return path !== '/lojas/buscar';
+  if (/^\/produtos\/[^/]+$/.test(path)) return path !== '/produtos/buscar';
+  if (/^\/ofertas\/produto\/[^/]+$/.test(path)) return true;
+  if (/^\/ofertas\/[^/]+$/.test(path)) return path !== '/ofertas/produto';
+  if (/^\/avaliacoes\/loja\/[^/]+\/media$/.test(path)) return true;
+  if (/^\/avaliacoes\/loja\/[^/]+$/.test(path)) return true;
+  return false;
+}
+
+/** GET e POST públicos do catálogo, método e caminho exatos. */
 export function isPedidoPublicoDeCatalogo(config) {
   const method = String(config?.method || 'get').toLowerCase();
-  const path = caminhoDaRequisicao(config?.url);
-  if (method === 'get') return LEITURA_PUBLICA.some((regra) => regra.test(path));
-  if (method === 'post') return BUSCA_PUBLICA.some((regra) => regra.test(path));
+  const path = caminhoDaRequisicao(config?.url).toLowerCase();
+  if (method === 'get') return leituraPublicaExata(path);
+  if (method === 'post') return path === '/produtos/buscar' || path === '/lojas/buscar';
   return false;
+}
+
+/** Token válido no boot e revogado no servidor: o 401 do catálogo repete sem Authorization. */
+export function deveRepetirCatalogoSemToken(status, config) {
+  return status === 401 && isPedidoPublicoDeCatalogo(config) && !config?._semToken;
 }
 
 function ehRotaDeCredencial(url = '') {
