@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { FormScreen } from '../../components/form';
 import { PillBadge } from '../../components/ui/DesignPrimitives';
 import { useAuth } from '../../context/AuthContext';
+import { irParaLogin, setPendingAuthAction } from '../../navigation/authIntent';
 import { useTheme } from '../../context/ThemeContext';
 import { enviarPerguntaIA, isAdminSession } from '../../services/iaService';
 import { fonts, radii, shadows } from '../../theme';
@@ -283,6 +284,11 @@ export default function AiChatScreen({ navigation, route }) {
   async function enviarMensagemTexto(perguntaBruta) {
     const pergunta = String(perguntaBruta || '').trim();
     if (!pergunta || enviando) return;
+    if (!session) {
+      setPendingAuthAction({ type: 'route', name: route?.name === 'AiChat' ? 'AiChat' : 'IA' });
+      irParaLogin(navigation);
+      return;
+    }
 
     setErro(null);
     setTexto('');
@@ -321,7 +327,14 @@ export default function AiChatScreen({ navigation, route }) {
     } catch (error) {
       const status = error?.response?.status;
       let msg = 'Não foi possível falar com o assistente. Tente novamente.';
-      if (status === 429) {
+      if (status === 401) {
+        setPendingAuthAction({ type: 'route', name: route?.name === 'AiChat' ? 'AiChat' : 'IA' });
+        irParaLogin(navigation);
+        return;
+      }
+      if (status === 403) {
+        msg = 'Sua conta não pode consultar o assessor neste modo.';
+      } else if (status === 429) {
         msg = 'Muitas perguntas em pouco tempo. Aguarde um momento.';
       } else if (error?.response?.data?.message) {
         msg = error.response.data.message;

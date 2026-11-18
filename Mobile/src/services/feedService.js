@@ -1,4 +1,5 @@
 import api from './api';
+import { pageSizeSeguro } from './apiAccess';
 import { obterCache, obterCacheStale, salvarCache } from './feedCache';
 
 const NS = 'feed';
@@ -33,6 +34,7 @@ function normalizarPaginado(data) {
 }
 
 export async function listarFeed({ page = 1, pageSize = 20, termo = '', categoria = null, lojaId = null, force = false } = {}) {
+  pageSize = pageSizeSeguro(pageSize);
   const cacheKey = { page, pageSize, termo: termo.trim(), categoria, lojaId };
   if (!force) {
     const cached = obterCache(NS, cacheKey, TTL);
@@ -51,6 +53,7 @@ export async function listarFeed({ page = 1, pageSize = 20, termo = '', categori
 }
 
 export async function listarFeedComStale({ page = 1, pageSize = 20, termo = '', categoria = null, lojaId = null } = {}) {
+  pageSize = pageSizeSeguro(pageSize);
   const cacheKey = { page, pageSize, termo: termo.trim(), categoria, lojaId };
   const stale = obterCacheStale(NS, cacheKey);
   const fresh = obterCache(NS, cacheKey, TTL);

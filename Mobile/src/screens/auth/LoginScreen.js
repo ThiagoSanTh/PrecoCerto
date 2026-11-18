@@ -39,7 +39,7 @@ export default function LoginScreen({ navigation }) {
       const novaSessao = { tipo, perfil };
       const modo = podeUsarModoLoja(novaSessao) ? 'store' : 'user';
       await salvarSessao(novaSessao, modo);
-      navigation.replace('Home');
+      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
 
       if (perfil?.id) {
         sincronizarGpsCliente(perfil.id, { force: true }).catch(() => {});

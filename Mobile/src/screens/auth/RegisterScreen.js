@@ -61,7 +61,7 @@ export default function RegisterScreen({ navigation }) {
 
   async function concluirSessao(tipo, perfil) {
     await salvarSessao({ tipo: tipo || 'cliente', perfil }, 'user');
-    navigation.replace('Home');
+    navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
 
     if (perfil?.id) {
       sincronizarGpsCliente(perfil.id, { force: true }).catch(() => {});

@@ -52,7 +52,7 @@ export default function ConversasScreen({ navigation }) {
   const [ativaCodigo, setAtivaCodigo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const { emModoLoja } = useAuth();
+  const { session, emModoLoja } = useAuth();
   const { colors } = useTheme();
   const { atualizarFromConversas } = useChatBadge();
   const { useSplitView } = useLayoutProfile();
@@ -78,6 +78,11 @@ export default function ConversasScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
+      if (!session) {
+        setConversas([]);
+        setLoading(false);
+        return undefined;
+      }
       let ativo = true;
       async function init() {
         setLoading(true);
@@ -88,7 +93,7 @@ export default function ConversasScreen({ navigation }) {
       return () => {
         ativo = false;
       };
-    }, [carregar])
+    }, [session, carregar])
   );
 
   useEffect(() => {
