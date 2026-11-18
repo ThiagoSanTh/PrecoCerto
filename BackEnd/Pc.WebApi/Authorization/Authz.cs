@@ -58,7 +58,7 @@ namespace Pc.WebApi.Authorization
 
         private static async Task<LojaDoToken> ResolverLojaDoTokenAsync(ClaimsPrincipal user, ILojaAcesso acesso)
         {
-            if (user.GetLojaId() is not Guid lojaId)
+            if (user.GetLojaId() is not Guid lojaId || lojaId == Guid.Empty)
                 return new LojaDoToken(null, true);
             if (!await PertenceAsync(user, lojaId, acesso))
                 return new LojaDoToken(null, false);

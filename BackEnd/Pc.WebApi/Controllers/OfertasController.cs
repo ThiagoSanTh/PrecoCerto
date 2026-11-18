@@ -168,6 +168,7 @@ namespace Pc.WebApi.Controllers
             DataInicioPromocao = oferta.DataInicioPromocao,
             DataFimPromocao = oferta.DataFimPromocao,
             Disponivel = oferta.Disponivel,
+            QuantidadeEstoque = oferta.QuantidadeEstoque ?? 0,
             DataAtualizacaoPreco = oferta.DataAtualizacaoPreco
         };
     }

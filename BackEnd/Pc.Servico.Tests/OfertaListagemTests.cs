@@ -50,7 +50,22 @@ namespace Pc.Servico.Tests
             var item = Assert.Single(corpo.Items);
             Assert.Equal(lojaA, item.LojaId);
             Assert.Equal(10m, item.Preco);
-            Assert.Equal(0, item.QuantidadeEstoque);
+        }
+
+        [Fact]
+        public async Task Listar_OfertaComEstoque50_Devolve50()
+        {
+            var loja = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+            var agora = new DateTime(2026, 11, 18, 12, 0, 0, DateTimeKind.Utc);
+            await using var ctx = CriarContexto();
+            ctx.Ofertas.Add(Oferta(ctx, loja, 12m, 50, agora));
+            await ctx.SaveChangesAsync();
+
+            var ok = Assert.IsType<OkObjectResult>(await Listar(ctx, 1, 20, loja));
+            var corpo = Assert.IsType<PaginacaoRespostaDto<OfertaRespostaDto>>(ok.Value);
+            var item = Assert.Single(corpo.Items);
+
+            Assert.Equal(50, item.QuantidadeEstoque);
         }
 
         [Fact]

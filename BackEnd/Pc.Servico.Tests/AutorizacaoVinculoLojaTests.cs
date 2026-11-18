@@ -318,6 +318,29 @@ namespace Pc.Servico.Tests
         }
 
         [Fact]
+        public async Task Staff_com_claim_loja_vazio_recebe_o_mesmo_codigo()
+        {
+            var conversas = ConversasVazias();
+            var controller = new ConversasController(
+                conversas.Object,
+                new IdsFixos(),
+                Notificacao(),
+                Acesso(LojaA, DonoA));
+            Autenticar(controller, DonoA, "Lojista", Guid.Empty);
+
+            var resultado = await controller.Listar();
+
+            var obj = Assert.IsType<ObjectResult>(resultado);
+            Assert.Equal(StatusCodes.Status403Forbidden, obj.StatusCode);
+            var problem = Assert.IsType<ProblemDetails>(obj.Value);
+            Assert.Equal("loja_claim_ausente", problem.Extensions["code"]);
+            Assert.Equal("loja_claim_ausente", controller.Response.Headers["X-Error-Code"].ToString());
+            conversas.Verify(
+                s => s.ListarDoUsuarioAsync(It.IsAny<Guid>(), It.IsAny<PapelUsuario>(), It.IsAny<Guid?>()),
+                Times.Never);
+        }
+
+        [Fact]
         public async Task Cliente_com_papel_errado_nao_recebe_codigo_de_claim()
         {
             var controller = Lojistas(Mock.Of<IClienteServico>(), Acesso(LojaA, DonoA));
