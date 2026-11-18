@@ -43,12 +43,9 @@ namespace Pc.WebApi.Hubs
             var papel = ObterPapel(Context.User!);
             if (papel is PapelUsuario.Lojista or PapelUsuario.Vendedor)
             {
-                var lojaId = Context.User?.GetLojaId();
-                if (!lojaId.HasValue || !await Authz.PertenceAsync(Context.User!, lojaId.Value, _lojaAcesso))
-                    throw new HubException("Acesso negado.");
-
-                await Groups.AddToGroupAsync(Context.ConnectionId, $"loja:{lojaId.Value}");
-                _presenca?.Loja(Context.ConnectionId, lojaId.Value);
+                var lojaId = await Authz.ExigirLojaDoTokenNoHubAsync(Context.User!, _lojaAcesso);
+                await Groups.AddToGroupAsync(Context.ConnectionId, $"loja:{lojaId}");
+                _presenca?.Loja(Context.ConnectionId, lojaId);
             }
             else
             {
