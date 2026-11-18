@@ -46,7 +46,7 @@ namespace Pc.WebApi.Controllers
         {
             var paginacao = PaginacaoHelper.Normalizar(page, pageSize);
             var lojas = await _lojaServico.ListarPaginadoAsync(paginacao);
-            return Ok(PaginacaoHelper.ParaResposta(lojas, l => LojaMapper.ParaRespostaDto(l, _idCodificador)));
+            return Ok(PaginacaoHelper.ParaResposta(lojas, RespostaLoja));
         }
 
         [HttpGet("mapa")]
@@ -73,7 +73,7 @@ namespace Pc.WebApi.Controllers
             if (loja is null)
                 return NotFound("Loja não encontrada.");
 
-            return Ok(LojaMapper.ParaRespostaDto(loja, _idCodificador));
+            return Ok(RespostaLoja(loja));
         }
 
         [HttpPost("buscar")]
@@ -86,7 +86,7 @@ namespace Pc.WebApi.Controllers
         {
             var paginacao = PaginacaoHelper.Normalizar(page, pageSize);
             var lojas = await _lojaServico.BuscarPorNomePaginadoAsync(nome, paginacao);
-            return Ok(PaginacaoHelper.ParaResposta(lojas, l => LojaMapper.ParaRespostaDto(l, _idCodificador)));
+            return Ok(PaginacaoHelper.ParaResposta(lojas, RespostaLoja));
         }
 
         [HttpPost]
@@ -274,6 +274,28 @@ namespace Pc.WebApi.Controllers
                 Estado = estado,
                 Latitude = endereco.Latitude,
                 Longitude = endereco.Longitude
+            };
+        }
+
+        /// <summary>
+        /// Visitante não recebe e-mail nem telefone do dono. Quem está logado
+        /// (edição da loja) continua recebendo o DTO completo.
+        /// </summary>
+        private object RespostaLoja(Loja loja)
+        {
+            var dto = LojaMapper.ParaRespostaDto(loja, _idCodificador);
+            if (User.Identity?.IsAuthenticated == true)
+                return dto;
+
+            return new
+            {
+                dto.Id,
+                dto.CodigoPublico,
+                dto.NomeFantasia,
+                dto.RazaoSocial,
+                dto.Cnpj,
+                dto.Endereco,
+                dto.MediaAvaliacoes
             };
         }
     }

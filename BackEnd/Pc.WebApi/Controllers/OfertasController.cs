@@ -42,6 +42,7 @@ namespace Pc.WebApi.Controllers
 
         [HttpGet("{id:guid}")]
         [AllowAnonymous]
+        [EnableRateLimiting("catalogo")]
         public async Task<IActionResult> ObterPorId(Guid id)
         {
             var oferta = await _ofertaServico.ObterPorIdAsync(id);

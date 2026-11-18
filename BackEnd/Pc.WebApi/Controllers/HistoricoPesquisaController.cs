@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Pc.Dominio.Entities.Interacoes;
 using Pc.Servico.Interfaces;
 using Pc.WebApi.Authorization;
@@ -138,20 +139,35 @@ namespace Pc.WebApi.Controllers
         /// </summary>
         [HttpGet("sugestoes")]
         [AllowAnonymous]
-        public async Task<IActionResult> ObterSugestoes([FromQuery] string termo)
+        [EnableRateLimiting("catalogo")]
+        public async Task<IActionResult> ObterSugestoes([FromQuery] string? termo)
         {
+            if (termo is not null && termo.Contains('\0'))
+                return BadRequest(new { message = "Termo inválido." });
+
+            if (string.IsNullOrWhiteSpace(termo))
+                return Ok(Array.Empty<object>());
+
             var sugestoes = await _historicoPesquisaServico.ObterSugestoesAsync(termo);
+            var autenticado = User.Identity?.IsAuthenticated == true;
 
             var resposta = sugestoes
                 .GroupBy(h => h.TermoPesquisa)
                 .Select(g => g.First())
-                .Select(h => new HistoricoPesquisaRespostaDto
-                {
-                    Id = h.Id,
-                    ClienteId = h.ClienteId,
-                    TermoPesquisa = h.TermoPesquisa,
-                    DataPesquisa = h.DataPesquisa
-                });
+                .Select(h => autenticado
+                    ? (object)new HistoricoPesquisaRespostaDto
+                    {
+                        Id = h.Id,
+                        ClienteId = h.ClienteId,
+                        TermoPesquisa = h.TermoPesquisa,
+                        DataPesquisa = h.DataPesquisa
+                    }
+                    : new
+                    {
+                        h.Id,
+                        h.TermoPesquisa,
+                        h.DataPesquisa
+                    });
 
             return Ok(resposta);
         }

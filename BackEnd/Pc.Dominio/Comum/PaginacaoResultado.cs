@@ -6,6 +6,6 @@ namespace Pc.Dominio.Comum
         public int Page { get; init; }
         public int PageSize { get; init; }
         public int Total { get; init; }
-        public bool HasNext => Page * PageSize < Total;
+        public bool HasNext => (long)Page * PageSize < Total;
     }
 }
