@@ -37,9 +37,13 @@ self.addEventListener('fetch', (event) => {
 
   if (url.pathname.includes('/api/')) return;
 
-  // Bundles Expo: sempre rede (hash muda a cada deploy).
-  if (url.pathname.startsWith('/_expo/') || url.pathname.startsWith('/assets/')) {
-    event.respondWith(fetch(request));
+  // Bundles, ícone e o próprio script: o browser busca direto.
+  // respondWith(fetch) aqui rejeita e o console mostra "Failed to fetch".
+  if (
+    url.pathname.startsWith('/_expo/') ||
+    url.pathname.startsWith('/assets/') ||
+    url.pathname.endsWith('/service-worker.js')
+  ) {
     return;
   }
 
@@ -63,13 +67,15 @@ self.addEventListener('fetch', (event) => {
     caches.match(request).then(
       (cached) =>
         cached ||
-        fetch(request).then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        })
+        fetch(request)
+          .then((response) => {
+            if (response.ok) {
+              const clone = response.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+            }
+            return response;
+          })
+          .catch(() => new Response('', { status: 504, statusText: 'Offline' }))
     )
   );
 });
