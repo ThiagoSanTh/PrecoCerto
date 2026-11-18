@@ -10,6 +10,7 @@ using Pc.Servico.Interfaces;
 using Pc.WebApi.DTOs.Estabelecimentos;
 using Pc.WebApi.Extensions;
 using Pc.WebApi.Helpers;
+using Pc.WebApi.Hubs;
 using Pc.WebApi.Mappings;
 
 namespace Pc.WebApi.Controllers
@@ -22,17 +23,20 @@ namespace Pc.WebApi.Controllers
         private readonly IClienteServico _usuarioServico;
         private readonly IConsultaCnpjServico _consultaCnpj;
         private readonly IIdCodificador _idCodificador;
+        private readonly PresencaChat? _presenca;
 
         public LojasController(
             ILojaServico lojaServico,
             IClienteServico usuarioServico,
             IConsultaCnpjServico consultaCnpj,
-            IIdCodificador idCodificador)
+            IIdCodificador idCodificador,
+            PresencaChat? presenca = null)
         {
             _lojaServico = lojaServico;
             _usuarioServico = usuarioServico;
             _consultaCnpj = consultaCnpj;
             _idCodificador = idCodificador;
+            _presenca = presenca;
         }
 
         [HttpGet]
@@ -169,6 +173,8 @@ namespace Pc.WebApi.Controllers
             if (lojaExistente is null)
                 return NotFound("Loja não encontrada.");
 
+            var donoAnterior = lojaExistente.UsuarioId;
+
             if (!User.IsAdmin() && lojaExistente.UsuarioId != User.GetUserId())
                 return Forbid();
 
@@ -206,6 +212,13 @@ namespace Pc.WebApi.Controllers
                 lojaExistente.Endereco = CriarEndereco(dto.Endereco);
 
             await _lojaServico.AtualizarAsync(lojaExistente);
+            if (_presenca != null
+                && donoAnterior.HasValue
+                && donoAnterior != lojaExistente.UsuarioId)
+            {
+                await _presenca.RevogarAsync(donoAnterior.Value, lojaExistente.Id);
+            }
+
             return NoContent();
         }
 

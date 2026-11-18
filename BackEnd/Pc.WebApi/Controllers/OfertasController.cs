@@ -15,19 +15,19 @@ namespace Pc.WebApi.Controllers
     {
         private readonly IOfertaServico _ofertaServico;
         private readonly IIdCodificador _idCodificador;
-        private readonly ILojaServico _lojaServico;
         private readonly IProdutoServico _produtoServico;
+        private readonly ILojaAcesso _lojaAcesso;
 
         public OfertasController(
             IOfertaServico ofertaServico,
             IIdCodificador idCodificador,
-            ILojaServico lojaServico,
-            IProdutoServico produtoServico)
+            IProdutoServico produtoServico,
+            ILojaAcesso lojaAcesso)
         {
             _ofertaServico = ofertaServico;
             _idCodificador = idCodificador;
-            _lojaServico = lojaServico;
             _produtoServico = produtoServico;
+            _lojaAcesso = lojaAcesso;
         }
 
         [HttpGet]
@@ -66,8 +66,7 @@ namespace Pc.WebApi.Controllers
         [Authorize(Roles = "Lojista,Vendedor,Admin")]
         public async Task<IActionResult> Adicionar([FromBody] OfertaCriarDto dto)
         {
-            var loja = await _lojaServico.ObterPorIdAsync(dto.LojaId);
-            if (!Authz.OwnsLojaPersistida(this, loja))
+            if (!await Authz.PertenceAsync(User, dto.LojaId, _lojaAcesso))
                 return Forbid();
 
             var produtoInvalido = await RejeitarProdutoAsync(dto.ProdutoId, dto.LojaId);
@@ -100,8 +99,8 @@ namespace Pc.WebApi.Controllers
             if (ofertaExistente == null)
                 return NotFound("Oferta n?o encontrada.");
 
-            var loja = await _lojaServico.ObterPorIdAsync(ofertaExistente.LojaId);
-            if (!Authz.OwnsLojaPersistida(this, loja) || dto.LojaId != ofertaExistente.LojaId)
+            if (dto.LojaId != ofertaExistente.LojaId
+                || !await Authz.PertenceAsync(User, ofertaExistente.LojaId, _lojaAcesso))
                 return Forbid();
 
             var produtoInvalido = await RejeitarProdutoAsync(dto.ProdutoId, ofertaExistente.LojaId);
@@ -132,8 +131,7 @@ namespace Pc.WebApi.Controllers
             if (ofertaExistente == null)
                 return NotFound("Oferta n?o encontrada.");
 
-            var loja = await _lojaServico.ObterPorIdAsync(ofertaExistente.LojaId);
-            if (!Authz.OwnsLojaPersistida(this, loja))
+            if (!await Authz.PertenceAsync(User, ofertaExistente.LojaId, _lojaAcesso))
                 return Forbid();
 
             await _ofertaServico.RemoverAsync(id);

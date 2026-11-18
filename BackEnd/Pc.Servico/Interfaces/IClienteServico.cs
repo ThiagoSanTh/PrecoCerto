@@ -45,13 +45,12 @@ namespace Pc.Servico.Interfaces
         Task DefinirComoLojistaAsync(Guid usuarioId);
 
         /// <summary>
-        /// Promove um cliente a Vendedor de uma loja (controle de estoque).
-        /// Apenas o lojista dono da loja deve chamar (validação no controller).
+        /// Promove um cliente a Vendedor desta loja. Recusa quem já é vendedor de outra.
         /// </summary>
         Task PromoverParaVendedorAsync(Guid usuarioId, Guid lojaId, string? cargo);
 
-        /// <summary>Remove o vínculo de vendedor, voltando o usuário a Cliente.</summary>
-        Task RemoverVendedorAsync(Guid usuarioId);
+        /// <summary>Remove o vendedor desta loja, voltando o usuário a Cliente.</summary>
+        Task RemoverVendedorAsync(Guid usuarioId, Guid lojaId);
 
         /// <summary>Lista os vendedores vinculados a uma loja.</summary>
         Task<List<Usuario>> ListarVendedoresPorLojaAsync(Guid lojaId);

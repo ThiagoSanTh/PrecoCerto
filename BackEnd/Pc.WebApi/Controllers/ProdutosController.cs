@@ -17,16 +17,16 @@ namespace Pc.WebApi.Controllers
     {
         private readonly IProdutoServico _produtoServico;
         private readonly IIdCodificador _idCodificador;
-        private readonly ILojaServico _lojaServico;
+        private readonly ILojaAcesso _lojaAcesso;
 
         public ProdutosController(
             IProdutoServico produtoServico,
             IIdCodificador idCodificador,
-            ILojaServico lojaServico)
+            ILojaAcesso lojaAcesso)
         {
             _produtoServico = produtoServico;
             _idCodificador = idCodificador;
-            _lojaServico = lojaServico;
+            _lojaAcesso = lojaAcesso;
         }
 
         [HttpGet]
@@ -71,8 +71,7 @@ namespace Pc.WebApi.Controllers
             if (!dto.LojaId.HasValue)
                 return BadRequest("LojaId � obrigat�rio.");
 
-            var loja = await _lojaServico.ObterPorIdAsync(dto.LojaId.Value);
-            if (!Authz.OwnsLojaPersistida(this, loja))
+            if (!await Authz.PertenceAsync(User, dto.LojaId.Value, _lojaAcesso))
                 return Forbid();
 
             var produto = new Produto
@@ -99,8 +98,7 @@ namespace Pc.WebApi.Controllers
         [Authorize(Roles = "Lojista,Vendedor,Admin")]
         public async Task<IActionResult> Atualizar(Guid id, [FromBody] ProdutoAtualizarDto dto)
         {
-            var loja = await _lojaServico.ObterPorIdAsync(dto.LojaId);
-            if (!Authz.OwnsLojaPersistida(this, loja))
+            if (!await Authz.PertenceAsync(User, dto.LojaId, _lojaAcesso))
                 return Forbid();
 
             try
@@ -133,8 +131,7 @@ namespace Pc.WebApi.Controllers
         [Authorize(Roles = "Lojista,Vendedor,Admin")]
         public async Task<IActionResult> Deletar(Guid id, [FromQuery] Guid lojaId)
         {
-            var loja = await _lojaServico.ObterPorIdAsync(lojaId);
-            if (!Authz.OwnsLojaPersistida(this, loja))
+            if (!await Authz.PertenceAsync(User, lojaId, _lojaAcesso))
                 return Forbid();
 
             try

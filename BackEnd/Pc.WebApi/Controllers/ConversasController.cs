@@ -17,15 +17,18 @@ namespace Pc.WebApi.Controllers
         private readonly IConversaServico _conversaServico;
         private readonly IIdCodificador _idCodificador;
         private readonly ChatNotificacaoHelper _notificacao;
+        private readonly ILojaAcesso _lojaAcesso;
 
         public ConversasController(
             IConversaServico conversaServico,
             IIdCodificador idCodificador,
-            ChatNotificacaoHelper notificacao)
+            ChatNotificacaoHelper notificacao,
+            ILojaAcesso lojaAcesso)
         {
             _conversaServico = conversaServico;
             _idCodificador = idCodificador;
             _notificacao = notificacao;
+            _lojaAcesso = lojaAcesso;
         }
 
         [HttpGet]
@@ -36,6 +39,10 @@ namespace Pc.WebApi.Controllers
                 return Unauthorized();
 
             var papel = ObterPapel();
+            var negado = await ExigirVinculoDeStaffAsync(papel);
+            if (negado != null)
+                return negado;
+
             var lojaId = User.GetLojaId();
             var conversas = await _conversaServico.ListarDoUsuarioAsync(userId.Value, papel, lojaId);
             var naoLidasPorConversa = await _conversaServico.ContarNaoLidasPorConversasAsync(
@@ -66,8 +73,13 @@ namespace Pc.WebApi.Controllers
             if (!userId.HasValue)
                 return Unauthorized();
 
+            var papel = ObterPapel();
+            var negado = await ExigirVinculoDeStaffAsync(papel);
+            if (negado != null)
+                return negado;
+
             var total = await _conversaServico.ContarNaoLidasAsync(
-                userId.Value, ObterPapel(), User.GetLojaId());
+                userId.Value, papel, User.GetLojaId());
             return Ok(new { total });
         }
 
@@ -78,8 +90,13 @@ namespace Pc.WebApi.Controllers
             if (!userId.HasValue)
                 return Unauthorized();
 
+            var papel = ObterPapel();
+            var negado = await ExigirVinculoDeStaffAsync(papel);
+            if (negado != null)
+                return negado;
+
             var temNovas = await _conversaServico.TemNaoLidasAsync(
-                userId.Value, ObterPapel(), User.GetLojaId(), desde);
+                userId.Value, papel, User.GetLojaId(), desde);
             return Ok(new { temNovas });
         }
 
@@ -130,10 +147,15 @@ namespace Pc.WebApi.Controllers
             if (!userId.HasValue)
                 return Unauthorized();
 
+            var papel = ObterPapel();
+            var negado = await ExigirVinculoDeStaffAsync(papel);
+            if (negado != null)
+                return negado;
+
             try
             {
                 var mensagens = await _conversaServico.ListarMensagensAsync(
-                    conversaId, userId.Value, ObterPapel(), User.GetLojaId(), apos, antes, pageSize);
+                    conversaId, userId.Value, papel, apos, antes, pageSize);
 
                 await _conversaServico.MarcarComoRecebidasAsync(conversaId, userId.Value);
 
@@ -167,10 +189,15 @@ namespace Pc.WebApi.Controllers
             if (!userId.HasValue)
                 return Unauthorized();
 
+            var papel = ObterPapel();
+            var negado = await ExigirVinculoDeStaffAsync(papel);
+            if (negado != null)
+                return negado;
+
             try
             {
                 var mensagem = await _conversaServico.EnviarMensagemAsync(
-                    conversaId, userId.Value, ObterPapel(), dto.Texto);
+                    conversaId, userId.Value, papel, dto.Texto);
 
                 var conversa = await _conversaServico.ObterPorIdAsync(conversaId);
                 if (conversa != null)
@@ -190,5 +217,17 @@ namespace Pc.WebApi.Controllers
 
         private PapelUsuario ObterPapel() =>
             ContextoOperacional.ResolverPapel(User, ContextoOperacional.Ler(Request));
+
+        private async Task<IActionResult?> ExigirVinculoDeStaffAsync(PapelUsuario papel)
+        {
+            if (papel is not (PapelUsuario.Lojista or PapelUsuario.Vendedor))
+                return null;
+
+            var lojaId = User.GetLojaId();
+            if (!lojaId.HasValue || !await Authz.PertenceAsync(User, lojaId.Value, _lojaAcesso))
+                return Forbid();
+
+            return null;
+        }
     }
 }
