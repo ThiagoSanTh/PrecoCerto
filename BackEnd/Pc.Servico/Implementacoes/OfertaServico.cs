@@ -38,8 +38,8 @@ namespace Pc.Servico.Implementacoes
             return await _ofertaRepositorio.ListarAsync();
         }
 
-        public Task<PaginacaoResultado<Oferta>> ListarPaginadoAsync(PaginacaoParametros paginacao) =>
-            _ofertaRepositorio.ListarPaginadoAsync(paginacao);
+        public Task<PaginacaoResultado<Oferta>> ListarPaginadoAsync(PaginacaoParametros paginacao, Guid? lojaId = null) =>
+            _ofertaRepositorio.ListarPaginadoAsync(paginacao, lojaId);
 
         public async Task<List<Oferta>> ObterPorProdutoAsync(Guid produtoId)
         {

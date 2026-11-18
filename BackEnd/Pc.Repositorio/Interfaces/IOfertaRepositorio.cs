@@ -14,6 +14,6 @@ namespace Pc.Repositorio.Interfaces
         Task<List<Guid>> ListarIdsPorLojaAsync(Guid lojaId, int limite = 500);
         Task<List<Oferta>> ListarDisponiveisPorProdutosAsync(IEnumerable<Guid> produtoIds);
         Task<Dictionary<Guid, Oferta>> ObterMelhorOfertaPorProdutosAsync(IEnumerable<Guid> produtoIds);
-        Task<PaginacaoResultado<Oferta>> ListarPaginadoAsync(PaginacaoParametros paginacao);
+        Task<PaginacaoResultado<Oferta>> ListarPaginadoAsync(PaginacaoParametros paginacao, Guid? lojaId = null);
     }
 }

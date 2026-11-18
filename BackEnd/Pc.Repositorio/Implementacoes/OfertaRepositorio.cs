@@ -21,15 +21,16 @@ namespace Pc.Repositorio.Implementacoes
                 .ToListAsync();
         }
 
-        public async Task<PaginacaoResultado<Oferta>> ListarPaginadoAsync(PaginacaoParametros paginacao)
+        public async Task<PaginacaoResultado<Oferta>> ListarPaginadoAsync(PaginacaoParametros paginacao, Guid? lojaId = null)
         {
-            var query = _context.Ofertas
-                .AsNoTracking()
-                .Include(o => o.Produto)
-                .Include(o => o.Loja);
+            var query = _context.Ofertas.AsNoTracking();
+            if (lojaId.HasValue)
+                query = query.Where(o => o.LojaId == lojaId.Value);
 
-            var total = await _context.Ofertas.AsNoTracking().CountAsync();
+            var total = await query.CountAsync();
             var items = await query
+                .Include(o => o.Produto)
+                .Include(o => o.Loja)
                 .OrderByDescending(o => o.DataAtualizacaoPreco)
                 .Skip(paginacao.Skip)
                 .Take(paginacao.PageSize)

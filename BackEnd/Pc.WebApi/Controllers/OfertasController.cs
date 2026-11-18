@@ -33,10 +33,16 @@ namespace Pc.WebApi.Controllers
         [HttpGet]
         [AllowAnonymous]
         [EnableRateLimiting("catalogo")]
-        public async Task<IActionResult> Listar([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        public async Task<IActionResult> Listar(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            [FromQuery] Guid? lojaId = null)
         {
+            if (lojaId == Guid.Empty)
+                return BadRequest("lojaId inválido.");
+
             var paginacao = PaginacaoHelper.Normalizar(page, pageSize);
-            var ofertas = await _ofertaServico.ListarPaginadoAsync(paginacao);
+            var ofertas = await _ofertaServico.ListarPaginadoAsync(paginacao, lojaId);
             return Ok(PaginacaoHelper.ParaResposta(ofertas, MapResposta));
         }
 

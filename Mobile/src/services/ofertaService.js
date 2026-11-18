@@ -13,8 +13,10 @@ function normalizarPaginado(data) {
   };
 }
 
-export async function listarOfertas(page = 1, pageSize = 50) {
-  const { data } = await api.get('/Ofertas', { params: { page, pageSize } });
+export async function listarOfertas(page = 1, pageSize = 50, lojaId) {
+  const params = { page, pageSize };
+  if (lojaId) params.lojaId = lojaId;
+  const { data } = await api.get('/Ofertas', { params });
   return normalizarPaginado(data);
 }
 

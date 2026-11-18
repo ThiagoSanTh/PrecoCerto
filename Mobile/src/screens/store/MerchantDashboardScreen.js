@@ -30,6 +30,20 @@ import { FormScreen, PrimaryButton, ListCardText } from '../../components/form';
 import { PageHeader, SurfaceCard, PillBadge } from '../../components/ui/DesignPrimitives';
 import { fonts, radii } from '../../theme';
 
+async function listarOfertasDaLoja(lojaId) {
+  const items = [];
+  let page = 1;
+  let hasNext = true;
+  while (hasNext) {
+    const pagina = await listarOfertas(page, 100, lojaId);
+    const lote = pagina.items || [];
+    items.push(...lote);
+    hasNext = Boolean(pagina.hasNext) && lote.length > 0;
+    page += 1;
+  }
+  return { items };
+}
+
 export default function MerchantDashboardScreen({ navigation }) {
   const { session, isLojista } = useAuth();
   const { colors } = useTheme();
@@ -55,7 +69,7 @@ export default function MerchantDashboardScreen({ navigation }) {
       const [lojaRes, prodRes, ofertasRes, relRes] = await Promise.all([
         obterLoja(lojaId).catch(() => null),
         listarProdutos(lojaId, 1, 100).catch(() => ({ items: [] })),
-        listarOfertas(1, 200).catch(() => ({ items: [] })),
+        listarOfertasDaLoja(lojaId).catch(() => ({ items: [] })),
         obterRelatorioPesquisasLoja(lojaId).catch(() => []),
       ]);
 
