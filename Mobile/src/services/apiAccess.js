@@ -70,6 +70,31 @@ export function deveAbrirLoginNo401(status, config, routeName) {
   return !publicas.has(routeName);
 }
 
+export const CODIGO_LOJA_CLAIM = 'loja_claim_ausente';
+
+function codigoNoHeader(headers) {
+  if (!headers) return '';
+  if (typeof headers.get === 'function') {
+    return headers.get('x-error-code') || headers.get('X-Error-Code') || '';
+  }
+  return headers['x-error-code'] || headers['X-Error-Code'] || '';
+}
+
+/** 403 de funcionário sem loja no token, ou HubException com o mesmo prefixo. */
+export function ehLojaClaimAusente(erro) {
+  if (!erro) return false;
+  const texto = typeof erro === 'string' ? erro : String(erro.message || '');
+  if (texto.startsWith(`${CODIGO_LOJA_CLAIM}:`)) return true;
+
+  const response = erro.response;
+  const status = response?.status ?? erro.status;
+  if (status !== 403) return false;
+
+  const data = response?.data ?? erro.data;
+  if (data && String(data.code || data.Code || '') === CODIGO_LOJA_CLAIM) return true;
+  return String(codigoNoHeader(response?.headers ?? erro.headers)).toLowerCase() === CODIGO_LOJA_CLAIM;
+}
+
 export function pageSizeSeguro(pageSize) {
   const n = Number(pageSize);
   if (!Number.isFinite(n) || n < 1) return 20;
