@@ -64,7 +64,6 @@ namespace Pc.WebApi.Controllers
         /// Retorna uma avaliação específica
         /// </summary>
         [HttpGet("{id:guid}")]
-        [Authorize]
         public async Task<IActionResult> ObterPorId(Guid id)
         {
             var avaliacao = await _avaliacaoServico.ObterPorIdAsync(id);

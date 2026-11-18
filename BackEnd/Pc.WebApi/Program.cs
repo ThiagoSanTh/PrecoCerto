@@ -553,16 +553,17 @@ app.UseForwardedHeaders();
 var diagnosticoProxy = 0;
 app.Use(async (context, next) =>
 {
-    if (Interlocked.Exchange(ref diagnosticoProxy, 1) == 0)
+    var xff = context.Request.Headers["X-Forwarded-For"].ToString();
+    var peerOriginal = context.Request.Headers["X-Original-For"].ToString();
+    if (DeveRegistrarProxy(xff, peerOriginal, ref diagnosticoProxy))
     {
         var log = context.RequestServices.GetRequiredService<ILoggerFactory>()
             .CreateLogger("PrecoCerto.Proxy");
-        var peerOriginal = context.Request.Headers["X-Original-For"].ToString();
         log.LogInformation(
             "Proxy: RemoteIp={RemoteIp} XForwardedForAplicado={Aplicado} PeerOriginal={Peer}",
             context.Connection.RemoteIpAddress,
             peerOriginal.Length > 0,
-            peerOriginal);
+            peerOriginal.Length > 0 ? peerOriginal : context.Connection.RemoteIpAddress);
     }
 
     await next(context);
@@ -604,4 +605,12 @@ app.MapHub<Pc.WebApi.Hubs.ChatHub>("/hubs/chat");
 
 app.Run();
 
-public partial class Program { }
+public partial class Program
+{
+    internal static bool DeveRegistrarProxy(string xff, string originalFor, ref int estado)
+    {
+        if (xff.Length == 0 && originalFor.Length == 0)
+            return false;
+        return Interlocked.Exchange(ref estado, 1) == 0;
+    }
+}

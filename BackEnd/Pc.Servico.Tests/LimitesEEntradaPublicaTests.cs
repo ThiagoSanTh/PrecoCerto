@@ -327,6 +327,19 @@ public class EntradaPublicaTests : IClassFixture<CatalogoApiFactory>
     }
 }
 
+public class DiagnosticoProxyTests
+{
+    [Fact]
+    public void Primeiro_xff_registra_uma_vez_e_health_check_nao()
+    {
+        var estado = 0;
+        Assert.False(Program.DeveRegistrarProxy("", "", ref estado));
+        Assert.Equal(0, estado);
+        Assert.True(Program.DeveRegistrarProxy("203.0.113.7", "", ref estado));
+        Assert.False(Program.DeveRegistrarProxy("", "10.0.0.5:443", ref estado));
+    }
+}
+
 /// <summary>O upgrade do chat não pode ser barrado pelo balde da API.</summary>
 public class ChatHubLimiteTests : IClassFixture<CatalogoApiFactory>
 {

@@ -107,7 +107,6 @@ public class AcessoAnonimoCatalogoTests : IClassFixture<CatalogoApiFactory>
         yield return new object[] { "POST", $"/api/Lojistas/loja/{id}/vendedores", "{}" };
         yield return new object[] { "GET", $"/api/PreferenciasCliente/cliente/{cliente}", null! };
         yield return new object[] { "POST", "/api/Avaliacoes", "{}" };
-        yield return new object[] { "GET", $"/api/Avaliacoes/{AvaliacaoId}", null! };
         yield return new object[] { "GET", $"/api/Avaliacoes/cliente/{cliente}", null! };
         yield return new object[] { "POST", "/api/Rag/search", "{}" };
         yield return new object[] { "GET", "/api/Rag/dlq", null! };
@@ -142,6 +141,16 @@ public class AcessoAnonimoCatalogoTests : IClassFixture<CatalogoApiFactory>
         Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
         Assert.Contains(EmailDono, texto, StringComparison.Ordinal);
         Assert.Contains(TelefoneDono, texto, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Avaliacao_por_id_anonima_nao_expoe_cliente()
+    {
+        var resposta = await Enviar("GET", $"/api/Avaliacoes/{AvaliacaoId}");
+        var texto = await resposta.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
+        Assert.DoesNotContain(ClienteId.ToString(), texto, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("00000000-0000-0000-0000-000000000000", texto, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
