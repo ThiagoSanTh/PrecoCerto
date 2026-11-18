@@ -338,8 +338,6 @@ export function calcularIndicadoresProdutosLoja(meusProdutos = [], arg2 = [], ar
       if (meuPreco <= menorMercado + 0.005) {
         primeiroLugarCount += 1;
       }
-    } else if (Number.isFinite(meuPreco) && meuPreco > 0) {
-      primeiroLugarCount += 1;
     }
 
     const precosOrdenados = [

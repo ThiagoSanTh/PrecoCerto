@@ -139,6 +139,15 @@ test('calcularIndicadoresProdutosLoja and calcularCompetitividadePrecos compute 
   assert.ok(cafe.diferencaPercentual < 0);
 });
 
+test('produto com preço e sem oferta não conta como 1º lugar', () => {
+  const ind = calcularIndicadoresProdutosLoja(
+    [{ id: 'p1', nome: 'Só preço', preco: 10, lojaId: 'L1' }],
+    [],
+    'L1'
+  );
+  assert.equal(ind.percentualPrimeiroLugar, 0);
+});
+
 test('cruzarTermosMaisProcuradosComCatalogo marks whether searched term exists in store catalog', () => {
   const relatorio = [
     { termo: 'protetor solar', quantidade: 20 },
