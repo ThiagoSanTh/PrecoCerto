@@ -31,8 +31,9 @@ import {
   calcularDescontoPercentual,
   contarFavoritosEmPromocao,
 } from '../../utils/insights';
-import { calcularDistanciaKm, formatarDistancia } from '../../utils/geo';
-import { COORDENADAS_SAQUAREMA, formatarPrecoBrl } from '../../utils/mapaUtils';
+import { calcularDistanciaKm, coordenadasDoCliente, formatarDistancia } from '../../utils/geo';
+import { obterLocalizacaoAtual } from '../../services/locationService';
+import { formatarPrecoBrl } from '../../utils/mapaUtils';
 import { fonts, radii, shadows } from '../../theme';
 
 const PAGE_SIZE = 40;
@@ -42,6 +43,7 @@ export default function FavoritosScreen() {
   const [aba, setAba] = useState('produtos');
   const [itens, setItens] = useState([]);
   const [lojasMapa, setLojasMapa] = useState([]);
+  const [gps, setGps] = useState(null);
   const [loading, setLoading] = useState(true);
   const [carregandoMais, setCarregandoMais] = useState(false);
   const [page, setPage] = useState(1);
@@ -55,14 +57,8 @@ export default function FavoritosScreen() {
   const numColumns = contentWidth >= 1100 ? 3 : contentWidth >= 680 ? 2 : 1;
 
   const coordsCliente = useMemo(
-    () => ({
-      latitude:
-        Number(session?.perfil?.latitudeAtual) || COORDENADAS_SAQUAREMA.latitude,
-      longitude:
-        Number(session?.perfil?.longitudeAtual) ||
-        COORDENADAS_SAQUAREMA.longitude,
-    }),
-    [session?.perfil?.latitudeAtual, session?.perfil?.longitudeAtual]
+    () => coordenadasDoCliente(session?.perfil, gps),
+    [session?.perfil, gps]
   );
 
   const carregar = useCallback(
@@ -75,17 +71,16 @@ export default function FavoritosScreen() {
       else setCarregandoMais(true);
 
       try {
-        const [res, listaLojas] = await Promise.all([
-          listarFavoritosCliente(clienteId, pagina, PAGE_SIZE),
-          pagina === 1
-            ? listarLojasParaFeedMapa().catch(() => [])
-            : Promise.resolve(null),
-        ]);
+        const res = await listarFavoritosCliente(clienteId, pagina, PAGE_SIZE);
         setPage(res.page);
         setHasNext(res.hasNext);
         setItens((prev) => (append ? [...prev, ...res.items] : res.items));
-        if (Array.isArray(listaLojas)) {
-          setLojasMapa(listaLojas);
+        if (pagina === 1) {
+          listarLojasParaFeedMapa()
+            .then((lista) => {
+              if (Array.isArray(lista)) setLojasMapa(lista);
+            })
+            .catch(() => {});
         }
       } catch {
         Alert.alert('Erro', 'Não foi possível carregar favoritos.');
@@ -99,7 +94,16 @@ export default function FavoritosScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      let ativo = true;
       carregar(1, false);
+      obterLocalizacaoAtual()
+        .then((coords) => {
+          if (ativo) setGps(coords);
+        })
+        .catch(() => {});
+      return () => {
+        ativo = false;
+      };
     }, [carregar])
   );
 

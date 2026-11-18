@@ -33,7 +33,7 @@ function normalizarPaginado(data) {
   };
 }
 
-export async function listarFeed({ page = 1, pageSize = 20, termo = '', categoria = null, lojaId = null, force = false } = {}) {
+export async function listarFeed({ page = 1, pageSize = 20, termo = '', categoria = null, lojaId = null, force = false, signal } = {}) {
   pageSize = pageSizeSeguro(pageSize);
   const cacheKey = { page, pageSize, termo: termo.trim(), categoria, lojaId };
   if (!force) {
@@ -46,13 +46,13 @@ export async function listarFeed({ page = 1, pageSize = 20, termo = '', categori
   if (categoria != null) params.categoria = categoria;
   if (lojaId) params.lojaId = lojaId;
 
-  const { data } = await api.get('/Feed', { params });
+  const { data } = await api.get('/Feed', { params, signal });
   const resultado = normalizarPaginado(data);
   salvarCache(NS, cacheKey, resultado);
   return resultado;
 }
 
-export async function listarFeedComStale({ page = 1, pageSize = 20, termo = '', categoria = null, lojaId = null } = {}) {
+export async function listarFeedComStale({ page = 1, pageSize = 20, termo = '', categoria = null, lojaId = null, signal } = {}) {
   pageSize = pageSizeSeguro(pageSize);
   const cacheKey = { page, pageSize, termo: termo.trim(), categoria, lojaId };
   const stale = obterCacheStale(NS, cacheKey);
@@ -62,7 +62,7 @@ export async function listarFeedComStale({ page = 1, pageSize = 20, termo = '', 
     listarFeed({ page, pageSize, termo, categoria, lojaId, force: true }).catch(() => {});
     return { data: stale, fromCache: true, stale: true };
   }
-  const data = await listarFeed({ page, pageSize, termo, categoria, lojaId, force: true });
+  const data = await listarFeed({ page, pageSize, termo, categoria, lojaId, force: true, signal });
   return { data, fromCache: false };
 }
 

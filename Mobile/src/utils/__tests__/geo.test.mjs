@@ -2,10 +2,22 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   calcularDistanciaKm,
+  coordenadasDoCliente,
   formatarDistancia,
   estimarCaminhada,
   montarUrlRotaGoogleMaps,
 } from '../geo.js';
+
+test('coordenadasDoCliente não arredonda e usa GPS, perfil ou Saquarema', () => {
+  const perfil = { latitudeAtual: -22.93555, longitudeAtual: -42.51001 };
+  const gps = { latitude: -22.93001, longitude: -42.50001 };
+  assert.deepEqual(coordenadasDoCliente(perfil, gps), gps);
+  assert.deepEqual(coordenadasDoCliente(perfil, null), {
+    latitude: -22.93555,
+    longitude: -42.51001,
+  });
+  assert.equal(coordenadasDoCliente(null, null).latitude, -22.9329);
+});
 
 test('calcularDistanciaKm returns null for invalid coordinates and 0 for identical points', () => {
   assert.equal(calcularDistanciaKm(null, -42.5, -22.9, -42.5), null);

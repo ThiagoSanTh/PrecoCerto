@@ -51,8 +51,8 @@ import {
   SegmentedControl,
 } from '../../components/ui/DesignPrimitives';
 import { montarMapaBuscaPorLoja } from '../../utils/mapaPinUtils';
-import { COORDENADAS_SAQUAREMA, formatarPrecoBrl } from '../../utils/mapaUtils';
-import { montarUrlRotaGoogleMaps } from '../../utils/geo';
+import { formatarPrecoBrl } from '../../utils/mapaUtils';
+import { coordenadasDoCliente, montarUrlRotaGoogleMaps } from '../../utils/geo';
 import {
   calcularEconomiaBusca,
   enriquecerEOrdenarResultadosBusca,
@@ -93,7 +93,8 @@ export default function SearchScreen() {
   const [carregandoMais, setCarregandoMais] = useState(false);
   const [page, setPage] = useState(1);
   const [hasNext, setHasNext] = useState(false);
-  const [feedError, setFeedError] = useState(null);
+  const [termoServido, setTermoServido] = useState('');
+  const [aviso, setAviso] = useState(null);
   const [catalogoIndisponivel, setCatalogoIndisponivel] = useState(false);
   const [favoritosIds, setFavoritosIds] = useState(() => new Set());
   const [clima, setClima] = useState({ status: 'loading', data: null });
@@ -104,6 +105,9 @@ export default function SearchScreen() {
 
   const clienteId = isCliente ? session?.perfil?.id : null;
   const buscaIdRef = useRef(0);
+  const feedCtrlRef = useRef(null);
+  const feedGenRef = useRef(0);
+  const avisoTimerRef = useRef(null);
   const feedErroLogadoRef = useRef(false);
   const climaReqRef = useRef(0);
   const termoAtivo = termoBusca.trim();
@@ -178,6 +182,23 @@ export default function SearchScreen() {
     }
   }, [clienteId]);
 
+  useEffect(() => () => clearTimeout(avisoTimerRef.current), []);
+
+  function mostrarAviso(texto) {
+    if (!texto) return;
+    setAviso(texto);
+    clearTimeout(avisoTimerRef.current);
+    avisoTimerRef.current = setTimeout(() => setAviso(null), 5000);
+  }
+
+  function pedidoCancelado(error) {
+    return (
+      error?.code === 'ERR_CANCELED' ||
+      error?.name === 'CanceledError' ||
+      error?.name === 'AbortError'
+    );
+  }
+
   function registrarBuscaExecutada(termo, extra = {}) {
     if (!clienteId || !termo) return;
     registrarPesquisa(clienteId, termo, extra).catch((error) => {
@@ -187,8 +208,13 @@ export default function SearchScreen() {
 
   const carregarFeed = useCallback(
     async (termo = '', pagina = 1, append = false, useStale = false) => {
+      const gen = ++feedGenRef.current;
+      feedCtrlRef.current?.abort();
+      const ctrl = new AbortController();
+      feedCtrlRef.current = ctrl;
       const loader = pagina === 1 && !append ? setLoading : setCarregandoMais;
       loader(true);
+      const termoLimpo = String(termo || '').trim();
       try {
         let resultado;
         if (useStale && pagina === 1 && !append) {
@@ -196,6 +222,7 @@ export default function SearchScreen() {
             page: pagina,
             pageSize: PAGE_SIZE,
             termo,
+            signal: ctrl.signal,
           });
           resultado = res.data;
         } else {
@@ -204,22 +231,25 @@ export default function SearchScreen() {
             pageSize: PAGE_SIZE,
             termo,
             force: true,
+            signal: ctrl.signal,
           });
         }
 
+        if (gen !== feedGenRef.current) return;
         setPage(resultado.page);
         setHasNext(resultado.hasNext);
         setProdutos((prev) =>
           append ? [...prev, ...resultado.items] : resultado.items
         );
-        setFeedError(null);
+        setTermoServido(termoLimpo);
         setCatalogoIndisponivel(false);
         feedErroLogadoRef.current = false;
       } catch (error) {
+        if (pedidoCancelado(error) || gen !== feedGenRef.current) return;
         if (pagina === 1 && !append && error?.response?.status === 401) {
           setProdutos([]);
+          setTermoServido(termoLimpo);
           setHasNext(false);
-          setFeedError(null);
           setCatalogoIndisponivel(true);
           return;
         }
@@ -229,11 +259,18 @@ export default function SearchScreen() {
         }
         if (pagina === 1 && !append) {
           setCatalogoIndisponivel(false);
-          setFeedError(mapApiError(error));
+          const mapped = mapApiError(error);
+          mostrarAviso(mapped?.message);
+          if (termoLimpo !== termoAtivoRef.current) {
+            setProdutos([]);
+            setTermoServido(termoAtivoRef.current);
+          }
         }
       } finally {
-        loader(false);
-        setBuscando(false);
+        if (gen === feedGenRef.current) {
+          loader(false);
+          setBuscando(false);
+        }
       }
     },
     []
@@ -258,22 +295,13 @@ export default function SearchScreen() {
     ])
   );
 
+  const coordsOrigem = useMemo(
+    () => coordenadasDoCliente(session?.perfil, localizacaoCliente),
+    [session?.perfil, localizacaoCliente]
+  );
   const coordsClima = useMemo(
-    () =>
-      normalizarCoordenadasClima(
-        localizacaoCliente?.latitude ??
-          session?.perfil?.latitudeAtual ??
-          COORDENADAS_SAQUAREMA.latitude,
-        localizacaoCliente?.longitude ??
-          session?.perfil?.longitudeAtual ??
-          COORDENADAS_SAQUAREMA.longitude
-      ),
-    [
-      localizacaoCliente?.latitude,
-      localizacaoCliente?.longitude,
-      session?.perfil?.latitudeAtual,
-      session?.perfil?.longitudeAtual,
-    ]
+    () => normalizarCoordenadasClima(coordsOrigem.latitude, coordsOrigem.longitude),
+    [coordsOrigem]
   );
 
   useFocusEffect(
@@ -354,16 +382,21 @@ export default function SearchScreen() {
 
   const produtosEnriquecidos = useMemo(
     () =>
-      enriquecerEOrdenarResultadosBusca(produtos, lojas, coordsClima, {
+      enriquecerEOrdenarResultadosBusca(produtos, lojas, coordsOrigem, {
         ordenarPor,
         apenasPromocao,
       }),
-    [produtos, lojas, coordsClima, ordenarPor, apenasPromocao]
+    [produtos, lojas, coordsOrigem, ordenarPor, apenasPromocao]
+  );
+
+  const resultadosVisiveis = useMemo(
+    () => (termoServido === termoAtivo ? produtosEnriquecidos : []),
+    [termoServido, termoAtivo, produtosEnriquecidos]
   );
 
   const economiaInfo = useMemo(
-    () => calcularEconomiaBusca(produtosEnriquecidos),
-    [produtosEnriquecidos]
+    () => calcularEconomiaBusca(resultadosVisiveis),
+    [resultadosVisiveis]
   );
 
   const compraPendenteIdRef = useRef(peekCompraPendente());
@@ -376,48 +409,48 @@ export default function SearchScreen() {
 
   useEffect(() => {
     const pendente = compraPendenteIdRef.current;
-    if (produtosEnriquecidos.length === 0) {
+    if (resultadosVisiveis.length === 0) {
       if (!pendente) setSelectedId(null);
       return;
     }
     if (pendente) {
-      const achou = produtosEnriquecidos.some((p) => String(p.id) === pendente);
+      const achou = resultadosVisiveis.some((p) => String(p.id) === pendente);
       if (!achou) return;
       if (String(selectedId) !== pendente) setSelectedId(pendente);
       compraPendenteIdRef.current = null;
       consumeCompraPendente();
       return;
     }
-    const existe = produtosEnriquecidos.some(
+    const existe = resultadosVisiveis.some(
       (p) => String(p.id) === String(selectedId)
     );
-    if (!existe) setSelectedId(produtosEnriquecidos[0].id);
-  }, [produtosEnriquecidos, selectedId]);
+    if (!existe) setSelectedId(resultadosVisiveis[0].id);
+  }, [resultadosVisiveis, selectedId]);
 
   const selectedItem = useMemo(() => {
     const pendente = compraPendenteIdRef.current;
     if (pendente) {
       return (
-        produtosEnriquecidos.find((p) => String(p.id) === pendente) || null
+        resultadosVisiveis.find((p) => String(p.id) === pendente) || null
       );
     }
     return (
-      produtosEnriquecidos.find((p) => String(p.id) === String(selectedId)) ||
-      produtosEnriquecidos[0] ||
+      resultadosVisiveis.find((p) => String(p.id) === String(selectedId)) ||
+      resultadosVisiveis[0] ||
       null
     );
-  }, [produtosEnriquecidos, selectedId]);
+  }, [resultadosVisiveis, selectedId]);
 
   const lojaIdsDestaque = useMemo(() => {
     if (selectedItem?.lojaId) return [String(selectedItem.lojaId)];
     if (!termoAtivo) return null;
-    const ids = new Set(produtosEnriquecidos.map((p) => p.lojaId).filter(Boolean));
+    const ids = new Set(resultadosVisiveis.map((p) => p.lojaId).filter(Boolean));
     return [...ids].map(String);
-  }, [produtosEnriquecidos, termoAtivo, selectedItem]);
+  }, [resultadosVisiveis, termoAtivo, selectedItem]);
 
-  const { produtosPorLoja, imagemPinPorLoja } = useMemo(
-    () => montarMapaBuscaPorLoja(produtosEnriquecidos, termoAtivo, MAX_PRODUTOS_POR_PIN),
-    [produtosEnriquecidos, termoAtivo]
+  const { produtosPorLoja, imagemPinPorLoja, contagemPorLoja } = useMemo(
+    () => montarMapaBuscaPorLoja(resultadosVisiveis, termoAtivo, MAX_PRODUTOS_POR_PIN),
+    [resultadosVisiveis, termoAtivo]
   );
 
   function abrirProduto(productId, produto) {
@@ -438,7 +471,7 @@ export default function SearchScreen() {
   }
 
   function abrirProdutoDoMapa(productId) {
-    const produto = produtosEnriquecidos.find(
+    const produto = resultadosVisiveis.find(
       (p) => String(p.id) === String(productId)
     );
     if (produto) {
@@ -463,7 +496,7 @@ export default function SearchScreen() {
 
   function handleSelectStoreFromMap(lojaId) {
     if (!lojaId) return;
-    const match = produtosEnriquecidos.find(
+    const match = resultadosVisiveis.find(
       (p) => String(p.lojaId) === String(lojaId)
     );
     if (match) {
@@ -488,8 +521,8 @@ export default function SearchScreen() {
       destinoLat: item.latitudeLoja ?? item.lojaLat,
       destinoLng: item.longitudeLoja ?? item.lojaLng,
       enderecoDestino: item.lojaEnderecoTexto || item.lojaNome || item.nome,
-      origemLat: coordsClima?.latitude,
-      origemLng: coordsClima?.longitude,
+      origemLat: coordsOrigem.latitude,
+      origemLng: coordsOrigem.longitude,
     });
     if (!url) {
       Alert.alert('Rota', 'Endereço da loja não disponível para rota.');
@@ -974,13 +1007,14 @@ export default function SearchScreen() {
       <View style={[styles.mapPanel, { backgroundColor: colors.map }]}>
         <LojasMapView
           lojas={lojas}
-          localizacaoCliente={localizacaoCliente || coordsClima}
+          localizacaoCliente={localizacaoCliente || coordsOrigem}
           lojaIdsDestaque={lojaIdsDestaque}
           lojaSelecionadaId={selectedItem?.lojaId || null}
           rotaAtiva={Boolean(selectedItem?.lojaId)}
           focoRotaKey={focoRotaKey}
           produtosPorLoja={produtosPorLoja}
           imagemPinPorLoja={imagemPinPorLoja}
+          contagemPorLoja={contagemPorLoja}
           buscaAtiva={Boolean(termoAtivo)}
           onProductPress={abrirProdutoDoMapa}
           onStorePress={abrirCatalogoLoja}
@@ -1240,8 +1274,8 @@ export default function SearchScreen() {
             />
             {compactMapMode ? (
               <Text style={[styles.compactMapCount, { color: colors.textMuted }]}>
-                {produtosEnriquecidos.length}{' '}
-                {produtosEnriquecidos.length === 1 ? 'oferta' : 'ofertas'}
+                {resultadosVisiveis.length}{' '}
+                {resultadosVisiveis.length === 1 ? 'oferta' : 'ofertas'}
               </Text>
             ) : null}
           </View>
@@ -1272,8 +1306,8 @@ export default function SearchScreen() {
         {!compactMapMode ? (
           <View style={styles.resultsBar}>
             <Text style={[styles.resultsCount, { color: colors.text }]}>
-              {produtosEnriquecidos.length}{' '}
-              {produtosEnriquecidos.length === 1
+              {resultadosVisiveis.length}{' '}
+              {resultadosVisiveis.length === 1
                 ? 'loja/oferta encontrada'
                 : 'ofertas encontradas'}
             </Text>
@@ -1308,7 +1342,7 @@ export default function SearchScreen() {
         ]}
       >
         <FlatList
-          data={produtosEnriquecidos}
+          data={resultadosVisiveis}
           keyExtractor={(item) => String(item.id)}
           renderItem={renderResultCard}
           ListHeaderComponent={renderSearchHeaderControls()}
@@ -1358,8 +1392,8 @@ export default function SearchScreen() {
       fullBleed
       hideHeader
       noBodyPadding
-      error={feedError}
     >
+      <View style={styles.buscaRoot}>
       {useSplitView ? (
         <View style={styles.splitContainer}>
           {renderLeftListColumn()}
@@ -1375,11 +1409,41 @@ export default function SearchScreen() {
       ) : (
         renderLeftListColumn()
       )}
+      {aviso ? (
+        <View
+          pointerEvents="none"
+          accessibilityRole="alert"
+          accessibilityLiveRegion="polite"
+          style={[styles.avisoFlutuante, { backgroundColor: colors.danger }]}
+        >
+          <Text style={styles.avisoFlutuanteTexto}>{aviso}</Text>
+        </View>
+      ) : null}
+      </View>
     </FormScreen>
   );
 }
 
 const styles = StyleSheet.create({
+  buscaRoot: {
+    flex: 1,
+  },
+  avisoFlutuante: {
+    position: 'absolute',
+    top: 12,
+    left: 16,
+    right: 16,
+    zIndex: 30,
+    borderRadius: radii.lg,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  avisoFlutuanteTexto: {
+    color: '#fff',
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 14,
+    textAlign: 'center',
+  },
   splitContainer: {
     flex: 1,
     flexDirection: 'row',
