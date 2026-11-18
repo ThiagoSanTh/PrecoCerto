@@ -4,6 +4,7 @@ import { atualizarLocalizacao } from '../services/clienteService';
 import { obterLocalizacaoAtual } from '../services/locationService';
 import { onAuthFailure } from '../navigation/authIntent';
 import { clearToken, getToken } from '../services/tokenStorage';
+import { tokenInutilizavel } from '../utils/jwtSessao';
 import { invalidarCache } from '../services/feedCache';
 import {
   MODO_CLIENTE,
@@ -51,6 +52,14 @@ export function AuthProvider({ children }) {
   async function carregarSessao() {
     try {
       const token = await getToken();
+      if (token && tokenInutilizavel(token)) {
+        await clearToken();
+        await AsyncStorage.multiRemove([SESSION_KEY, MODE_KEY]);
+        gravarSessaoEmMemoria(null);
+        setAppModeState(aplicarModo(MODO_CLIENTE, null));
+        return;
+      }
+
       const raw = await AsyncStorage.getItem(SESSION_KEY);
       const savedMode = await AsyncStorage.getItem(MODE_KEY);
 
@@ -180,7 +189,7 @@ export function AuthProvider({ children }) {
         isAdmin: String(session?.tipo ?? '').toLowerCase() === 'admin',
       }}
     >
-      {children}
+      {loading ? null : children}
     </AuthContext.Provider>
   );
 }
