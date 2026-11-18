@@ -24,20 +24,30 @@ namespace Pc.WebApi.Hubs
         }
 
         public void Ligar(string connectionId, Guid usuarioId) =>
-            _conexoes[connectionId] = new Conexao { UsuarioId = usuarioId };
+            Obter(connectionId, usuarioId);
 
-        public void Loja(string connectionId, Guid lojaId)
+        public void Loja(string connectionId, Guid usuarioId, Guid lojaId)
         {
-            if (_conexoes.TryGetValue(connectionId, out var conexao))
-                lock (conexao) conexao.Lojas.Add(lojaId);
+            var conexao = Obter(connectionId, usuarioId);
+            lock (conexao) conexao.Lojas.Add(lojaId);
         }
 
-        public void Conversa(string connectionId, Guid lojaId, string codigo)
+        public void Conversa(string connectionId, Guid usuarioId, Guid lojaId, string codigo)
         {
-            if (string.IsNullOrEmpty(codigo) || !_conexoes.TryGetValue(connectionId, out var conexao))
+            if (string.IsNullOrEmpty(codigo))
                 return;
-            lock (conexao) conexao.Conversas.Add((lojaId, codigo));
+
+            var conexao = Obter(connectionId, usuarioId);
+            lock (conexao)
+            {
+                if (conexao.Conversas.Exists(c => c.LojaId == lojaId && c.Codigo == codigo))
+                    return;
+                conexao.Conversas.Add((lojaId, codigo));
+            }
         }
+
+        private Conexao Obter(string connectionId, Guid usuarioId) =>
+            _conexoes.GetOrAdd(connectionId, _ => new Conexao { UsuarioId = usuarioId });
 
         public void Desligar(string connectionId) =>
             _conexoes.TryRemove(connectionId, out _);

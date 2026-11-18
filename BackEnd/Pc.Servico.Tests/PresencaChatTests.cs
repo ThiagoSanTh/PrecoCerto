@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Connections.Features;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -51,8 +52,8 @@ namespace Pc.Servico.Tests
             var removidos = new List<string>();
             var presenca = Presenca(Grupos(removidos));
             presenca.Ligar("c1", VendedorId);
-            presenca.Loja("c1", LojaId);
-            presenca.Conversa("c1", LojaId, "conversa-publica");
+            presenca.Loja("c1", VendedorId, LojaId);
+            presenca.Conversa("c1", VendedorId, LojaId, "conversa-publica");
 
             var vendedor = new Usuario
             {
@@ -86,9 +87,9 @@ namespace Pc.Servico.Tests
             var removidos = new List<string>();
             var presenca = Presenca(Grupos(removidos));
             presenca.Ligar("c1", DonoId);
-            presenca.Loja("c1", LojaId);
-            presenca.Conversa("c1", LojaId, "conversa-publica");
-            presenca.Loja("c1", OutraLoja);
+            presenca.Loja("c1", DonoId, LojaId);
+            presenca.Conversa("c1", DonoId, LojaId, "conversa-publica");
+            presenca.Loja("c1", DonoId, OutraLoja);
 
             var lojas = new Mock<ILojaServico>();
             lojas.Setup(s => s.ObterPorIdAsync(LojaId)).ReturnsAsync(new Loja
@@ -128,9 +129,9 @@ namespace Pc.Servico.Tests
             var removidos = new List<string>();
             var presenca = Presenca(Grupos(removidos));
             presenca.Ligar("c1", DonoId);
-            presenca.Loja("c1", LojaId);
-            presenca.Conversa("c1", LojaId, "conversa-publica");
-            presenca.Loja("c1", OutraLoja);
+            presenca.Loja("c1", DonoId, LojaId);
+            presenca.Conversa("c1", DonoId, LojaId, "conversa-publica");
+            presenca.Loja("c1", DonoId, OutraLoja);
 
             var usuarios = new Mock<IClienteServico>();
             usuarios.Setup(s => s.RemoverAsync(DonoId)).Returns(Task.CompletedTask);
@@ -150,12 +151,37 @@ namespace Pc.Servico.Tests
         }
 
         [Fact]
+        public async Task Desativar_depois_de_religar_ainda_tira_a_conversa()
+        {
+            var removidos = new List<string>();
+            var grupos = Grupos(removidos);
+            var presenca = Presenca(grupos);
+            var hub = Hub(presenca, grupos, DonoId, "Lojista");
+            await hub.EntrarConversa("conversa-publica");
+            await hub.ConectarUsuario();
+
+            var usuarios = new Mock<IClienteServico>();
+            usuarios.Setup(s => s.RemoverAsync(DonoId)).Returns(Task.CompletedTask);
+            var controller = new LojistasController(
+                usuarios.Object,
+                Mock.Of<IIdCodificador>(),
+                Mock.Of<ILojaAcesso>(),
+                presenca);
+            Autenticar(controller, NovoDono, "Admin", null);
+
+            var resultado = await controller.Remover(DonoId);
+
+            Assert.IsType<NoContentResult>(resultado);
+            Assert.Contains("conversa-publica", removidos);
+        }
+
+        [Fact]
         public async Task Desativar_cliente_tira_a_conversa_do_hub()
         {
             var removidos = new List<string>();
             var presenca = Presenca(Grupos(removidos));
             presenca.Ligar("c1", DonoId);
-            presenca.Conversa("c1", LojaId, "conversa-publica");
+            presenca.Conversa("c1", DonoId, LojaId, "conversa-publica");
 
             var usuarios = new Mock<IClienteServico>();
             usuarios.Setup(s => s.RemoverAsync(DonoId)).Returns(Task.CompletedTask);
@@ -178,12 +204,12 @@ namespace Pc.Servico.Tests
             var removidos = new List<string>();
             var presenca = Presenca(Grupos(removidos));
             presenca.Ligar("dono", DonoId);
-            presenca.Loja("dono", LojaId);
-            presenca.Conversa("dono", LojaId, "conversa-publica");
+            presenca.Loja("dono", DonoId, LojaId);
+            presenca.Conversa("dono", DonoId, LojaId, "conversa-publica");
             presenca.Ligar("cliente", VendedorId);
-            presenca.Conversa("cliente", LojaId, "conversa-cliente");
+            presenca.Conversa("cliente", VendedorId, LojaId, "conversa-cliente");
             presenca.Ligar("outra", NovoDono);
-            presenca.Loja("outra", OutraLoja);
+            presenca.Loja("outra", NovoDono, OutraLoja);
 
             var lojas = new Mock<ILojaServico>();
             lojas.Setup(s => s.ObterPorIdAsync(LojaId)).ReturnsAsync(new Loja
@@ -208,6 +234,80 @@ namespace Pc.Servico.Tests
             Assert.Contains("conversa-publica", removidos);
             Assert.Contains("conversa-cliente", removidos);
             Assert.DoesNotContain($"loja:{OutraLoja}", removidos);
+        }
+
+        [Fact]
+        public async Task Conectar_entrar_e_conectar_de_novo_ainda_revoga_a_conversa()
+        {
+            await SequenciaRevogaConversa(async hub =>
+            {
+                await hub.ConectarUsuario();
+                await hub.EntrarConversa("conversa-publica");
+                await hub.ConectarUsuario();
+            });
+        }
+
+        [Fact]
+        public async Task So_entrar_na_conversa_ainda_revoga_a_conversa()
+        {
+            await SequenciaRevogaConversa(async hub =>
+            {
+                await hub.EntrarConversa("conversa-publica");
+            });
+        }
+
+        [Fact]
+        public async Task Entrar_e_depois_conectar_ainda_revoga_a_conversa()
+        {
+            await SequenciaRevogaConversa(async hub =>
+            {
+                await hub.EntrarConversa("conversa-publica");
+                await hub.ConectarUsuario();
+            });
+        }
+
+        [Fact]
+        public async Task Entrar_duas_vezes_revoga_a_conversa_uma_vez()
+        {
+            var removidos = new List<string>();
+            var grupos = Grupos(removidos);
+            var presenca = Presenca(grupos);
+            var hub = Hub(presenca, grupos, DonoId, "Lojista");
+
+            await hub.ConectarUsuario();
+            await hub.EntrarConversa("conversa-publica");
+            await hub.EntrarConversa("conversa-publica");
+            await presenca.RevogarAsync(DonoId, LojaId);
+
+            Assert.Equal(1, removidos.Count(g => g == "conversa-publica"));
+        }
+
+        [Fact]
+        public async Task Ex_vendedor_como_cliente_mantem_a_propria_conversa()
+        {
+            var removidos = new List<string>();
+            var grupos = Grupos(removidos);
+            var presenca = Presenca(grupos);
+            var hub = Hub(presenca, grupos, VendedorId, "Vendedor", "cliente");
+
+            await hub.ConectarUsuario();
+            await hub.EntrarConversa("conversa-publica");
+            await presenca.RevogarAsync(VendedorId, LojaId);
+
+            Assert.DoesNotContain("conversa-publica", removidos);
+        }
+
+        private static async Task SequenciaRevogaConversa(Func<ChatHub, Task> sequencia)
+        {
+            var removidos = new List<string>();
+            var grupos = Grupos(removidos);
+            var presenca = Presenca(grupos);
+            var hub = Hub(presenca, grupos, DonoId, "Lojista");
+
+            await sequencia(hub);
+            await presenca.RevogarAsync(DonoId, LojaId);
+
+            Assert.Contains("conversa-publica", removidos);
         }
 
         private static LojaAcesso AcessoDono()
@@ -251,7 +351,12 @@ namespace Pc.Servico.Tests
             return new PresencaChat(hub.Object);
         }
 
-        private static ChatHub Hub(PresencaChat presenca, Mock<IGroupManager> grupos, Guid userId, string role)
+        private static ChatHub Hub(
+            PresencaChat presenca,
+            Mock<IGroupManager> grupos,
+            Guid userId,
+            string role,
+            string? contexto = null)
         {
             var conversas = new Mock<IConversaServico>();
             conversas.Setup(s => s.UsuarioPodeAcessarAsync(ConversaId, userId, It.IsAny<PapelUsuario>()))
@@ -273,13 +378,13 @@ namespace Pc.Servico.Tests
                 acesso.Object,
                 presenca)
             {
-                Context = Contexto(userId, role),
+                Context = Contexto(userId, role, contexto),
                 Groups = grupos.Object
             };
             return hub;
         }
 
-        private static HubCallerContext Contexto(Guid userId, string role)
+        private static HubCallerContext Contexto(Guid userId, string role, string? contextoOperacional = null)
         {
             var claims = new List<Claim>
             {
@@ -287,10 +392,18 @@ namespace Pc.Servico.Tests
                 new(ClaimTypes.Role, role),
                 new("lojaId", LojaId.ToString())
             };
+            var features = new FeatureCollection();
+            if (contextoOperacional != null)
+            {
+                var http = new DefaultHttpContext();
+                http.Request.QueryString = new QueryString($"?contexto={contextoOperacional}");
+                features.Set<IHttpContextFeature>(new HttpDoHub { HttpContext = http });
+            }
+
             var contexto = new Mock<HubCallerContext>();
             contexto.Setup(c => c.ConnectionId).Returns("c1");
             contexto.Setup(c => c.User).Returns(new ClaimsPrincipal(new ClaimsIdentity(claims, "test")));
-            contexto.Setup(c => c.Features).Returns(new FeatureCollection());
+            contexto.Setup(c => c.Features).Returns(features);
             return contexto.Object;
         }
 
@@ -310,6 +423,11 @@ namespace Pc.Servico.Tests
                     User = new ClaimsPrincipal(new ClaimsIdentity(claims, "test"))
                 }
             };
+        }
+
+        private sealed class HttpDoHub : IHttpContextFeature
+        {
+            public HttpContext? HttpContext { get; set; }
         }
 
         private sealed class Ids : IIdCodificador
