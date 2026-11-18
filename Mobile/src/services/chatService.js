@@ -51,8 +51,6 @@ async function criarHubConnection(signalR, token) {
   const connection = new signalR.HubConnectionBuilder()
     .withUrl(`${hubBaseUrl()}/hubs/chat?contexto=${contexto}`, {
       accessTokenFactory: async () => (await getToken()) || token,
-      transport: signalR.HttpTransportType.WebSockets,
-      skipNegotiation: true,
     })
     .withAutomaticReconnect()
     .configureLogging(signalR.LogLevel.Warning)

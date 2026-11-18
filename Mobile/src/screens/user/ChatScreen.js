@@ -24,10 +24,18 @@ import { useChatBadge } from '../../context/ChatBadgeContext';
 import { useTheme } from '../../context/ThemeContext';
 import { FormScreen } from '../../components/form';
 import { fonts, radii, shadows } from '../../theme';
+import {
+  enterEnviaMensagem,
+  instanteMensagem,
+  itensComSeparadorDeDia,
+  ordenarMensagens,
+  valorAtualDoInput,
+} from '../../utils/chatThread';
 
 const PAPEL_POR_TIPO = { cliente: 1, lojista: 2, vendedor: 3 };
 
 function isErroSilencioso(error) {
+  if (error?.lojaClaim) return true;
   const status = error?.response?.status;
   return !status || status === 429 || status >= 500;
 }
@@ -45,11 +53,10 @@ function isMinhaMensagem(item, session, emModoLoja) {
   return meuPapel != null && item.remetentePapel === meuPapel;
 }
 
-function formatarHoraMsg(iso) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+function formatarHoraMsg(msg) {
+  const ms = instanteMensagem(msg);
+  if (!ms) return '';
+  return new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
 export function ChatThreadPanel({
@@ -64,6 +71,8 @@ export function ChatThreadPanel({
   const [mensagens, setMensagens] = useState([]);
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const textoRef = useRef('');
+  const enviandoRef = useRef(false);
   const ultimaDataRef = useRef(null);
   const pollRef = useRef(null);
   const listRef = useRef(null);
@@ -73,9 +82,7 @@ export function ChatThreadPanel({
       if (!msg?.codigoPublico) return;
       setMensagens((prev) => {
         if (prev.some((m) => m.codigoPublico === msg.codigoPublico)) return prev;
-        return [...prev, msg].sort(
-          (a, b) => new Date(a.enviadaEm) - new Date(b.enviadaEm)
-        );
+        return ordenarMensagens([...prev, msg]);
       });
       if (msg.enviadaEm) ultimaDataRef.current = msg.enviadaEm;
       onNovaMensagemLocal?.(conversaCodigo, msg);
@@ -112,11 +119,11 @@ export function ChatThreadPanel({
       novas.forEach((m) => {
         if (!ids.has(m.codigoPublico)) merged.push(m);
       });
-      return merged.sort(
-        (a, b) => new Date(a.enviadaEm) - new Date(b.enviadaEm)
-      );
+      return ordenarMensagens(merged);
     });
-    ultimaDataRef.current = novas[novas.length - 1].enviadaEm;
+    const ordenadas = ordenarMensagens(novas);
+    const ultima = ordenadas[ordenadas.length - 1];
+    ultimaDataRef.current = ultima?.enviadaEm ?? ultima?.EnviadaEm ?? null;
   }
 
   useEffect(() => {
@@ -173,34 +180,43 @@ export function ChatThreadPanel({
     };
   }, [conversaCodigo, hubConectado, aplicarMensagem]);
 
-  async function handleEnviar() {
-    if (!texto.trim() || !conversaCodigo) return;
+  function definirTexto(valor) {
+    textoRef.current = valor;
+    setTexto(valor);
+  }
+
+  async function enviarTexto(bruto) {
+    const valor = String(bruto ?? '').trim();
+    if (!valor || !conversaCodigo || enviandoRef.current) return;
+    enviandoRef.current = true;
+    definirTexto('');
     setEnviando(true);
     try {
-      const msg = await enviarMensagem(conversaCodigo, texto.trim());
-      setTexto('');
+      const msg = await enviarMensagem(conversaCodigo, valor);
       aplicarMensagem(msg);
       requestAnimationFrame(() =>
         listRef.current?.scrollToEnd?.({ animated: true })
       );
     } catch (error) {
+      definirTexto(valor);
       if (!isErroSilencioso(error)) {
         Alert.alert('Erro', 'Não foi possível enviar a mensagem.');
       }
     } finally {
+      enviandoRef.current = false;
       setEnviando(false);
     }
   }
 
+  function handleEnviar() {
+    enviarTexto(textoRef.current);
+  }
+
   const handleKeyPress = (e) => {
-    if (
-      Platform.OS === 'web' &&
-      e.nativeEvent?.key === 'Enter' &&
-      !e.nativeEvent?.shiftKey
-    ) {
-      e.preventDefault?.();
-      handleEnviar();
-    }
+    if (Platform.OS !== 'web' || !enterEnviaMensagem(e.nativeEvent)) return;
+    e.preventDefault?.();
+    const domValue = e?.target?.value ?? e.nativeEvent?.target?.value;
+    enviarTexto(valorAtualDoInput(textoRef.current, domValue));
   };
 
   return (
@@ -252,8 +268,8 @@ export function ChatThreadPanel({
       {/* Messages List */}
       <FlatList
         ref={listRef}
-        data={mensagens}
-        keyExtractor={(item) => item.codigoPublico}
+        data={itensComSeparadorDeDia(mensagens)}
+        keyExtractor={(item) => item.id}
         style={styles.messagesList}
         contentContainerStyle={styles.messagesContent}
         showsVerticalScrollIndicator={false}
@@ -268,8 +284,18 @@ export function ChatThreadPanel({
           </Text>
         }
         renderItem={({ item }) => {
-          const minha = isMinhaMensagem(item, session, emModoLoja);
-          const hora = formatarHoraMsg(item.enviadaEm);
+          if (item.tipo === 'dia') {
+            return (
+              <View style={styles.diaSeparador} accessibilityRole="header">
+                <Text style={[styles.diaSeparadorTexto, { color: colors.textMuted }]}>
+                  {item.label}
+                </Text>
+              </View>
+            );
+          }
+          const msg = item.msg;
+          const minha = isMinhaMensagem(msg, session, emModoLoja);
+          const hora = formatarHoraMsg(msg);
           return (
             <View
               style={[
@@ -302,7 +328,7 @@ export function ChatThreadPanel({
                     },
                   ]}
                 >
-                  {item.texto}
+                  {msg.texto}
                 </Text>
                 {hora ? (
                   <Text
@@ -341,7 +367,7 @@ export function ChatThreadPanel({
         >
           <TextInput
             value={texto}
-            onChangeText={setTexto}
+            onChangeText={definirTexto}
             placeholder="Escreva uma mensagem…"
             placeholderTextColor={colors.placeholder}
             returnKeyType="send"
@@ -408,6 +434,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderBottomWidth: 1,
+  },
+  diaSeparador: {
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  diaSeparadorTexto: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 12,
+    fontWeight: '600',
   },
   backBtn: {
     width: 36,
