@@ -525,7 +525,14 @@ export default function SearchScreen() {
   }, [route.params?.retomarCompraId, navigation]);
 
   async function handleAbrirChatItem(item) {
-    if (!item || !clienteId) return;
+    if (!item) return;
+    if (!clienteId) {
+      Alert.alert(
+        'Chat',
+        'O chat é da conta de cliente. Troque para o modo cliente para conversar com a loja.'
+      );
+      return;
+    }
     const loja = lojas.find((l) => String(l.id ?? l.Id) === String(item.lojaId));
     const lojaCodigo =
       item.lojaCodigoPublico ||

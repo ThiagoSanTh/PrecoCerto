@@ -2,7 +2,7 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import { getToken, clearToken } from './tokenStorage';
 import { getContextoOperacional } from '../utils/modoUsuario';
-import { deveAbrirLoginNo401, deveEncaminharAoLogin, isPedidoPublicoDeCatalogo } from './apiAccess';
+import { deveAbrirLoginNo401, deveEncaminharAoLogin, deveRepetirCatalogoSemToken } from './apiAccess';
 import { emitAuthFailure, peekPendingAuthAction, setPendingAuthAction } from '../navigation/authIntent';
 import { navigationRef } from '../navigation/navigationRef';
 
@@ -124,7 +124,7 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const status = error.response?.status;
-    if (status === 401 && isPedidoPublicoDeCatalogo(error.config) && !error.config?._semToken) {
+    if (deveRepetirCatalogoSemToken(status, error.config)) {
       await clearToken();
       emitAuthFailure();
       const headers = { ...(error.config.headers || {}) };

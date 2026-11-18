@@ -1,6 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { deveAbrirLoginNo401, deveEncaminharAoLogin, isPedidoPublicoDeCatalogo, pageSizeSeguro } from '../apiAccess.js';
+import { deveAbrirLoginNo401, deveEncaminharAoLogin, deveRepetirCatalogoSemToken, isPedidoPublicoDeCatalogo, pageSizeSeguro } from '../apiAccess.js';
+import { tokenInutilizavel } from '../../utils/jwtSessao.js';
+
+function jwt(payload) {
+  const parte = (valor) => Buffer.from(JSON.stringify(valor)).toString('base64url');
+  return `${parte({ alg: 'none', typ: 'JWT' })}.${parte(payload)}.assinatura`;
+}
 
 test('leitura de catálogo, mapa e busca segue sem sessão', () => {
   const publicos = [
@@ -42,6 +48,13 @@ test('compra, IA, chat, perfil e escrita continuam autenticados', () => {
     { method: 'post', url: '/HistoricoPesquisa' },
     { method: 'post', url: '/Avaliacoes' },
     { method: 'get', url: '/Avaliacoes/abc' },
+    { method: 'get', url: '/Feed/extra' },
+    { method: 'get', url: '/Lojas/buscar' },
+    { method: 'get', url: '/Lojas/abc/extra' },
+    { method: 'get', url: '/Produtos/Buscar' },
+    { method: 'get', url: '/Ofertas/produto' },
+    { method: 'get', url: '/Weather/agora' },
+    { method: 'get', url: '/Avaliacoes/loja/abc/extra' },
     { method: 'get', url: '/Avaliacoes/cliente/abc' },
     { method: 'get', url: '/HistoricoPesquisa/cliente/abc/ultimos' },
     { method: 'get', url: '/Favoritos/verificar/abc' },
@@ -72,6 +85,18 @@ test('401 na vitrine não abre o login', () => {
   assert.equal(deveAbrirLoginNo401(401, conversas, 'ConversasLista'), true);
   assert.equal(deveAbrirLoginNo401(401, { method: 'get', url: '/Feed' }, 'Search'), false);
   assert.equal(deveAbrirLoginNo401(403, conversas, 'Mensagens'), false);
+});
+
+test('token válido no boot e revogado no catálogo ainda repete sem Authorization', () => {
+  const token = jwt({ exp: Math.floor(Date.now() / 1000) + 3600 });
+  assert.equal(tokenInutilizavel(token), false);
+  assert.equal(deveRepetirCatalogoSemToken(401, { method: 'get', url: '/Feed' }), true);
+  assert.equal(
+    deveRepetirCatalogoSemToken(401, { method: 'get', url: '/Feed', _semToken: true }),
+    false
+  );
+  assert.equal(deveRepetirCatalogoSemToken(401, { method: 'get', url: '/Conversas' }), false);
+  assert.equal(tokenInutilizavel('lixo'), true);
 });
 
 test('pageSize não passa de 100', () => {
