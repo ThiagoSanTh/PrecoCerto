@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Platform } from 'react-native';
+import { StackActions } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
@@ -207,8 +208,17 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
       target: route.key,
       canPreventDefault: true,
     });
-    if (!focused && !event.defaultPrevented) {
+    if (event.defaultPrevented) return;
+    if (!focused) {
       navigation.navigate(route.name);
+      return;
+    }
+    const nestedKey = route.state?.key;
+    if (nestedKey && (route.state?.index ?? 0) > 0) {
+      navigation.dispatch({
+        ...StackActions.popToTop(),
+        target: nestedKey,
+      });
     }
   }
 
@@ -220,8 +230,8 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
       { key: 'c-hist', route: 'Histórico', label: 'Histórico', icon: 'time' },
     ];
     const lojistaCrossLinks = [
-      { key: 's-painel', route: 'Painel', label: 'Painel BI', icon: 'bar-chart' },
-      { key: 's-prod', route: 'Produtos', label: 'Meus produtos', icon: 'storefront' },
+      { key: 's-painel', route: 'Painel', label: 'Painel', icon: 'bar-chart' },
+      { key: 's-prod', route: 'Produtos', label: 'Produtos', icon: 'storefront' },
     ];
 
     return (
@@ -423,10 +433,7 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
           const focused = state.index === realIndex;
           const { options } = descriptors[route.key];
           const rawLabel = options.tabBarLabel ?? options.title ?? route.name;
-          const shortLabel = String(rawLabel)
-            .replace('Assistente ', '')
-            .replace('Meus ', '')
-            .replace('Painel ', '');
+          const shortLabel = String(rawLabel).replace(/^Assistente\s+/, '');
           const iconName = ICONS[route.name] || 'ellipse';
           const showBadge = route.name === 'Mensagens' && badgeCount > 0;
 
