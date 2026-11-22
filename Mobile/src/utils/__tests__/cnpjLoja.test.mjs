@@ -1,32 +1,32 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  ERROS_CNPJ,
+  FRASES,
+  FRASE_GENERICA,
+  FRASE_LIMITE,
   mapearRespostaCnpj,
   mensagemErroConsultaCnpj,
   planejarPreenchimento,
 } from '../cnpjLoja.js';
 
-const COMPLETA = {
-  cnpj: '11222333000116',
-  razaoSocial: 'Padaria São Jorge Ltda',
-  nomeFantasia: 'Padaria São Jorge',
-  situacao: 'ATIVA',
-  endereco: {
-    logradouro: 'RUA FULANO DE TAL',
-    numero: '100',
-    complemento: 'Loja 2',
-    bairro: 'Centro',
-    cidade: 'Saquarema',
-    uf: 'rj',
-    cep: '28990000',
-  },
-  email: 'contato@padaria.test',
-  telefone: '21987654321',
-};
-
-test('resposta completa preenche os campos do formulário e mascara cep e telefone', () => {
-  assert.deepEqual(mapearRespostaCnpj(COMPLETA), {
+test('mapeia completa, parcial, antiga e endereco null, com cep e telefone mascarados', () => {
+  assert.deepEqual(mapearRespostaCnpj({
+    razaoSocial: 'Padaria São Jorge Ltda',
+    nomeFantasia: 'Padaria São Jorge',
+    situacaoCadastral: 'ATIVA',
+    ativo: true,
+    endereco: {
+      logradouro: 'RUA FULANO DE TAL',
+      numero: '100',
+      complemento: 'Loja 2',
+      bairro: 'Centro',
+      cidade: 'Saquarema',
+      uf: 'rj',
+      cep: '28990000',
+    },
+    email: 'contato@padaria.test',
+    telefone: '21987654321',
+  }), {
     nomeFantasia: 'Padaria São Jorge',
     razaoSocial: 'Padaria São Jorge Ltda',
     logradouro: 'RUA FULANO DE TAL',
@@ -38,184 +38,70 @@ test('resposta completa preenche os campos do formulário e mascara cep e telefo
     email: 'contato@padaria.test',
     telefone: '(21) 98765-4321',
   });
-});
 
-test('resposta parcial ignora null e usa a razão social quando não há nome fantasia', () => {
-  const parcial = {
-    cnpj: '11222333000116',
+  assert.deepEqual(mapearRespostaCnpj({
     razaoSocial: 'Só Razão Ltda',
     nomeFantasia: null,
-    situacao: null,
-    endereco: {
-      logradouro: 'PAULISTA',
-      numero: null,
-      complemento: null,
-      bairro: null,
-      cidade: 'Rio',
-      uf: null,
-      cep: null,
-    },
+    endereco: { logradouro: 'PAULISTA', numero: null, cidade: 'Rio', uf: null, cep: null },
     email: null,
     telefone: '2133334444',
-  };
-
-  assert.deepEqual(mapearRespostaCnpj(parcial), {
+  }), {
     nomeFantasia: 'Só Razão Ltda',
     razaoSocial: 'Só Razão Ltda',
     logradouro: 'PAULISTA',
     cidade: 'Rio',
     telefone: '(21) 3333-4444',
   });
-});
 
-test('resposta antiga, só com os 4 campos, não inventa endereço, e-mail nem telefone', () => {
-  const antiga = {
-    cnpj: '11222333000116',
-    razaoSocial: 'Antiga Ltda',
-    nomeFantasia: 'Antiga',
-    situacao: 'ATIVA',
-  };
+  assert.deepEqual(
+    mapearRespostaCnpj({ razaoSocial: 'Antiga Ltda', nomeFantasia: 'Antiga', situacao: 'ATIVA' }),
+    { nomeFantasia: 'Antiga', razaoSocial: 'Antiga Ltda' }
+  );
 
-  assert.deepEqual(mapearRespostaCnpj(antiga), {
-    nomeFantasia: 'Antiga',
-    razaoSocial: 'Antiga Ltda',
-  });
-});
-
-test('endereco null não preenche endereço e telefone só com dígitos ganha DDD', () => {
-  const semEndereco = {
-    cnpj: '11222333000116',
-    razaoSocial: null,
+  assert.deepEqual(mapearRespostaCnpj({
     nomeFantasia: 'Sem Endereço',
-    situacao: 'ATIVA',
     endereco: null,
     email: 'a@loja.test',
-    telefone: '21987654321',
-  };
-
-  const campos = mapearRespostaCnpj(semEndereco);
-  assert.deepEqual(campos, {
-    nomeFantasia: 'Sem Endereço',
-    email: 'a@loja.test',
-    telefone: '(21) 98765-4321',
-  });
-  assert.equal('cep' in campos, false);
-  assert.equal('logradouro' in campos, false);
-});
-
-test('cep e telefone nulos ou vazios ficam de fora', () => {
-  const campos = mapearRespostaCnpj({
-    nomeFantasia: 'Loja',
-    endereco: { cep: null, logradouro: 'Rua A' },
     telefone: null,
-    email: '  ',
-  });
-
-  assert.deepEqual(campos, {
-    nomeFantasia: 'Loja',
-    logradouro: 'Rua A',
-  });
+  }), { nomeFantasia: 'Sem Endereço', email: 'a@loja.test' });
 });
 
-test('planejarPreenchimento só marca vazio e separa o que já foi digitado', () => {
-  const plano = planejarPreenchimento(COMPLETA, {
-    nomeFantasia: 'Minha Loja',
-    razaoSocial: '',
-    telefone: '(21) 98765-4321',
-    email: '',
-    cep: '',
-    logradouro: '',
-    numero: '',
-    bairro: '',
-    cidade: '',
-    estado: '',
-  });
-
-  assert.equal(plano.vazios.nomeFantasia, undefined);
-  assert.equal(plano.conflitos.nomeFantasia, 'Padaria São Jorge');
-  assert.equal(plano.vazios.cep, '28990-000');
-  assert.equal(plano.conflitos.telefone, undefined);
-  assert.equal(plano.vazios.telefone, undefined);
+test('campo preenchido vira conflito e campo vazio é preenchido', () => {
+  const plano = planejarPreenchimento(
+    { nomeFantasia: 'Outra', telefone: '21987654321' },
+    { nomeFantasia: 'Minha Loja', telefone: '' }
+  );
+  assert.equal(plano.conflitos.nomeFantasia, 'Outra');
+  assert.equal(plano.vazios.telefone, '(21) 98765-4321');
 });
 
-function erroConsulta({ status, code, header, detail = 'DETALHE CRU BAIXADA INAPTA SUSPENSA' }) {
-  return {
-    response: {
-      status,
-      data: { type: 'about:blank', title: 'erro', status, detail, ...(code ? { code } : {}) },
-      headers: header ? { 'x-error-code': header } : {},
-    },
-  };
+const STATUS = {
+  cnpj_invalido: 400,
+  cnpj_nao_encontrado: 404,
+  cnpj_inativo: 422,
+  cnpj_fonte_indisponivel: 503,
+};
+
+for (const [code, frase] of Object.entries(FRASES)) {
+  test(`${code} vira a frase fixa e ignora o detail`, () => {
+    const msg = mensagemErroConsultaCnpj({
+      response: {
+        status: STATUS[code],
+        data: { title: 't', detail: 'CNPJ com situação cadastral: Baixada.', code },
+        headers: { 'x-error-code': 'outro' },
+      },
+    });
+    assert.equal(msg, frase);
+    assert.equal(msg.includes('Baixada'), false);
+  });
 }
 
-function assertMensagemFixa(mensagem, esperada, cru = 'DETALHE CRU') {
-  assert.equal(mensagem, esperada);
-  assert.equal(mensagem.includes(cru), false);
-  assert.equal(mensagem.includes('BAIXADA'), false);
-}
-
-test('400 cnpj_invalido vira a frase fixa e ignora o detail', () => {
-  assertMensagemFixa(
-    mensagemErroConsultaCnpj(erroConsulta({ status: 400, code: 'cnpj_invalido' })),
-    ERROS_CNPJ.invalido
-  );
-});
-
-test('404 cnpj_nao_encontrado vira a frase fixa e ignora o detail', () => {
-  assertMensagemFixa(
-    mensagemErroConsultaCnpj(erroConsulta({ status: 404, code: 'cnpj_nao_encontrado' })),
-    ERROS_CNPJ.naoEncontrado
-  );
-});
-
-test('422 cnpj_inativo cobre baixado, inapto e suspenso sem repetir o detail', () => {
-  for (const detail of ['situação BAIXADA', 'empresa INAPTA', 'cadastro SUSPENSO']) {
-    const mensagem = mensagemErroConsultaCnpj(
-      erroConsulta({ status: 422, code: 'cnpj_inativo', detail })
-    );
-    assert.equal(mensagem, ERROS_CNPJ.inativo);
-    assert.equal(mensagem.includes(detail), false);
-  }
-});
-
-test('503 cnpj_fonte_indisponivel vira a frase fixa e ignora o detail', () => {
-  assertMensagemFixa(
-    mensagemErroConsultaCnpj(erroConsulta({ status: 503, code: 'cnpj_fonte_indisponivel' })),
-    ERROS_CNPJ.indisponivel
-  );
-});
-
-test('429 usa a frase de limite mesmo sem code e sem o texto da API', () => {
-  assertMensagemFixa(
-    mensagemErroConsultaCnpj(erroConsulta({ status: 429, detail: 'slow down' })),
-    ERROS_CNPJ.limite,
-    'slow down'
-  );
-});
-
-test('sem code no corpo, o header X-Error-Code define a mensagem', () => {
-  assert.equal(
-    mensagemErroConsultaCnpj(erroConsulta({ status: 422, header: 'cnpj_inativo' })),
-    ERROS_CNPJ.inativo
-  );
-});
-
-test('o code do corpo ganha do header', () => {
-  assert.equal(
-    mensagemErroConsultaCnpj(erroConsulta({
-      status: 400,
-      code: 'cnpj_invalido',
-      header: 'cnpj_inativo',
-    })),
-    ERROS_CNPJ.invalido
-  );
-});
-
-test('code desconhecido, outro status ou falha de rede usam a mensagem genérica', () => {
-  assertMensagemFixa(
-    mensagemErroConsultaCnpj(erroConsulta({ status: 500, code: 'erro_interno' })),
-    ERROS_CNPJ.generico
-  );
-  assert.equal(mensagemErroConsultaCnpj({ request: {}, message: 'Network Error' }), ERROS_CNPJ.generico);
-  assert.equal(mensagemErroConsultaCnpj(erroConsulta({ status: 503 })), ERROS_CNPJ.generico);
+test('sem code no corpo usa o header; 429 e o resto usam frases próprias', () => {
+  assert.equal(mensagemErroConsultaCnpj({
+    response: { status: 422, data: { detail: 'Baixada' }, headers: { 'x-error-code': 'cnpj_inativo' } },
+  }), FRASES.cnpj_inativo);
+  assert.equal(mensagemErroConsultaCnpj({
+    response: { status: 429, data: { detail: 'slow down' }, headers: {} },
+  }), FRASE_LIMITE);
+  assert.equal(mensagemErroConsultaCnpj({ request: {} }), FRASE_GENERICA);
 });

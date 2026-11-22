@@ -1,9 +1,8 @@
-import { View, Text, Pressable, Alert, ActivityIndicator, StyleSheet, Platform } from 'react-native';
+import { View, Text, Pressable, Alert, ActivityIndicator, Platform } from 'react-native';
 import { useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { criarLoja } from '../../services/lojaService';
 import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
 import { buscarEnderecoPorCep, geocodificarEndereco } from '../../services/enderecoService';
 import { consultarCnpj } from '../../services/consultaService';
 import { obterLocalizacaoAtual } from '../../services/locationService';
@@ -16,11 +15,7 @@ import {
   formStyles,
 } from '../../components/form';
 import { apenasDigitosCnpj, isCnpjValido, isEmailValido, isTelefoneValido } from '../../utils/validacaoUtils';
-import {
-  ERROS_CNPJ,
-  mensagemErroConsultaCnpj,
-  planejarPreenchimento,
-} from '../../utils/cnpjLoja';
+import { FRASES, mensagemErroConsultaCnpj, planejarPreenchimento } from '../../utils/cnpjLoja';
 import { formatApiError } from '../../utils/apiErrorUtils';
 import { colors } from '../../theme';
 
@@ -32,7 +27,6 @@ const STEPS = [
 
 export default function CreateStoreScreen({ navigation }) {
   const { session, logout } = useAuth();
-  const { colors: themeColors } = useTheme();
   const [step, setStep] = useState(0);
 
   const [nomeFantasia, setNomeFantasia] = useState('');
@@ -106,7 +100,7 @@ export default function CreateStoreScreen({ navigation }) {
     const digitos = apenasDigitosCnpj(cnpj);
     if (digitos.length !== 14) return false;
     if (!isCnpjValido(digitos)) {
-      setErroCnpj(ERROS_CNPJ.invalido);
+      setErroCnpj(FRASES.cnpj_invalido);
       setCnpjVerificado(false);
       return false;
     }
@@ -395,7 +389,6 @@ export default function CreateStoreScreen({ navigation }) {
           />
           <FormField
             label="CNPJ"
-            name="cnpj"
             value={cnpj}
             onChangeText={(value) => {
               setCnpj(value);
@@ -403,8 +396,6 @@ export default function CreateStoreScreen({ navigation }) {
             }}
             onBlur={() => buscarDadosCnpj(false)}
             keyboardType="number-pad"
-            autoComplete="off"
-            spellCheck={false}
             returnKeyType="next"
             rightAccessory={
               <Pressable
@@ -413,21 +404,19 @@ export default function CreateStoreScreen({ navigation }) {
                 accessibilityState={{ disabled: !cnpjCompleto, busy: loadingCnpj }}
                 disabled={!cnpjCompleto}
                 onPress={() => buscarDadosCnpj(true)}
-                style={({ pressed, hovered, focused }) => [
-                  styles.lupa,
-                  !cnpjCompleto && styles.lupaOff,
-                  hovered && cnpjCompleto && { backgroundColor: themeColors.primarySoft },
-                  pressed && cnpjCompleto && { opacity: 0.72 },
-                  focused && styles.lupaFocus,
+                style={({ focused }) => [
+                  lupaBase,
+                  !cnpjCompleto && { opacity: 0.4 },
+                  focused && lupaFoco,
                 ]}
               >
                 {loadingCnpj ? (
-                  <ActivityIndicator color={themeColors.primary} size="small" />
+                  <ActivityIndicator color={colors.primary} size="small" />
                 ) : (
                   <Ionicons
                     name="search-outline"
                     size={20}
-                    color={cnpjCompleto ? themeColors.primary : themeColors.textMuted}
+                    color={cnpjCompleto ? colors.primary : colors.textMuted}
                     accessible={false}
                   />
                 )}
@@ -435,40 +424,28 @@ export default function CreateStoreScreen({ navigation }) {
             }
           />
           {erroCnpj ? (
-            <Text
-              accessibilityRole="alert"
-              accessibilityLiveRegion="polite"
-              style={[styles.erroCnpj, { color: themeColors.destructive }]}
-            >
+            <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={formStyles.dangerText}>
               {erroCnpj}
             </Text>
           ) : null}
           {confirmacaoCnpj ? (
-            <View style={styles.confirma} accessibilityRole="alert">
-              <Text style={[formStyles.sectionHint, { color: themeColors.text, marginBottom: 0 }]}>
+            <View accessibilityRole="alert">
+              <Text style={formStyles.sectionHint}>
                 Alguns campos já estão preenchidos. Substituir pelos dados do CNPJ?
               </Text>
-              <View style={styles.confirmaAcoes}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Manter o que já digitei"
-                  onPress={() => setConfirmacaoCnpj(null)}
-                  style={[styles.confirmaBtn, { borderColor: themeColors.border, backgroundColor: themeColors.surface }]}
-                >
-                  <Text style={[formStyles.secondaryButtonText, { color: themeColors.text }]}>Manter</Text>
-                </Pressable>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Substituir pelos dados do CNPJ"
-                  onPress={() => {
-                    aplicarCampos(confirmacaoCnpj);
-                    setConfirmacaoCnpj(null);
-                  }}
-                  style={[styles.confirmaBtn, { borderColor: themeColors.primary, backgroundColor: themeColors.primary }]}
-                >
-                  <Text style={formStyles.cepButtonText}>Substituir</Text>
-                </Pressable>
-              </View>
+              <SecondaryButton
+                label="Manter"
+                accessibilityLabel="Manter o que já digitei"
+                onPress={() => setConfirmacaoCnpj(null)}
+              />
+              <PrimaryButton
+                label="Substituir"
+                accessibilityLabel="Substituir pelos dados do CNPJ"
+                onPress={() => {
+                  aplicarCampos(confirmacaoCnpj);
+                  setConfirmacaoCnpj(null);
+                }}
+              />
             </View>
           ) : null}
           <FormField
@@ -620,44 +597,13 @@ export default function CreateStoreScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  lupa: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 10,
-    flexShrink: 0,
-    ...(Platform.OS === 'web' ? { cursor: 'pointer' } : null),
-  },
-  lupaOff: {
-    opacity: 0.4,
-  },
-  lupaFocus: Platform.OS === 'web'
-    ? { boxShadow: '0 0 0 2px rgba(14, 124, 102, 0.45)' }
-    : {},
-  erroCnpj: {
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: -4,
-    marginBottom: 8,
-  },
-  confirma: {
-    marginTop: -4,
-    marginBottom: 12,
-    gap: 8,
-  },
-  confirmaAcoes: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  confirmaBtn: {
-    minHeight: 44,
-    minWidth: 44,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+const lupaBase = {
+  width: 44,
+  height: 44,
+  alignItems: 'center',
+  justifyContent: 'center',
+  flexShrink: 0,
+  ...(Platform.OS === 'web' ? { cursor: 'pointer' } : null),
+};
+
+const lupaFoco = Platform.OS === 'web' ? { boxShadow: '0 0 0 2px rgba(14, 124, 102, 0.45)' } : null;
