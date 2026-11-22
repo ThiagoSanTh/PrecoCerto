@@ -21,6 +21,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useChatBadge } from '../../context/ChatBadgeContext';
 import { useLayoutProfile } from '../../hooks/useLayoutProfile';
+import { usePresencaChat } from '../../hooks/usePresencaChat';
 import { ChatThreadPanel } from './ChatScreen';
 import { fonts, inputFontSize, radii } from '../../theme';
 
@@ -56,6 +57,7 @@ export default function ConversasScreen({ navigation }) {
   const { colors } = useTheme();
   const { atualizarFromConversas } = useChatBadge();
   const { useSplitView } = useLayoutProfile();
+  usePresencaChat();
 
   const carregar = useCallback(
     async (force = false) => {

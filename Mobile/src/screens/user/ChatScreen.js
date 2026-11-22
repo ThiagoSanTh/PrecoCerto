@@ -22,6 +22,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useChatBadge } from '../../context/ChatBadgeContext';
 import { useTheme } from '../../context/ThemeContext';
+import { usePresencaChat } from '../../hooks/usePresencaChat';
 import { FormScreen } from '../../components/form';
 import { fonts, inputFontSize, radii, shadows } from '../../theme';
 
@@ -379,6 +380,7 @@ export function ChatThreadPanel({
 
 export default function ChatScreen({ route, navigation }) {
   const { conversaCodigo, titulo } = route.params || {};
+  usePresencaChat();
 
   return (
     <FormScreen
