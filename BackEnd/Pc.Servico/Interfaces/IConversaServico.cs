@@ -17,6 +17,9 @@ namespace Pc.Servico.Interfaces
         Task MarcarComoRecebidasAsync(Guid conversaId, Guid leitorId);
         Task<int> ContarNaoLidasAsync(Guid usuarioId, PapelUsuario papel, Guid? lojaId);
         Task<bool> TemNaoLidasAsync(Guid usuarioId, PapelUsuario papel, Guid? lojaId, DateTime? desde = null);
+        Task<bool> AbrirChatAsync(Guid usuarioId);
+        Task<bool> FecharChatAsync(Guid usuarioId);
+        Task<(bool ChatAberto, DateTime? ChatFechadoEm)> ObterEstadoChatAsync(Guid usuarioId);
         Task<Dictionary<Guid, int>> ContarNaoLidasPorConversasAsync(Guid usuarioId, PapelUsuario papel, Guid? lojaId);
         Task<Dictionary<Guid, string>> ObterUltimasMensagensTextoAsync(IEnumerable<Guid> conversaIds);
         Task<bool> UsuarioPodeAcessarAsync(Guid conversaId, Guid usuarioId, PapelUsuario papel);
