@@ -19,25 +19,24 @@ namespace Pc.Servico.Tests
         private const string Cnpj = "19131243000197";
 
         [Fact]
-        public async Task OpenCnpj_mapeia_endereco_email_e_telefone()
+        public async Task BrasilApi_mapeia_endereco_email_e_telefone()
         {
-            var chamadasBrasil = 0;
+            var chamadas = 0;
             var sut = Criar(req =>
             {
-                if (req.RequestUri!.Host.Contains("opencnpj", StringComparison.OrdinalIgnoreCase))
-                    return Json(HttpStatusCode.OK, OpenCnpjComEndereco);
-
-                chamadasBrasil++;
-                return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable);
+                chamadas++;
+                Assert.Equal($"https://brasilapi.com.br/api/cnpj/v1/{Cnpj}", req.RequestUri!.AbsoluteUri);
+                return Json(HttpStatusCode.OK, BrasilApiComEndereco);
             });
 
             var resultado = await sut.ConsultarAsync(Cnpj);
 
+            Assert.Equal(1, chamadas);
             Assert.NotNull(resultado);
             Assert.Equal(Cnpj, resultado.Cnpj);
             Assert.Equal("OPEN KNOWLEDGE BRASIL", resultado.RazaoSocial);
             Assert.Equal("REDE PELO CONHECIMENTO LIVRE", resultado.NomeFantasia);
-            Assert.Equal("Ativa", resultado.SituacaoCadastral);
+            Assert.Equal("ATIVA", resultado.SituacaoCadastral);
             Assert.Equal("contato@okbr.org", resultado.Email);
             Assert.Equal("1123851939", resultado.Telefone);
             var endereco = Assert.IsType<CnpjEndereco>(resultado.Endereco);
@@ -48,63 +47,16 @@ namespace Pc.Servico.Tests
             Assert.Equal("SAO PAULO", endereco.Cidade);
             Assert.Equal("SP", endereco.Uf);
             Assert.Equal("01311902", endereco.Cep);
-            Assert.Equal(0, chamadasBrasil);
         }
 
         [Fact]
-        public async Task BrasilApi_mapeia_endereco_email_e_telefone_quando_opencnpj_falha()
-        {
-            var sut = Criar(req =>
-            {
-                if (req.RequestUri!.Host.Contains("opencnpj", StringComparison.OrdinalIgnoreCase))
-                    return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable);
-
-                return Json(HttpStatusCode.OK, BrasilApiComEndereco);
-            });
-
-            var resultado = await sut.ConsultarAsync(Cnpj);
-
-            Assert.NotNull(resultado);
-            Assert.Equal(Cnpj, resultado.Cnpj);
-            Assert.Equal("OPEN KNOWLEDGE BRASIL", resultado.RazaoSocial);
-            Assert.Null(resultado.NomeFantasia);
-            Assert.Equal("ATIVA", resultado.SituacaoCadastral);
-            Assert.Null(resultado.Email);
-            Assert.Equal("1123851939", resultado.Telefone);
-            var endereco = Assert.IsType<CnpjEndereco>(resultado.Endereco);
-            Assert.Equal("AVENIDA PAULISTA 37", endereco.Logradouro);
-            Assert.Equal("37", endereco.Numero);
-            Assert.Equal("ANDAR 4", endereco.Complemento);
-            Assert.Equal("BELA VISTA", endereco.Bairro);
-            Assert.Equal("SAO PAULO", endereco.Cidade);
-            Assert.Equal("SP", endereco.Uf);
-            Assert.Equal("01311902", endereco.Cep);
-        }
-
-        [Fact]
-        public async Task OpenCnpj_sem_endereco_devolve_endereco_nulo()
-        {
-            var sut = Criar(_ => Json(HttpStatusCode.OK, OpenCnpjSemEndereco));
-
-            var resultado = await sut.ConsultarAsync(Cnpj);
-
-            Assert.NotNull(resultado);
-            Assert.Equal("EMPRESA SEM ENDERECO LTDA", resultado.RazaoSocial);
-            Assert.Equal("SEM ENDERECO", resultado.NomeFantasia);
-            Assert.Equal("Ativa", resultado.SituacaoCadastral);
-            Assert.Null(resultado.Endereco);
-            Assert.Null(resultado.Email);
-            Assert.Null(resultado.Telefone);
-        }
-
-        [Fact]
-        public async Task OpenCnpj_monta_logradouro_com_tipo()
+        public async Task BrasilApi_monta_logradouro_com_tipo()
         {
             const string corpo = """
                 {
                   "razao_social": "FULANO LTDA",
-                  "situacao_cadastral": "Ativa",
-                  "tipo_logradouro": "RUA",
+                  "descricao_situacao_cadastral": "ATIVA",
+                  "descricao_tipo_de_logradouro": "RUA",
                   "logradouro": "FULANO DE TAL",
                   "municipio": "SAO PAULO"
                 }
@@ -117,13 +69,13 @@ namespace Pc.Servico.Tests
         }
 
         [Fact]
-        public async Task OpenCnpj_nao_duplica_tipo_que_ja_esta_no_logradouro()
+        public async Task BrasilApi_nao_duplica_tipo_que_ja_esta_no_logradouro()
         {
             const string corpo = """
                 {
                   "razao_social": "FULANO LTDA",
-                  "situacao_cadastral": "Ativa",
-                  "tipo_logradouro": "rua",
+                  "descricao_situacao_cadastral": "ATIVA",
+                  "descricao_tipo_de_logradouro": "rua",
                   "logradouro": "RUA FULANO DE TAL",
                   "municipio": "SAO PAULO"
                 }
@@ -136,12 +88,12 @@ namespace Pc.Servico.Tests
         }
 
         [Fact]
-        public async Task OpenCnpj_sem_tipo_usa_so_o_logradouro()
+        public async Task BrasilApi_sem_tipo_usa_so_o_logradouro()
         {
             const string corpo = """
                 {
                   "razao_social": "FULANO LTDA",
-                  "situacao_cadastral": "Ativa",
+                  "descricao_situacao_cadastral": "ATIVA",
                   "logradouro": "FULANO DE TAL",
                   "municipio": "SAO PAULO"
                 }
@@ -151,6 +103,40 @@ namespace Pc.Servico.Tests
             var resultado = await sut.ConsultarAsync(Cnpj);
 
             Assert.Equal("FULANO DE TAL", resultado!.Endereco!.Logradouro);
+        }
+
+        [Fact]
+        public async Task BrasilApi_sem_endereco_devolve_endereco_nulo()
+        {
+            var sut = Criar(_ => Json(HttpStatusCode.OK, BrasilApiSemEndereco));
+
+            var resultado = await sut.ConsultarAsync(Cnpj);
+
+            Assert.NotNull(resultado);
+            Assert.Equal("EMPRESA SEM ENDERECO LTDA", resultado.RazaoSocial);
+            Assert.Null(resultado.Endereco);
+            Assert.Null(resultado.Email);
+            Assert.Null(resultado.Telefone);
+        }
+
+        [Fact]
+        public async Task BrasilApi_nao_encontrado_retorna_null()
+        {
+            var sut = Criar(_ => new HttpResponseMessage(HttpStatusCode.NotFound));
+
+            var resultado = await sut.ConsultarAsync(Cnpj);
+
+            Assert.Null(resultado);
+        }
+
+        [Fact]
+        public async Task BrasilApi_fora_ou_timeout_lanca_indisponivel()
+        {
+            var fora = Criar(_ => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+            var timeout = Criar(_ => throw new TaskCanceledException("timeout"));
+
+            await Assert.ThrowsAsync<CnpjConsultaIndisponivelException>(() => fora.ConsultarAsync(Cnpj));
+            await Assert.ThrowsAsync<CnpjConsultaIndisponivelException>(() => timeout.ConsultarAsync(Cnpj));
         }
 
         private static ConsultaCnpjServico Criar(Func<HttpRequestMessage, HttpResponseMessage> responder)
@@ -168,15 +154,13 @@ namespace Pc.Servico.Tests
                 Content = new StringContent(body, Encoding.UTF8, "application/json")
             };
 
-        // Campos reais da OpenCNPJ (https://api.opencnpj.org/schema): logradouro, numero,
-        // complemento, bairro, municipio, uf, cep, email e telefones[{ddd, numero, is_fax}].
-        private const string OpenCnpjComEndereco = """
+        private const string BrasilApiComEndereco = """
             {
               "cnpj": "19131243000197",
               "razao_social": "OPEN KNOWLEDGE BRASIL",
               "nome_fantasia": "  REDE PELO CONHECIMENTO LIVRE  ",
-              "situacao_cadastral": "Ativa",
-              "tipo_logradouro": "AVENIDA",
+              "descricao_situacao_cadastral": "ATIVA",
+              "descricao_tipo_de_logradouro": "AVENIDA",
               "logradouro": "PAULISTA",
               "numero": "37",
               "complemento": "",
@@ -185,20 +169,17 @@ namespace Pc.Servico.Tests
               "uf": "SP",
               "municipio": "SAO PAULO",
               "email": " contato@okbr.org ",
-              "telefones": [
-                { "ddd": "11", "numero": "99990000", "is_fax": true },
-                { "ddd": "11", "numero": "2385-1939", "is_fax": false }
-              ]
+              "ddd_telefone_1": "(11) 2385-1939",
+              "ddd_telefone_2": "1133334444"
             }
             """;
 
-        private const string OpenCnpjSemEndereco = """
+        private const string BrasilApiSemEndereco = """
             {
-              "cnpj": "19131243000197",
               "razao_social": "EMPRESA SEM ENDERECO LTDA",
               "nome_fantasia": "SEM ENDERECO",
-              "situacao_cadastral": "Ativa",
-              "tipo_logradouro": "",
+              "descricao_situacao_cadastral": "ATIVA",
+              "descricao_tipo_de_logradouro": "",
               "logradouro": "",
               "numero": " ",
               "complemento": "",
@@ -207,31 +188,7 @@ namespace Pc.Servico.Tests
               "uf": "",
               "municipio": "",
               "email": "",
-              "telefones": [
-                { "ddd": "11", "numero": "33334444", "is_fax": true }
-              ]
-            }
-            """;
-
-        // Campos reais da BrasilAPI CNPJ v1: logradouro, numero, complemento, bairro,
-        // municipio, uf, cep, email e ddd_telefone_1.
-        private const string BrasilApiComEndereco = """
-            {
-              "cnpj": "19131243000197",
-              "razao_social": "OPEN KNOWLEDGE BRASIL",
-              "nome_fantasia": "",
-              "descricao_situacao_cadastral": "ATIVA",
-              "descricao_tipo_de_logradouro": "AVENIDA",
-              "logradouro": "PAULISTA 37",
-              "numero": "37",
-              "complemento": "ANDAR 4",
-              "bairro": "BELA VISTA",
-              "cep": "01311-902",
-              "uf": "SP",
-              "municipio": "SAO PAULO",
-              "email": null,
-              "ddd_telefone_1": "(11) 2385-1939",
-              "ddd_telefone_2": "1133334444"
+              "ddd_telefone_1": ""
             }
             """;
     }
