@@ -103,7 +103,7 @@ namespace Pc.Servico.Implementacoes
                     NomeFantasia = string.IsNullOrWhiteSpace(json.NomeFantasia) ? null : json.NomeFantasia.Trim(),
                     SituacaoCadastral = json.SituacaoCadastral?.Trim() ?? string.Empty,
                     Endereco = MontarEndereco(
-                        json.Logradouro, json.Numero, json.Complemento, json.Bairro, json.Municipio, json.Uf, json.Cep),
+                        json.TipoLogradouro, json.Logradouro, json.Numero, json.Complemento, json.Bairro, json.Municipio, json.Uf, json.Cep),
                     Email = Texto(json.Email),
                     Telefone = TelefoneOpenCnpj(json.Telefones)
                 });
@@ -142,7 +142,7 @@ namespace Pc.Servico.Implementacoes
                     NomeFantasia = string.IsNullOrWhiteSpace(json.NomeFantasia) ? null : json.NomeFantasia.Trim(),
                     SituacaoCadastral = json.DescricaoSituacaoCadastral?.Trim() ?? string.Empty,
                     Endereco = MontarEndereco(
-                        json.Logradouro, json.Numero, json.Complemento, json.Bairro, json.Municipio, json.Uf, json.Cep),
+                        json.DescricaoTipoDeLogradouro, json.Logradouro, json.Numero, json.Complemento, json.Bairro, json.Municipio, json.Uf, json.Cep),
                     Email = Texto(json.Email),
                     Telefone = Digitos(json.DddTelefone1)
                 });
@@ -170,6 +170,7 @@ namespace Pc.Servico.Implementacoes
         }
 
         private static CnpjEndereco? MontarEndereco(
+            string? tipoLogradouro,
             string? logradouro,
             string? numero,
             string? complemento,
@@ -180,7 +181,7 @@ namespace Pc.Servico.Implementacoes
         {
             var endereco = new CnpjEndereco
             {
-                Logradouro = Texto(logradouro),
+                Logradouro = LogradouroComTipo(tipoLogradouro, logradouro),
                 Numero = Texto(numero),
                 Complemento = Texto(complemento),
                 Bairro = Texto(bairro),
@@ -221,6 +222,17 @@ namespace Pc.Servico.Implementacoes
             return null;
         }
 
+        private static string? LogradouroComTipo(string? tipo, string? logradouro)
+        {
+            var nome = Texto(logradouro);
+            var prefixo = Texto(tipo);
+            if (prefixo is null || nome is null)
+                return nome;
+            if (nome.StartsWith(prefixo, StringComparison.OrdinalIgnoreCase))
+                return nome;
+            return $"{prefixo} {nome}";
+        }
+
         private static string? Texto(string? valor) =>
             string.IsNullOrWhiteSpace(valor) ? null : valor.Trim();
 
@@ -243,6 +255,9 @@ namespace Pc.Servico.Implementacoes
 
             [JsonPropertyName("situacao_cadastral")]
             public string? SituacaoCadastral { get; set; }
+
+            [JsonPropertyName("tipo_logradouro")]
+            public string? TipoLogradouro { get; set; }
 
             [JsonPropertyName("logradouro")]
             public string? Logradouro { get; set; }
@@ -294,6 +309,9 @@ namespace Pc.Servico.Implementacoes
 
             [JsonPropertyName("descricao_situacao_cadastral")]
             public string? DescricaoSituacaoCadastral { get; set; }
+
+            [JsonPropertyName("descricao_tipo_de_logradouro")]
+            public string? DescricaoTipoDeLogradouro { get; set; }
 
             [JsonPropertyName("logradouro")]
             public string? Logradouro { get; set; }

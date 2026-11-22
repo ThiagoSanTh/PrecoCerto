@@ -150,7 +150,8 @@ builder.Services.AddCors(options =>
                 if (uri.Host.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase)) return true;
 
                 return corsOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase);
-            });
+            })
+            .WithExposedHeaders("X-Error-Code");
     });
 });
 

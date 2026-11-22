@@ -1,10 +1,12 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Moq;
+using Pc.Servico.Excecoes;
 using Pc.Servico.Implementacoes;
 using Pc.Servico.Interfaces;
 using Pc.WebApi.Controllers;
@@ -39,7 +41,7 @@ namespace Pc.Servico.Tests
             Assert.Equal("contato@okbr.org", resultado.Email);
             Assert.Equal("1123851939", resultado.Telefone);
             var endereco = Assert.IsType<CnpjEndereco>(resultado.Endereco);
-            Assert.Equal("PAULISTA", endereco.Logradouro);
+            Assert.Equal("AVENIDA PAULISTA", endereco.Logradouro);
             Assert.Equal("37", endereco.Numero);
             Assert.Null(endereco.Complemento);
             Assert.Equal("BELA VISTA", endereco.Bairro);
@@ -70,7 +72,7 @@ namespace Pc.Servico.Tests
             Assert.Null(resultado.Email);
             Assert.Equal("1123851939", resultado.Telefone);
             var endereco = Assert.IsType<CnpjEndereco>(resultado.Endereco);
-            Assert.Equal("PAULISTA 37", endereco.Logradouro);
+            Assert.Equal("AVENIDA PAULISTA 37", endereco.Logradouro);
             Assert.Equal("37", endereco.Numero);
             Assert.Equal("ANDAR 4", endereco.Complemento);
             Assert.Equal("BELA VISTA", endereco.Bairro);
@@ -93,6 +95,62 @@ namespace Pc.Servico.Tests
             Assert.Null(resultado.Endereco);
             Assert.Null(resultado.Email);
             Assert.Null(resultado.Telefone);
+        }
+
+        [Fact]
+        public async Task OpenCnpj_monta_logradouro_com_tipo()
+        {
+            const string corpo = """
+                {
+                  "razao_social": "FULANO LTDA",
+                  "situacao_cadastral": "Ativa",
+                  "tipo_logradouro": "RUA",
+                  "logradouro": "FULANO DE TAL",
+                  "municipio": "SAO PAULO"
+                }
+                """;
+
+            var sut = Criar(_ => Json(HttpStatusCode.OK, corpo));
+            var resultado = await sut.ConsultarAsync(Cnpj);
+
+            Assert.Equal("RUA FULANO DE TAL", resultado!.Endereco!.Logradouro);
+        }
+
+        [Fact]
+        public async Task OpenCnpj_nao_duplica_tipo_que_ja_esta_no_logradouro()
+        {
+            const string corpo = """
+                {
+                  "razao_social": "FULANO LTDA",
+                  "situacao_cadastral": "Ativa",
+                  "tipo_logradouro": "rua",
+                  "logradouro": "RUA FULANO DE TAL",
+                  "municipio": "SAO PAULO"
+                }
+                """;
+
+            var sut = Criar(_ => Json(HttpStatusCode.OK, corpo));
+            var resultado = await sut.ConsultarAsync(Cnpj);
+
+            Assert.Equal("RUA FULANO DE TAL", resultado!.Endereco!.Logradouro);
+        }
+
+        [Fact]
+        public async Task OpenCnpj_sem_tipo_usa_so_o_logradouro()
+        {
+            const string corpo = """
+                {
+                  "razao_social": "FULANO LTDA",
+                  "situacao_cadastral": "Ativa",
+                  "logradouro": "FULANO DE TAL",
+                  "municipio": "SAO PAULO"
+                }
+                """;
+
+            var sut = Criar(_ => Json(HttpStatusCode.OK, corpo));
+            var resultado = await sut.ConsultarAsync(Cnpj);
+
+            Assert.Equal("FULANO DE TAL", resultado!.Endereco!.Logradouro);
         }
 
         private static ConsultaCnpjServico Criar(Func<HttpRequestMessage, HttpResponseMessage> responder)
@@ -252,6 +310,108 @@ namespace Pc.Servico.Tests
             Assert.Equal(JsonValueKind.Null, json.GetProperty("endereco").ValueKind);
             Assert.Equal(JsonValueKind.Null, json.GetProperty("email").ValueKind);
             Assert.Equal(JsonValueKind.Null, json.GetProperty("telefone").ValueKind);
+        }
+
+        [Theory]
+        [InlineData("123")]
+        [InlineData("19131243000190")]
+        public async Task Cnpj_invalido_responde_400(string cnpj)
+        {
+            var servico = new Mock<IConsultaCnpjServico>();
+            var (resultado, http) = await ConsultarErro(servico.Object, cnpj);
+
+            var problema = Problema(resultado, 400, "cnpj_invalido", http);
+            Assert.Equal("CNPJ inválido", problema.Title);
+            Assert.Equal("O CNPJ não tem formato ou dígito verificador válido.", problema.Detail);
+            servico.Verify(
+                s => s.ConsultarAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task Cnpj_nao_encontrado_responde_404()
+        {
+            var servico = new Mock<IConsultaCnpjServico>();
+            servico
+                .Setup(s => s.ConsultarAsync(Cnpj, It.IsAny<CancellationToken>()))
+                .ReturnsAsync((CnpjConsultaResultado?)null);
+
+            var (resultado, http) = await ConsultarErro(servico.Object, Cnpj);
+            var problema = Problema(resultado, 404, "cnpj_nao_encontrado", http);
+            Assert.Equal("CNPJ não encontrado", problema.Title);
+            Assert.Equal(
+                "CNPJ não encontrado na base da Receita. Verifique se o número está correto e se a empresa está cadastrada.",
+                problema.Detail);
+        }
+
+        [Theory]
+        [InlineData("Baixada")]
+        [InlineData("Inapta")]
+        [InlineData("Suspensa")]
+        [InlineData("Nula")]
+        public async Task Cnpj_inativo_responde_422(string situacao)
+        {
+            var servico = new Mock<IConsultaCnpjServico>();
+            servico
+                .Setup(s => s.ConsultarAsync(Cnpj, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new CnpjConsultaResultado
+                {
+                    Cnpj = Cnpj,
+                    RazaoSocial = "EMPRESA INATIVA LTDA",
+                    SituacaoCadastral = situacao
+                });
+
+            var (resultado, http) = await ConsultarErro(servico.Object, Cnpj);
+            var problema = Problema(resultado, 422, "cnpj_inativo", http);
+            Assert.Equal("CNPJ inativo", problema.Title);
+            Assert.Equal($"CNPJ com situação cadastral: {situacao}.", problema.Detail);
+        }
+
+        [Fact]
+        public async Task Cnpj_fonte_indisponivel_responde_503()
+        {
+            var servico = new Mock<IConsultaCnpjServico>();
+            servico
+                .Setup(s => s.ConsultarAsync(Cnpj, It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new CnpjConsultaIndisponivelException(
+                    "Consulta de CNPJ temporariamente indisponível. Tente novamente em instantes."));
+
+            var (resultado, http) = await ConsultarErro(servico.Object, Cnpj);
+            var problema = Problema(resultado, 503, "cnpj_fonte_indisponivel", http);
+            Assert.Equal("Consulta de CNPJ indisponível", problema.Title);
+            Assert.Equal(
+                "Consulta de CNPJ temporariamente indisponível. Tente novamente em instantes.",
+                problema.Detail);
+        }
+
+        private static ProblemDetails Problema(
+            IActionResult resultado,
+            int status,
+            string code,
+            HttpContext http)
+        {
+            var obj = Assert.IsType<ObjectResult>(resultado);
+            Assert.Equal(status, obj.StatusCode);
+            var problema = Assert.IsType<ProblemDetails>(obj.Value);
+            Assert.Equal(status, problema.Status);
+            Assert.Equal(code, problema.Extensions["code"]);
+            Assert.Equal(code, http.Response.Headers["X-Error-Code"]);
+            var json = JsonSerializer.Serialize(problema);
+            Assert.Equal(code, JsonDocument.Parse(json).RootElement.GetProperty("code").GetString());
+            return problema;
+        }
+
+        private static async Task<(IActionResult Resultado, HttpContext Http)> ConsultarErro(
+            IConsultaCnpjServico servico,
+            string cnpj)
+        {
+            var http = new DefaultHttpContext();
+            var controller = new ConsultasController(servico)
+            {
+                ControllerContext = new ControllerContext { HttpContext = http }
+            };
+            var resultado = await controller.ConsultarCnpj(cnpj, CancellationToken.None);
+            return (resultado, http);
         }
 
         private static async Task<JsonElement> Consultar(IConsultaCnpjServico servico)
