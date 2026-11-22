@@ -55,6 +55,10 @@ namespace Pc.Infraestrutura
                 .HasForeignKey(u => u.LojaVinculadaId)
                 .OnDelete(DeleteBehavior.SetNull);
 
+            modelBuilder.Entity<Usuario>()
+                .Property(u => u.ChatAberto)
+                .HasDefaultValue(false);
+
             modelBuilder.Entity<Produto>()
                 .HasOne(p => p.Loja)
                 .WithMany()

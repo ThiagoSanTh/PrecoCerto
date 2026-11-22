@@ -507,10 +507,12 @@ namespace Pc.Servico.Tests
         private static ConversaServico Conversa(Mock<IConversaRepositorio> repo, ILojaAcesso acesso) =>
             new(
                 repo.Object,
+                Mock.Of<IClienteRepositorio>(),
                 Mock.Of<ILojaRepositorio>(),
                 Mock.Of<IProdutoRepositorio>(),
                 Mock.Of<IOfertaRepositorio>(),
-                acesso);
+                acesso,
+                TimeProvider.System);
 
         private static Mock<IGroupManager> Grupos()
         {

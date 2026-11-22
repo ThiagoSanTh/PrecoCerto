@@ -40,6 +40,11 @@ namespace Pc.Dominio.Entities.Usuarios
         public decimal? LatitudeAtual { get; set; }
         public decimal? LongitudeAtual { get; set; }
 
+        // 💬 Chat em foco. A expiração do heartbeat é calculada na leitura.
+        public bool ChatAberto { get; set; }
+        public DateTime? ChatFechadoEm { get; set; }
+        public DateTime? ChatAtivoEm { get; set; }
+
         // 🏪 Dados de Vendedor/Lojista
         // Cargo é usado para vendedores (ex.: vendedor, estoquista).
         public string? Cargo { get; set; }

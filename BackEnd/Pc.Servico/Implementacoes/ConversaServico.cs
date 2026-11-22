@@ -1,5 +1,6 @@
 using System.Globalization;
 using Pc.Dominio.Entities.Interacoes;
+using Pc.Dominio.Entities.Usuarios;
 using Pc.Dominio.Enums;
 using Pc.Repositorio.Interfaces;
 using Pc.Servico.Interfaces;
@@ -11,24 +12,33 @@ namespace Pc.Servico.Implementacoes
         private static readonly CultureInfo CulturaPtBr = CultureInfo.GetCultureInfo("pt-BR");
         private static readonly TimeSpan JanelaMensagemInteresse = TimeSpan.FromMinutes(10);
 
+        /// <summary>Chat aberto sem heartbeat mais novo que isto conta como fechado.</summary>
+        public static readonly TimeSpan TtlChatAberto = TimeSpan.FromMinutes(5);
+
         private readonly IConversaRepositorio _repo;
+        private readonly IClienteRepositorio _usuarios;
         private readonly ILojaRepositorio _lojaRepo;
         private readonly IProdutoRepositorio _produtoRepo;
         private readonly IOfertaRepositorio _ofertaRepo;
         private readonly ILojaAcesso _acesso;
+        private readonly TimeProvider _relogio;
 
         public ConversaServico(
             IConversaRepositorio repo,
+            IClienteRepositorio usuarios,
             ILojaRepositorio lojaRepo,
             IProdutoRepositorio produtoRepo,
             IOfertaRepositorio ofertaRepo,
-            ILojaAcesso acesso)
+            ILojaAcesso acesso,
+            TimeProvider relogio)
         {
             _repo = repo;
+            _usuarios = usuarios;
             _lojaRepo = lojaRepo;
             _produtoRepo = produtoRepo;
             _ofertaRepo = ofertaRepo;
             _acesso = acesso;
+            _relogio = relogio;
         }
 
         public async Task<List<Conversa>> ListarDoUsuarioAsync(Guid usuarioId, PapelUsuario papel, Guid? lojaId)
@@ -162,9 +172,61 @@ namespace Pc.Servico.Implementacoes
             Guid usuarioId, PapelUsuario papel, Guid? lojaId, DateTime? desde = null)
         {
             await ExigirStaffAsync(usuarioId, papel, lojaId);
+            if (!desde.HasValue)
+            {
+                var estado = await ObterEstadoChatAsync(usuarioId);
+                desde = estado.ChatFechadoEm;
+            }
+
             var ehLojista = papel is PapelUsuario.Lojista or PapelUsuario.Vendedor;
             return await _repo.TemNaoLidasAsync(usuarioId, ehLojista, lojaId, desde);
         }
+
+        public async Task<bool> AbrirChatAsync(Guid usuarioId)
+        {
+            var usuario = await _usuarios.ObterPorIdAsync(usuarioId);
+            if (usuario == null)
+                return false;
+
+            usuario.ChatAberto = true;
+            usuario.ChatAtivoEm = AgoraUtc();
+            await _usuarios.AtualizarAsync(usuario);
+            return true;
+        }
+
+        public async Task<bool> FecharChatAsync(Guid usuarioId)
+        {
+            var usuario = await _usuarios.ObterPorIdAsync(usuarioId);
+            if (usuario == null)
+                return false;
+
+            usuario.ChatAberto = false;
+            usuario.ChatFechadoEm = AgoraUtc();
+            await _usuarios.AtualizarAsync(usuario);
+            return true;
+        }
+
+        public async Task<(bool ChatAberto, DateTime? ChatFechadoEm)> ObterEstadoChatAsync(Guid usuarioId)
+        {
+            var usuario = await _usuarios.ObterPorIdAsync(usuarioId);
+            if (usuario == null)
+                return (false, null);
+
+            if (ChatExpirado(usuario))
+                return (false, EmUtc(usuario.ChatAtivoEm!.Value));
+
+            return (usuario.ChatAberto, usuario.ChatFechadoEm is DateTime fechado ? EmUtc(fechado) : null);
+        }
+
+        private bool ChatExpirado(Usuario usuario) =>
+            usuario.ChatAberto
+            && usuario.ChatAtivoEm is DateTime ativo
+            && AgoraUtc() - EmUtc(ativo) > TtlChatAberto;
+
+        private DateTime AgoraUtc() => _relogio.GetUtcNow().UtcDateTime;
+
+        private static DateTime EmUtc(DateTime valor) =>
+            valor.Kind == DateTimeKind.Utc ? valor : DateTime.SpecifyKind(valor, DateTimeKind.Utc);
 
         public async Task<bool> UsuarioPodeAcessarAsync(
             Guid conversaId, Guid usuarioId, PapelUsuario papel)

@@ -16,10 +16,12 @@ namespace Pc.Servico.Tests
             acesso.Setup(a => a.PertenceAsync(It.IsAny<Guid>(), It.IsAny<Guid>())).ReturnsAsync(false);
             return new(
                 repo,
+                Mock.Of<IClienteRepositorio>(),
                 Mock.Of<ILojaRepositorio>(),
                 Mock.Of<IProdutoRepositorio>(),
                 Mock.Of<IOfertaRepositorio>(),
-                acesso.Object);
+                acesso.Object,
+                TimeProvider.System);
         }
 
         [Fact]

@@ -100,6 +100,43 @@ namespace Pc.WebApi.Controllers
             return Ok(new { temNovas });
         }
 
+        [HttpPost("chat/abrir")]
+        public async Task<IActionResult> AbrirChat()
+        {
+            var userId = User.GetUserId();
+            if (!userId.HasValue)
+                return Unauthorized();
+
+            if (!await _conversaServico.AbrirChatAsync(userId.Value))
+                return NotFound();
+
+            return NoContent();
+        }
+
+        [HttpPost("chat/fechar")]
+        public async Task<IActionResult> FecharChat()
+        {
+            var userId = User.GetUserId();
+            if (!userId.HasValue)
+                return Unauthorized();
+
+            if (!await _conversaServico.FecharChatAsync(userId.Value))
+                return NotFound();
+
+            return NoContent();
+        }
+
+        [HttpGet("chat/estado")]
+        public async Task<IActionResult> EstadoChat()
+        {
+            var userId = User.GetUserId();
+            if (!userId.HasValue)
+                return Unauthorized();
+
+            var estado = await _conversaServico.ObterEstadoChatAsync(userId.Value);
+            return Ok(new { chatAberto = estado.ChatAberto, chatFechadoEm = estado.ChatFechadoEm });
+        }
+
         [HttpPost("abrir")]
         [Authorize(Policy = AuthPolicies.CapacidadeCliente)]
         public async Task<IActionResult> Abrir([FromQuery] string lojaCodigo, [FromQuery] Guid? produtoId)

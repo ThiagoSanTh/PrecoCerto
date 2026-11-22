@@ -93,6 +93,10 @@ public class AcessoAnonimoCatalogoTests : IClassFixture<CatalogoApiFactory>
         yield return new object[] { "DELETE", $"/api/Favoritos/cliente/{cliente}/produto/{produto}", null! };
         yield return new object[] { "GET", "/api/Conversas", null! };
         yield return new object[] { "GET", "/api/Conversas/nao-lidas", null! };
+        yield return new object[] { "GET", "/api/Conversas/tem-novas", null! };
+        yield return new object[] { "POST", "/api/Conversas/chat/abrir", null! };
+        yield return new object[] { "POST", "/api/Conversas/chat/fechar", null! };
+        yield return new object[] { "GET", "/api/Conversas/chat/estado", null! };
         yield return new object[] { "POST", "/api/Conversas/abrir?lojaId=" + id, null! };
         yield return new object[] { "GET", "/api/Conversas/abc/mensagens", null! };
         yield return new object[] { "POST", "/api/Conversas/abc/mensagens", "{\"texto\":\"oi\"}" };

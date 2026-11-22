@@ -501,6 +501,7 @@ builder.Services.AddScoped<IPreferenciaClienteServico, PreferenciaClienteServico
 builder.Services.AddScoped<IConversaServico, ConversaServico>();
 builder.Services.AddScoped<ChatNotificacaoHelper>();
 builder.Services.AddSingleton<PresencaChat>();
+builder.Services.AddSingleton(TimeProvider.System);
 
 // MotorIA v2
 builder.Services.AddSingleton<ILlmRouterService, LlmRouterService>();
