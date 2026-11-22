@@ -227,6 +227,7 @@ const styles = StyleSheet.create({
   rightSlot: {
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   innerInput: {
     flex: 1,
