@@ -18,7 +18,7 @@ import { useAuth } from '../../context/AuthContext';
 import { irParaLogin, setPendingAuthAction } from '../../navigation/authIntent';
 import { useTheme } from '../../context/ThemeContext';
 import { enviarPerguntaIA, isAdminSession } from '../../services/iaService';
-import { fonts, radii, shadows } from '../../theme';
+import { fonts, inputFontSize, radii, shadows } from '../../theme';
 
 const CHIPS_CLIENTE = [
   'Onde tem café mais barato perto de mim?',
@@ -836,7 +836,7 @@ const styles = StyleSheet.create({
   inputField: {
     flex: 1,
     fontFamily: fonts.sans,
-    fontSize: 14,
+    fontSize: inputFontSize(14),
     paddingVertical: 6,
     minWidth: 0,
   },

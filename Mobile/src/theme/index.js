@@ -23,6 +23,11 @@ export const fonts = {
   }),
 };
 
+/** Safari no iPhone dá zoom ao focar input, textarea ou select com font-size < 16px. */
+export function inputFontSize(size) {
+  return Platform.OS === 'web' ? Math.max(16, size) : size;
+}
+
 export const radii = {
   sm: 10,
   md: 12,

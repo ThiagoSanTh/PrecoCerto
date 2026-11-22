@@ -22,7 +22,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useChatBadge } from '../../context/ChatBadgeContext';
 import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import { ChatThreadPanel } from './ChatScreen';
-import { fonts, radii } from '../../theme';
+import { fonts, inputFontSize, radii } from '../../theme';
 
 function formatarHorarioConversa(iso) {
   if (!iso) return '';
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontFamily: fonts.sans,
-    fontSize: 13.5,
+    fontSize: inputFontSize(13.5),
     paddingVertical: 2,
     minWidth: 0,
   },
