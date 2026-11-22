@@ -23,8 +23,9 @@ using Xunit;
 namespace Pc.Servico.Tests
 {
     /// <summary>
-    /// O que faria cada teste falhar: aceitar de novo o claim lojaId, ou
-    /// promover/remover vendedor sem olhar LojaVinculadaId.
+    /// O que faria cada teste falhar: aceitar de novo o claim lojaId,
+    /// promover/remover vendedor sem olhar LojaVinculadaId, ou devolver 400
+    /// quando o vendedor é de outra loja.
     /// </summary>
     public class AutorizacaoVinculoLojaTests
     {
@@ -63,7 +64,24 @@ namespace Pc.Servico.Tests
 
             var resultado = await controller.RemoverVendedor(LojaA, VendedorId);
 
-            Assert.IsType<BadRequestObjectResult>(resultado);
+            Assert.IsType<ForbidResult>(resultado);
+            Assert.Equal(LojaB, vendedor.LojaVinculadaId);
+            Assert.Equal(PapelUsuario.Vendedor, vendedor.Papel);
+            repo.Verify(r => r.AtualizarAsync(It.IsAny<Usuario>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Lojista_nao_promove_vendedor_de_outra_loja_pelo_controller()
+        {
+            var vendedor = VendedorDe(LojaB);
+            var repo = RepoCom(vendedor);
+            var controller = Lojistas(Servico(repo), Acesso(LojaA, DonoA));
+            Autenticar(controller, DonoA, "Lojista", LojaA);
+
+            var resultado = await controller.PromoverVendedor(
+                LojaA, new PromoverVendedorDto { UsuarioId = VendedorId, Cargo = "Caixa" });
+
+            Assert.IsType<ForbidResult>(resultado);
             Assert.Equal(LojaB, vendedor.LojaVinculadaId);
             Assert.Equal(PapelUsuario.Vendedor, vendedor.Papel);
             repo.Verify(r => r.AtualizarAsync(It.IsAny<Usuario>()), Times.Never);
