@@ -36,7 +36,7 @@ import {
 import { labelCategoria } from '../../utils/categoriasProduto';
 import { formatarPrecoBrl } from '../../utils/mapaUtils';
 import { calcularIndicadoresProdutosLoja } from '../../utils/insights';
-import { fonts, radii } from '../../theme';
+import { fonts, inputFontSize, radii } from '../../theme';
 
 export default function ProductsScreen({ navigation }) {
   const { session } = useAuth();
@@ -627,7 +627,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontFamily: fonts.sans,
-    fontSize: 14,
+    fontSize: inputFontSize(14),
     paddingVertical: 4,
     minWidth: 0,
   },

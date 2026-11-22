@@ -57,7 +57,7 @@ import {
   calcularEconomiaBusca,
   enriquecerEOrdenarResultadosBusca,
 } from '../../utils/insights';
-import { fonts, radii, shadows } from '../../theme';
+import { fonts, inputFontSize, radii, shadows } from '../../theme';
 
 const DEBOUNCE_BUSCA_MS = 400;
 const DEBOUNCE_HISTORICO_MS = 1200;
@@ -1495,7 +1495,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontFamily: fonts.sans,
-    fontSize: 15,
+    fontSize: inputFontSize(15),
     paddingVertical: 6,
     minHeight: 44,
     minWidth: 0,

@@ -82,6 +82,9 @@ export function ensureWebViewport() {
       outline: 2px solid var(--focus-ring, ${FOCUS_RING.light});
       outline-offset: 2px;
     }
+    input, textarea, select {
+      font-size: max(16px, 1em);
+    }
   `;
   document.head.appendChild(style);
 }
