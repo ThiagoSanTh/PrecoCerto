@@ -101,7 +101,11 @@ namespace Pc.Servico.Implementacoes
                     Cnpj = digitos,
                     RazaoSocial = json.RazaoSocial.Trim(),
                     NomeFantasia = string.IsNullOrWhiteSpace(json.NomeFantasia) ? null : json.NomeFantasia.Trim(),
-                    SituacaoCadastral = json.SituacaoCadastral?.Trim() ?? string.Empty
+                    SituacaoCadastral = json.SituacaoCadastral?.Trim() ?? string.Empty,
+                    Endereco = MontarEndereco(
+                        json.Logradouro, json.Numero, json.Complemento, json.Bairro, json.Municipio, json.Uf, json.Cep),
+                    Email = Texto(json.Email),
+                    Telefone = TelefoneOpenCnpj(json.Telefones)
                 });
             }
             catch
@@ -136,7 +140,11 @@ namespace Pc.Servico.Implementacoes
                     Cnpj = digitos,
                     RazaoSocial = json.RazaoSocial.Trim(),
                     NomeFantasia = string.IsNullOrWhiteSpace(json.NomeFantasia) ? null : json.NomeFantasia.Trim(),
-                    SituacaoCadastral = json.DescricaoSituacaoCadastral?.Trim() ?? string.Empty
+                    SituacaoCadastral = json.DescricaoSituacaoCadastral?.Trim() ?? string.Empty,
+                    Endereco = MontarEndereco(
+                        json.Logradouro, json.Numero, json.Complemento, json.Bairro, json.Municipio, json.Uf, json.Cep),
+                    Email = Texto(json.Email),
+                    Telefone = Digitos(json.DddTelefone1)
                 });
             }
             catch
@@ -161,6 +169,70 @@ namespace Pc.Servico.Implementacoes
                 new() { IsIndisponivel = true };
         }
 
+        private static CnpjEndereco? MontarEndereco(
+            string? logradouro,
+            string? numero,
+            string? complemento,
+            string? bairro,
+            string? cidade,
+            string? uf,
+            string? cep)
+        {
+            var endereco = new CnpjEndereco
+            {
+                Logradouro = Texto(logradouro),
+                Numero = Texto(numero),
+                Complemento = Texto(complemento),
+                Bairro = Texto(bairro),
+                Cidade = Texto(cidade),
+                Uf = Texto(uf),
+                Cep = Digitos(cep)
+            };
+
+            if (endereco.Logradouro is null
+                && endereco.Numero is null
+                && endereco.Complemento is null
+                && endereco.Bairro is null
+                && endereco.Cidade is null
+                && endereco.Uf is null
+                && endereco.Cep is null)
+            {
+                return null;
+            }
+
+            return endereco;
+        }
+
+        private static string? TelefoneOpenCnpj(List<OpenCnpjTelefone>? telefones)
+        {
+            if (telefones is null)
+                return null;
+
+            foreach (var telefone in telefones)
+            {
+                if (telefone.IsFax)
+                    continue;
+
+                var digitos = Digitos(string.Concat(telefone.Ddd, telefone.Numero));
+                if (digitos is not null)
+                    return digitos;
+            }
+
+            return null;
+        }
+
+        private static string? Texto(string? valor) =>
+            string.IsNullOrWhiteSpace(valor) ? null : valor.Trim();
+
+        private static string? Digitos(string? valor)
+        {
+            if (string.IsNullOrWhiteSpace(valor))
+                return null;
+
+            var digitos = new string(valor.Where(char.IsDigit).ToArray());
+            return digitos.Length == 0 ? null : digitos;
+        }
+
         private sealed class OpenCnpjResponse
         {
             [JsonPropertyName("razao_social")]
@@ -171,6 +243,45 @@ namespace Pc.Servico.Implementacoes
 
             [JsonPropertyName("situacao_cadastral")]
             public string? SituacaoCadastral { get; set; }
+
+            [JsonPropertyName("logradouro")]
+            public string? Logradouro { get; set; }
+
+            [JsonPropertyName("numero")]
+            public string? Numero { get; set; }
+
+            [JsonPropertyName("complemento")]
+            public string? Complemento { get; set; }
+
+            [JsonPropertyName("bairro")]
+            public string? Bairro { get; set; }
+
+            [JsonPropertyName("municipio")]
+            public string? Municipio { get; set; }
+
+            [JsonPropertyName("uf")]
+            public string? Uf { get; set; }
+
+            [JsonPropertyName("cep")]
+            public string? Cep { get; set; }
+
+            [JsonPropertyName("email")]
+            public string? Email { get; set; }
+
+            [JsonPropertyName("telefones")]
+            public List<OpenCnpjTelefone>? Telefones { get; set; }
+        }
+
+        private sealed class OpenCnpjTelefone
+        {
+            [JsonPropertyName("ddd")]
+            public string? Ddd { get; set; }
+
+            [JsonPropertyName("numero")]
+            public string? Numero { get; set; }
+
+            [JsonPropertyName("is_fax")]
+            public bool IsFax { get; set; }
         }
 
         private sealed class BrasilApiCnpjResponse
@@ -183,6 +294,33 @@ namespace Pc.Servico.Implementacoes
 
             [JsonPropertyName("descricao_situacao_cadastral")]
             public string? DescricaoSituacaoCadastral { get; set; }
+
+            [JsonPropertyName("logradouro")]
+            public string? Logradouro { get; set; }
+
+            [JsonPropertyName("numero")]
+            public string? Numero { get; set; }
+
+            [JsonPropertyName("complemento")]
+            public string? Complemento { get; set; }
+
+            [JsonPropertyName("bairro")]
+            public string? Bairro { get; set; }
+
+            [JsonPropertyName("municipio")]
+            public string? Municipio { get; set; }
+
+            [JsonPropertyName("uf")]
+            public string? Uf { get; set; }
+
+            [JsonPropertyName("cep")]
+            public string? Cep { get; set; }
+
+            [JsonPropertyName("email")]
+            public string? Email { get; set; }
+
+            [JsonPropertyName("ddd_telefone_1")]
+            public string? DddTelefone1 { get; set; }
         }
     }
 }

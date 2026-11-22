@@ -39,7 +39,13 @@ namespace Pc.WebApi.Controllers
                     razaoSocial = resultado.RazaoSocial,
                     nomeFantasia = resultado.NomeFantasia,
                     situacaoCadastral = resultado.SituacaoCadastral,
-                    ativo = resultado.Ativo
+                    situacao = string.IsNullOrWhiteSpace(resultado.SituacaoCadastral)
+                        ? null
+                        : resultado.SituacaoCadastral,
+                    ativo = resultado.Ativo,
+                    endereco = resultado.Endereco,
+                    email = resultado.Email,
+                    telefone = resultado.Telefone
                 });
             }
             catch (CnpjConsultaIndisponivelException ex)
