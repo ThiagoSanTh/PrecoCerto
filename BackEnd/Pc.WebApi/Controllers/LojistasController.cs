@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pc.Dominio.Entities.Usuarios;
 using Pc.Dominio.Enums;
+using Pc.Servico.Excecoes;
 using Pc.Servico.Interfaces;
 using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Comum;
@@ -113,6 +114,10 @@ namespace Pc.WebApi.Controllers
             {
                 await _usuarioServico.PromoverParaVendedorAsync(alvo.Id, lojaId, dto.Cargo);
             }
+            catch (VendedorDeOutraLojaException)
+            {
+                return Forbid();
+            }
             catch (Exception ex)
             {
                 return BadRequest(ex.Message);
@@ -133,6 +138,10 @@ namespace Pc.WebApi.Controllers
             try
             {
                 await _usuarioServico.RemoverVendedorAsync(usuarioId, lojaId);
+            }
+            catch (VendedorDeOutraLojaException)
+            {
+                return Forbid();
             }
             catch (Exception ex)
             {
