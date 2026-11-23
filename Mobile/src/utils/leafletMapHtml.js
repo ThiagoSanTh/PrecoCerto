@@ -40,8 +40,18 @@ function chaveCoordLoja(lat, lng) {
   return `${Number(lat).toFixed(5)},${Number(lng).toFixed(5)}`;
 }
 
+/** Chave de texto só com número de porta. Sem número, a coordenada decide. */
+function chaveEnderecoComNumero(loja) {
+  if (Object.prototype.hasOwnProperty.call(loja, 'enderecoGrupo')) {
+    const norm = normalizarEnderecoMapa(loja.enderecoGrupo);
+    return /\d/.test(norm) ? norm : '';
+  }
+  const norm = normalizarEnderecoMapa(loja.endereco);
+  return /\d/.test(norm) ? norm : '';
+}
+
 /**
- * Junta lojas no mesmo endereço normalizado ou na mesma coordenada (~5 casas).
+ * Junta lojas pelo endereço só quando há número, ou pela coordenada (~5 casas).
  * Grupo com 1 loja continua pin comum; 2+ vira o pin de prédio.
  */
 export function agruparLojasPorEndereco(lojas) {
@@ -72,7 +82,7 @@ export function agruparLojasPorEndereco(lojas) {
   const byEnd = new Map();
   const byGeo = new Map();
   items.forEach((loja, i) => {
-    const end = normalizarEnderecoMapa(loja.enderecoGrupo || loja.endereco);
+    const end = chaveEnderecoComNumero(loja);
     if (end) {
       const prev = byEnd.get(end);
       if (prev == null) byEnd.set(end, i);
@@ -389,7 +399,9 @@ export function normalizarLojaParaMapa(loja) {
     lng: lng != null && lng !== '' ? Number(lng) : null,
     nome,
     endereco: [logradouro, cidade].filter(Boolean).join(' — '),
-    enderecoGrupo: [logradouro, numero, cidade].filter(Boolean).join(' '),
+    enderecoGrupo: String(numero).trim()
+      ? [logradouro, numero, cidade].filter(Boolean).join(' ')
+      : '',
     media: loja?.mediaAvaliacoes ?? loja?.MediaAvaliacoes ?? null,
     inicial: inicialPlaceholder(nome),
   };
@@ -1263,6 +1275,35 @@ export function buildLojasMapHtml(dadosMapa) {
       });
     }
 
+    function deslocarPopupDoClima() {
+      var popupEl = document.querySelector('.leaflet-popup');
+      var card;
+      var frame;
+      try {
+        card = window.parent.document.querySelector('[data-testid="weather-card"]');
+        frame = window.frameElement;
+      } catch (e) {
+        return;
+      }
+      if (!popupEl || !card || !frame) return;
+      var caixa = popupEl.querySelector('.leaflet-popup-content-wrapper') || popupEl;
+      var rect = caixa.getBoundingClientRect();
+      var clima = card.getBoundingClientRect();
+      var mapa = frame.getBoundingClientRect();
+      var topo = mapa.top + rect.top;
+      var cruza = mapa.left + rect.left < clima.right &&
+        mapa.left + rect.right > clima.left &&
+        topo < clima.bottom;
+      if (!cruza) return;
+      var dy = Math.ceil(clima.bottom - topo) + 8;
+      if (map._mapPane) {
+        map._mapPane.classList.remove('leaflet-pan-anim');
+        map._mapPane.style.transition = 'none';
+      }
+      if (map.stop) map.stop();
+      map.panBy([0, -dy], { animate: false });
+    }
+
     function rotularPin(marker, rotulo) {
       function aplicar() {
         var el = marker.getElement();
@@ -1301,9 +1342,15 @@ export function buildLojasMapHtml(dadosMapa) {
       var lojas = (g.ids || []).map(function(id) { return porId[String(id)]; }).filter(Boolean);
       if (lojas.length >= 2) {
         var rotulo = lojas.length + ' lojas neste endereço';
-        var marker = L.marker([g.lat, g.lng], { icon: criarIconPredio(lojas.length) })
-          .bindPopup(function() { return popupPredioHtml(lojas); }, { maxWidth: 280 });
-        marker.on('popupopen', ligarBotoesPopup);
+        var marker = L.marker([g.lat, g.lng], { icon: criarIconPredio(lojas.length) });
+        marker.bindPopup(function() { return popupPredioHtml(lojas); }, {
+          maxWidth: 280,
+          autoPan: false
+        });
+        marker.on('popupopen', function() {
+          ligarBotoesPopup();
+          deslocarPopupDoClima();
+        });
         rotularPin(marker, rotulo);
         colocarMarcador(marker);
         lojas.forEach(function(m) {

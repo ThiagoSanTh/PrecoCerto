@@ -99,6 +99,7 @@ export default function WeatherCard({
       <Pressable
         onPress={() => setExpanded(true)}
         style={cardStyle}
+        testID="weather-card"
         accessibilityRole="button"
         accessibilityLabel={`Clima em ${cidade}: ${temp || ''}. Toque para expandir`}
       >
@@ -127,6 +128,7 @@ export default function WeatherCard({
     <Container
       {...containerProps}
       style={cardStyle}
+      testID="weather-card"
       accessibilityLabel={`Clima em ${cidade}`}
     >
       <View style={styles.row}>
