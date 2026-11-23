@@ -86,6 +86,35 @@ test('agruparLojasPorEndereco ignora loja sem coordenada e lista vazia', () => {
   assert.equal(grupos[0].lojas[0].id, 'ok');
 });
 
+test('lojas sem número no mesmo logradouro e cidade só se juntam na mesma coordenada', () => {
+  function loja(id, lat, lng) {
+    return normalizarLojaParaMapa({
+      id,
+      nomeFantasia: 'Loja ' + id,
+      endereco: {
+        logradouro: 'Rua 25 de Março',
+        numero: '',
+        cidade: 'Saquarema',
+        latitude: lat,
+        longitude: lng,
+      },
+    });
+  }
+
+  const separadas = agruparLojasPorEndereco([
+    loja('a', -22.9, -42.5),
+    loja('b', -22.91, -42.52),
+  ]);
+  assert.equal(separadas.length, 2);
+
+  const mesmaCoord = agruparLojasPorEndereco([
+    loja('c', -22.9, -42.5),
+    loja('d', -22.900001, -42.500001),
+  ]);
+  assert.equal(mesmaCoord.length, 1);
+  assert.equal(mesmaCoord[0].lojas.length, 2);
+});
+
 test('normalizarLojaParaMapa distingue o número no mesmo logradouro', () => {
   const a = normalizarLojaParaMapa({
     id: 'a',
