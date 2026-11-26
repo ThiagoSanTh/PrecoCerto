@@ -8,7 +8,7 @@ import {
   prepararDadosMapaLojas,
   sanitizarLojasParaHtml,
 } from '../utils/leafletMapHtml';
-import { styles as appStyles } from '../theme';
+import { colors, radii, styles as appStyles } from '../theme';
 
 /**
  * Mapa do feed com lojas.
@@ -202,9 +202,9 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: radii.md,
     overflow: 'hidden',
-    backgroundColor: '#e2e8f0',
+    backgroundColor: colors.map,
   },
   mapEdgeToEdge: {
     borderRadius: 0,
@@ -215,13 +215,13 @@ const styles = StyleSheet.create({
     left: 12,
     right: 12,
     zIndex: 5,
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
-    borderRadius: 8,
+    backgroundColor: 'rgba(15, 29, 34, 0.8)',
+    borderRadius: radii.sm,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
   bannerText: {
-    color: '#fff',
+    color: colors.inkForeground,
     fontSize: 12,
     textAlign: 'center',
   },

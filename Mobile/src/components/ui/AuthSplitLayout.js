@@ -5,7 +5,7 @@ import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import { useTheme } from '../../context/ThemeContext';
 import FormErrorBanner from '../form/FormErrorBanner';
 import { BrandLogo } from './DesignPrimitives';
-import { fonts, radii } from '../../theme';
+import { fonts, gradients, radii } from '../../theme';
 
 const FEATURES = [
   { icon: 'location-outline', text: 'Preços das lojas físicas da sua cidade' },
@@ -34,12 +34,7 @@ export default function AuthSplitLayout({
             style={[
               styles.heroPanel,
               { backgroundColor: colors.ink },
-              Platform.OS === 'web'
-                ? {
-                    backgroundImage:
-                      'linear-gradient(135deg, #0F1D22 0%, #103A35 100%)',
-                  }
-                : null,
+              gradients.aiWeb,
             ]}
           >
             <BrandLogo dark />

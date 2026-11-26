@@ -23,6 +23,21 @@ export const fonts = {
   }),
 };
 
+export const tabularNums = {
+  fontVariant: ['tabular-nums'],
+};
+
+export const gradients = {
+  aiWeb:
+    Platform.OS === 'web'
+      ? { backgroundImage: 'linear-gradient(135deg, #0F1D22 0%, #103A35 100%)' }
+      : null,
+  brandWeb:
+    Platform.OS === 'web'
+      ? { backgroundImage: 'linear-gradient(135deg, #0E7C66 0%, #0A5E4D 100%)' }
+      : null,
+};
+
 export const radii = {
   sm: 10,
   md: 12,
@@ -98,7 +113,9 @@ export const lightColors = {
   placeholder: '#98ACB1',
   border: '#DDE5E1',
   success: '#179A6B',
+  successSoft: '#E2F5EE',
   destructive: '#DC3B32',
+  destructiveSoft: '#FEE2E2',
   destructiveForeground: '#FAFAFA',
   danger: '#DC3B32',
   warning: '#D98218',
@@ -146,7 +163,9 @@ export const darkColors = {
   placeholder: '#8CA1A7',
   border: '#263C45',
   success: '#2AD195',
+  successSoft: '#15342E',
   destructive: '#F0584E',
+  destructiveSoft: '#3B1A1B',
   destructiveForeground: '#FFFFFF',
   danger: '#F0584E',
   warning: '#F59E0B',

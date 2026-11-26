@@ -1,6 +1,7 @@
 import { Platform, View, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import { colors, radii } from '../theme';
 
 /**
  * Mapa Leaflet: WebView no nativo, iframe no Expo Web (PWA).
@@ -75,9 +76,9 @@ export default LeafletMapFrame;
 const styles = StyleSheet.create({
   frame: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: radii.md,
     overflow: 'hidden',
-    backgroundColor: '#e2e8f0',
+    backgroundColor: colors.map,
   },
   iframe: {
     borderWidth: 0,

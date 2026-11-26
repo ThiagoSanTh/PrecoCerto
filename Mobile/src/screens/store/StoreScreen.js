@@ -1,21 +1,27 @@
-import { FlatList, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, Pressable, Alert, ActivityIndicator, StyleSheet } from 'react-native';
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { listarOfertas } from '../../services/ofertaService';
 import { obterLoja } from '../../services/lojaService';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
+import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import { podeCriarLoja } from '../../utils/modoUsuario';
+import { formatarPrecoBrl } from '../../utils/mapaUtils';
 import {
   FormScreen,
   PrimaryButton,
   ListCard,
   ListCardText,
-  formStyles,
 } from '../../components/form';
-import { colors } from '../../theme';
+import { PageHeader, SurfaceCard, PillBadge } from '../../components/ui/DesignPrimitives';
+import { fonts, radii, tabularNums } from '../../theme';
 
 export default function StoreScreen({ navigation }) {
   const { session, isLojista } = useAuth();
+  const { colors } = useTheme();
+  const { useSidebarNav } = useLayoutProfile();
   const lojaId = session?.perfil?.lojaId;
   const [loja, setLoja] = useState(null);
   const [ofertas, setOfertas] = useState([]);
@@ -50,8 +56,8 @@ export default function StoreScreen({ navigation }) {
 
   if (loading) {
     return (
-      <FormScreen title="Minha loja" scrollable={false}>
-        <ActivityIndicator color={colors.primary} style={{ marginTop: 24 }} />
+      <FormScreen title="Minha loja" hideHeader scrollable={false} maxContentWidth={1020}>
+        <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
       </FormScreen>
     );
   }
@@ -81,48 +87,215 @@ export default function StoreScreen({ navigation }) {
   }
 
   return (
-    <FormScreen title="Minha loja" subtitle={loja?.nomeFantasia} scrollable={false}>
-      {loja ? (
-        <ListCard title={loja.nomeFantasia}>
-          <ListCardText>{loja.email}</ListCardText>
-          <ListCardText>{loja.telefone}</ListCardText>
-        </ListCard>
-      ) : null}
-
-      <PrimaryButton
-        label="+ Nova oferta"
-        onPress={() => navigation.navigate('CreateOferta')}
-        style={{ marginBottom: 12 }}
-      />
-
-      {isLojista ? (
-        <PrimaryButton
-          label="Gerenciar vendedores"
-          onPress={() => navigation.navigate('Vendedores', { lojaId })}
-          style={{ marginBottom: 12 }}
-        />
-      ) : null}
-
+    <FormScreen title="Minha loja" hideHeader scrollable={false} maxContentWidth={1020}>
       <FlatList
-        style={formStyles.listFlex}
         data={ofertas}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => String(item.id)}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.listContent,
+          useSidebarNav && styles.listContentDesktop,
+        ]}
         ListHeaderComponent={
-          <ListCardText style={{ marginBottom: 8, fontWeight: '600' }}>
-            Ofertas ({ofertas.length})
-          </ListCardText>
+          <View style={styles.headerWrap}>
+            <PageHeader
+              eyebrow="Gestão da loja"
+              title={loja?.nomeFantasia || 'Minha loja'}
+              action={
+                <View style={styles.headerActions}>
+                  <Pressable
+                    onPress={() => navigation.navigate('CreateOferta')}
+                    style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Nova oferta"
+                  >
+                    <Ionicons name="add" size={16} color={colors.primaryForeground} />
+                    <Text style={[styles.primaryBtnText, { color: colors.primaryForeground }]}>
+                      Nova oferta
+                    </Text>
+                  </Pressable>
+                  {isLojista ? (
+                    <Pressable
+                      onPress={() => navigation.navigate('Vendedores', { lojaId })}
+                      style={[
+                        styles.secondaryBtn,
+                        { backgroundColor: colors.card, borderColor: colors.border },
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel="Gerenciar vendedores"
+                    >
+                      <Ionicons name="people-outline" size={16} color={colors.text} />
+                      <Text style={[styles.secondaryBtnText, { color: colors.text }]}>
+                        Vendedores
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              }
+            />
+
+            {loja ? (
+              <SurfaceCard style={styles.storeInfoCard}>
+                <View style={styles.storeInfoRow}>
+                  <View style={[styles.storeIconBox, { backgroundColor: colors.primarySoft }]}>
+                    <Ionicons name="storefront-outline" size={20} color={colors.primary} />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={[styles.storeName, { color: colors.text }]} numberOfLines={1}>
+                      {loja.nomeFantasia}
+                    </Text>
+                    <Text style={[styles.storeMeta, { color: colors.textMuted }]} numberOfLines={1}>
+                      {[loja.email, loja.telefone].filter(Boolean).join(' · ') || 'Loja ativa'}
+                    </Text>
+                  </View>
+                </View>
+              </SurfaceCard>
+            ) : null}
+
+            <View style={styles.sectionBar}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Ofertas cadastradas
+              </Text>
+              <Text style={[styles.sectionCount, tabularNums, { color: colors.textMuted }]}>
+                {ofertas.length} {ofertas.length === 1 ? 'oferta' : 'ofertas'}
+              </Text>
+            </View>
+          </View>
         }
         renderItem={({ item }) => (
-          <ListCard title={item.nomeProduto}>
-            <ListCardText>R$ {Number(item.preco).toFixed(2)}</ListCardText>
-            <ListCardText>{item.disponivel ? 'Disponível' : 'Indisponível'}</ListCardText>
-          </ListCard>
+          <SurfaceCard style={styles.offerCard}>
+            <View style={styles.offerRow}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={[styles.offerTitle, { color: colors.text }]} numberOfLines={1}>
+                  {item.nomeProduto || 'Produto'}
+                </Text>
+                <View style={styles.offerBadgeWrap}>
+                  <PillBadge
+                    label={item.disponivel ? 'Disponível' : 'Indisponível'}
+                    variant={item.disponivel ? 'success' : 'destructive'}
+                  />
+                </View>
+              </View>
+              <Text style={[styles.offerPrice, tabularNums, { color: colors.text }]}>
+                {formatarPrecoBrl(item.preco)}
+              </Text>
+            </View>
+          </SurfaceCard>
         )}
         ListEmptyComponent={
-          <ListCardText>Cadastre produtos e crie ofertas.</ListCardText>
+          <ListCardText style={{ textAlign: 'center', marginTop: 24 }}>
+            Cadastre produtos e crie ofertas.
+          </ListCardText>
         }
       />
     </FormScreen>
   );
 }
+
+const styles = StyleSheet.create({
+  listContent: {
+    gap: 10,
+    paddingBottom: 104,
+  },
+  listContentDesktop: {
+    paddingBottom: 32,
+  },
+  headerWrap: {
+    gap: 16,
+    marginBottom: 4,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  primaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: radii.md,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  primaryBtnText: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  secondaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  secondaryBtnText: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  storeInfoCard: {
+    padding: 16,
+  },
+  storeInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  storeIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  storeName: {
+    fontFamily: fonts.display,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  storeMeta: {
+    fontFamily: fonts.sans,
+    fontSize: 13,
+    marginTop: 2,
+  },
+  sectionBar: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+  },
+  sectionTitle: {
+    fontFamily: fonts.display,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  sectionCount: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  offerCard: {
+    padding: 15,
+  },
+  offerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  offerTitle: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 14.5,
+    fontWeight: '600',
+  },
+  offerBadgeWrap: {
+    marginTop: 6,
+  },
+  offerPrice: {
+    fontFamily: fonts.display,
+    fontSize: 17,
+    fontWeight: '700',
+  },
+});

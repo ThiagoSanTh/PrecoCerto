@@ -1,9 +1,11 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
+import { fonts, tabularNums } from '../../theme';
 
 export default function StarRating({ nota, size = 16, showValue = false }) {
   const { colors } = useTheme();
+  const starColor = colors.chart4 || colors.warning;
   const valor = Math.max(0, Math.min(5, Number(nota) || 0));
   const cheias = Math.floor(valor);
   const meia = valor - cheias >= 0.5;
@@ -18,15 +20,15 @@ export default function StarRating({ nota, size = 16, showValue = false }) {
     >
       <View style={styles.starsWrap}>
         {Array.from({ length: cheias }).map((_, i) => (
-          <Ionicons key={`f-${i}`} name="star" size={size} color="#F59E0B" />
+          <Ionicons key={`f-${i}`} name="star" size={size} color={starColor} />
         ))}
-        {meia ? <Ionicons name="star-half" size={size} color="#F59E0B" /> : null}
+        {meia ? <Ionicons name="star-half" size={size} color={starColor} /> : null}
         {Array.from({ length: vazias }).map((_, i) => (
-          <Ionicons key={`e-${i}`} name="star-outline" size={size} color="#F59E0B" />
+          <Ionicons key={`e-${i}`} name="star-outline" size={size} color={starColor} />
         ))}
       </View>
       {showValue ? (
-        <Text style={[styles.value, { fontSize: size - 2, color: colors.textMuted }]}>
+        <Text style={[styles.value, tabularNums, { fontSize: size - 2, color: colors.textMuted }]}>
           {valor.toFixed(1)}
         </Text>
       ) : null}
@@ -46,7 +48,7 @@ const styles = StyleSheet.create({
     gap: 1,
   },
   value: {
+    fontFamily: fonts.sansSemiBold,
     fontWeight: '600',
-    fontVariant: ['tabular-nums'],
   },
 });

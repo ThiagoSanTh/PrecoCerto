@@ -36,12 +36,12 @@ import {
 import { labelCategoria } from '../../utils/categoriasProduto';
 import { formatarPrecoBrl } from '../../utils/mapaUtils';
 import { calcularIndicadoresProdutosLoja } from '../../utils/insights';
-import { fonts, radii } from '../../theme';
+import { fonts, radii, tabularNums } from '../../theme';
 
 export default function ProductsScreen({ navigation }) {
   const { session } = useAuth();
   const { colors } = useTheme();
-  const { useTableView } = useLayoutProfile();
+  const { useTableView, useSidebarNav } = useLayoutProfile();
   const lojaId = session?.perfil?.lojaId;
 
   const [nomeLoja, setNomeLoja] = useState(
@@ -162,7 +162,10 @@ export default function ProductsScreen({ navigation }) {
     >
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          useSidebarNav && styles.scrollContentDesktop,
+        ]}
       >
         <PageHeader
           eyebrow={nomeLoja}
@@ -222,8 +225,8 @@ export default function ProductsScreen({ navigation }) {
 
         {/* 4 KPI Cards */}
         <View style={styles.kpiRow}>
-          <SurfaceCard style={styles.kpiCard}>
-            <Text style={[styles.kpiVal, { color: colors.text }]}>
+          <SurfaceCard style={[styles.kpiCard, useTableView && styles.kpiCardWide]}>
+            <Text style={[styles.kpiVal, tabularNums, { color: colors.text }]}>
               {indicadores.produtosAtivos}
             </Text>
             <Text style={[styles.kpiLabel, { color: colors.textMuted }]}>
@@ -231,8 +234,8 @@ export default function ProductsScreen({ navigation }) {
             </Text>
           </SurfaceCard>
 
-          <SurfaceCard style={styles.kpiCard}>
-            <Text style={[styles.kpiVal, { color: colors.text }]}>
+          <SurfaceCard style={[styles.kpiCard, useTableView && styles.kpiCardWide]}>
+            <Text style={[styles.kpiVal, tabularNums, { color: colors.text }]}>
               {indicadores.estoqueBaixo}
             </Text>
             <Text style={[styles.kpiLabel, { color: colors.textMuted }]}>
@@ -240,8 +243,8 @@ export default function ProductsScreen({ navigation }) {
             </Text>
           </SurfaceCard>
 
-          <SurfaceCard style={styles.kpiCard}>
-            <Text style={[styles.kpiVal, { color: colors.text }]}>
+          <SurfaceCard style={[styles.kpiCard, useTableView && styles.kpiCardWide]}>
+            <Text style={[styles.kpiVal, tabularNums, { color: colors.text }]}>
               {indicadores.semEstoque}
             </Text>
             <Text style={[styles.kpiLabel, { color: colors.textMuted }]}>
@@ -249,8 +252,8 @@ export default function ProductsScreen({ navigation }) {
             </Text>
           </SurfaceCard>
 
-          <SurfaceCard style={styles.kpiCard}>
-            <Text style={[styles.kpiVal, { color: colors.text }]}>
+          <SurfaceCard style={[styles.kpiCard, useTableView && styles.kpiCardWide]}>
+            <Text style={[styles.kpiVal, tabularNums, { color: colors.text }]}>
               {indicadores.percentualPrimeiroLugar}%
             </Text>
             <Text style={[styles.kpiLabel, { color: colors.textMuted }]}>
@@ -381,8 +384,9 @@ export default function ProductsScreen({ navigation }) {
                   <Pressable
                     key={String(p.id)}
                     onPress={() => abrirDetalhesOuEditar(p)}
-                    style={[
+                    style={({ hovered }) => [
                       styles.tRow,
+                      hovered && { backgroundColor: colors.surfaceSubtle },
                       idx < produtosExibidos.length - 1 && {
                         borderBottomWidth: 1,
                         borderBottomColor: colors.border,
@@ -417,6 +421,7 @@ export default function ProductsScreen({ navigation }) {
                     <Text
                       style={[
                         styles.cellPrice,
+                        tabularNums,
                         styles.textRight,
                         { color: colors.text, flex: 1 },
                       ]}
@@ -427,6 +432,7 @@ export default function ProductsScreen({ navigation }) {
                     <Text
                       style={[
                         styles.cellStock,
+                        tabularNums,
                         styles.textRight,
                         {
                           flex: 1,
@@ -534,7 +540,7 @@ export default function ProductsScreen({ navigation }) {
                     </View>
                     <View style={styles.mobileRightCol}>
                       <Text
-                        style={[styles.cellPrice, { color: colors.text }]}
+                        style={[styles.cellPrice, tabularNums, { color: colors.text }]}
                       >
                         {formatarPrecoBrl(p.precoEfetivo)}
                       </Text>
@@ -557,8 +563,11 @@ export default function ProductsScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 108,
     gap: 18,
+  },
+  scrollContentDesktop: {
+    paddingBottom: 32,
   },
   headerActions: {
     flexDirection: 'row',
@@ -602,6 +611,12 @@ const styles = StyleSheet.create({
     flexBasis: '46%',
     minWidth: 135,
     padding: 14,
+  },
+  kpiCardWide: {
+    flex: 1,
+    flexBasis: '22%',
+    minWidth: 160,
+    padding: 16,
   },
   kpiVal: {
     fontFamily: fonts.display,

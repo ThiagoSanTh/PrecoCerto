@@ -23,6 +23,7 @@ const ICONS = {
 
 const MOBILE_USER_ROUTES = new Set(['Buscar', 'IA', 'Favoritos', 'Mensagens', 'Perfil']);
 const MOBILE_STORE_ROUTES = new Set(['Painel', 'Produtos', 'IA', 'Mensagens', 'Conta']);
+const HIDDEN_MOBILE_NESTED_ROUTES = new Set(['Chat', 'ProductDetail', 'StoreCatalog']);
 
 function iniciaisUsuario(nome) {
   const partes = String(nome || 'Usuário')
@@ -47,9 +48,10 @@ function SidebarNavItem({
       accessibilityRole="button"
       accessibilityState={{ selected: focused }}
       onPress={onPress}
-      style={[
+      style={({ hovered }) => [
         styles.sidebarItem,
         focused && { backgroundColor: colors.sidebarAccent },
+        !focused && hovered && { backgroundColor: 'rgba(26, 45, 51, 0.6)' },
       ]}
     >
       <Ionicons
@@ -283,7 +285,10 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
             accessibilityLabel="Sair da conta"
             onPress={handleLogout}
             hitSlop={10}
-            style={styles.logoutBtn}
+            style={({ hovered }) => [
+              styles.logoutBtn,
+              hovered && { opacity: 0.9 },
+            ]}
           >
             <Ionicons
               name="log-out-outline"
@@ -296,10 +301,18 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
     );
   }
 
+  const activeRoute = state.routes[state.index];
+  const nestedState = activeRoute?.state;
+  const nestedName =
+    nestedState?.routes?.[nestedState?.index ?? -1]?.name ?? null;
+  if (nestedName && HIDDEN_MOBILE_NESTED_ROUTES.has(nestedName)) {
+    return null;
+  }
+
   const allowedMobile = emModoLoja ? MOBILE_STORE_ROUTES : MOBILE_USER_ROUTES;
   const mobileRoutes = state.routes.filter((r) => allowedMobile.has(r.name));
   const safeBottom = Math.max(insets.bottom || 0, 12);
-  const safeHorizontal = Math.max(insets.left || 0, insets.right || 0, isCompactPhone ? 10 : 14);
+  const safeHorizontal = Math.max(insets.left || 0, insets.right || 0, isCompactPhone ? 10 : 12);
 
   return (
     <View
@@ -308,7 +321,6 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
         {
           paddingBottom: safeBottom,
           paddingHorizontal: safeHorizontal,
-          backgroundColor: colors.background,
         },
         Platform.OS === 'web'
           ? {
@@ -362,7 +374,12 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
                       { backgroundColor: colors.primary },
                     ]}
                   >
-                    <Text style={styles.mobileBadgeText}>
+                    <Text
+                      style={[
+                        styles.mobileBadgeText,
+                        { color: colors.primaryForeground },
+                      ]}
+                    >
                       {badgeCount > 9 ? '9+' : badgeCount}
                     </Text>
                   </View>
@@ -482,7 +499,13 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   mobileFloatWrap: {
-    paddingHorizontal: 14,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 30,
+    backgroundColor: 'transparent',
+    paddingHorizontal: 12,
     paddingBottom: 12,
     paddingTop: 6,
   },

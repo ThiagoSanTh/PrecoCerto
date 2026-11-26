@@ -1,17 +1,17 @@
-# Graph Report - PrecoCerto-Cursor  (2026-11-15)
+# Graph Report - PrecoCerto-Cursor  (2026-11-26)
 
 ## Corpus Check
-- 559 files · ~271,922 words
+- 559 files · ~273,346 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 7 file(s) not represented in the graph (top: (none) 5, .example 1, .toml 1)
 
 ## Summary
-- 5126 nodes · 12564 edges · 333 communities (226 shown, 107 thin omitted)
+- 5138 nodes · 12637 edges · 336 communities (232 shown, 104 thin omitted)
 - Extraction: 90% EXTRACTED · 10% INFERRED · 0% AMBIGUOUS · INFERRED: 1225 edges (avg confidence: 0.86)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `c417d647`
+- Built from commit: `4307d444`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -19,7 +19,7 @@
 - Guid
 - Task
 - chatService.js
-- SearchScreen
+- FavoritosScreen
 - Task
 - ContextoIA
 - Pc.Servico.Interfaces
@@ -30,8 +30,8 @@
 - server.cjs
 - system
 - RegisterScreen.js
-- DecisaoIA
-- Oferta
+- MotorIA v2 — Documentação técnica
+- IRagIndexFila.Enfileirar
 - Pc.Servico.Modelos.Rag
 - Pc.Repositorio.Interfaces
 - MotorIA
@@ -40,23 +40,23 @@
 - LlmRouterService
 - IAAnalisarRequestDto
 - IActionResult
-- Pc.WebApi/Program.cs
+- MigrationBuilder
 - IntencaoIA
 - package.json
 - brandkit/SKILL.md
 - leafletMapHtml.js
 - Fact
 - LojistaRespostaDto
-- AiChatScreen.js
+- AiChatScreen
 - IAAnalisarItemDto
 - ConsultaCnpjServico
 - RagDlqItemResponseDto
-- LoginValidacaoResult.Ok
+- PaginacaoConsultaDto
 - GeminiEmbeddingService
-- IIdCodificador
+- CreateStoreScreen.js
 - DocumentoRag
-- RagSettings
-- ClientesController
+- DocumentoRag
+- AlterarSenhaDto
 - Usuario
 - Skill Creator
 - CORE DIRECTIVE: IMAGE-FIRST WEBSITE DESIGN TO CODE
@@ -67,7 +67,7 @@
 - OfertaRespostaDto
 - High-Agency Frontend Skill
 - Test-Driven Development (TDD)
-- ClimaPrevisao
+- CreateOfertaScreen.js
 - CandidatoIA
 - RagSettings
 - Executing Plans
@@ -76,13 +76,12 @@
 - generate_review.py
 - ContextoOperacional.ResolverPapel
 - OpenMeteoClimaProvedor.ConsultarAsync
-- HttpPost
+- Admin
 - ValidadorRespostaIA
-- IAAnalisarResponseDto
+- DateTime
 - MotorIATests.cs
 - FeedItem
 - RagDocumentoConstruido
-- LlmSettings
 - OpenMeteoClimaProvedor
 - RagIndexEvento
 - AppDbContext
@@ -102,7 +101,7 @@
 - ClienteRespostaDto
 - ILogger
 - ProdutoRespostaDto
-- AuthController
+- AuthLoginDto
 - Root Cause Tracing
 - Systematic Debugging
 - 5. Re-render Optimization
@@ -121,10 +120,10 @@
 - Clima (Weather)
 - JwtSettings
 - Program.ConfigureServices
-- TipoUsuario
+- LoginLojaResolver.ResolverLojaId
 - FavoritoRespostaDto
 - Ferramentas e dependências — Preço Certo
-- InterpretadorIA
+- ModelBuilder
 - system_componentmodel_dataannotations
 - AvaliacaoRespostaDto
 - Pc.Servico
@@ -138,16 +137,16 @@
 - Pc.RagReindexCli
 - RagIndexDlq
 - ProdutoAtualizarDto
-- IaChatLegadoFacadeTests.Chat_legado_delega_para_IMotorIA
-- AppDbContext.cs
-- LlmRouterServiceTests.CreateFactory
+- ConversaRespostaDto
+- ClienteServico
+- ClienteServico.VerificarSenhaAsync
 - ProdutoFeedDto
 - 3. Server-Side Performance
 - React Best Practices
 - PreferenciaClienteRespostaDto
 - LojistaCriarDto
 - EmailValidator
-- IAChatRequestDto
+- IAChatResponseDto
 - Pc.Servico.Tests
 - ProdutoResumoDto
 - Brainstorming
@@ -162,12 +161,12 @@
 - Pc.Infraestrutura
 - NominatimAddressDto
 - PromoverVendedorDto
-- SmtpEmailService
-- IAChatResponseDto
-- ControllerBase
+- RagIndexadorServicoTests
+- AdminRespostaDto
+- ClimaAtual
 - EnderecoDto
-- LlmInterpretacaoResultado
-- WeatherCard.js
+- MensagemRespostaDto
+- SearchScreen.js
 - enderecoService.js
 - helper.js
 - 11. COMPONENT EXECUTION GUIDELINES
@@ -209,12 +208,12 @@
 - Muse Tool Mapping
 - using-superpowers/SKILL.md
 - Pc.Dominio
-- Admin
+- Task
 - ProdutoBuscarDto
 - AvaliacaoCriarDto
 - HistoricoPesquisaCriarDto
 - CnpjValidoAttribute
-- AdminsController
+- AdminCriarDto
 - 12. THE BLOCK LIBRARY (Contract - Implementations Land Here Iteratively)
 - 5. CONTEXT-AWARE PROACTIVITY
 - 8. DARK MODE PROTOCOL
@@ -229,7 +228,7 @@
 - AppDbContextFactory
 - FavoritoCriarDto
 - LocalizacaoDto
-- GeminiCandidate
+- LojaRespostaDto
 - PaginacaoRespostaDto
 - DESIGN.md — Design System & Diretrizes Visuais (Preço Certo)
 - PRODUCT.md — Preço Certo (Saquarema · RJ)
@@ -326,207 +325,214 @@
 - server-serialization.md
 - _template.md
 - scripts/README.md
-- GeminiContent
+- CestaLojaAcumulador
 - GeradorRespostaIA
 - LojaCriarDto
 - OpenMeteoHourlyDto
-- Pc.Servico.Modelos
-- GeminiGenerateResponse
+- ClienteServico.ValidarLoginDetalhadoAsync
+- TipoUsuario
 - PreferenciaClienteCriarDto
-- OpenAiChatResponse
-- OpenAiChoice
-- GeminiPart
-- OpenAiMessage
+- RelatorioPesquisaTermoDto
+- AddEmailConfirmacao
+- AddCategoriaToProduto
+- UnificarUsuarios
+- LoginDto
+- RagHashHelper.cs
+- RelatorioPesquisaTermo
 - RedefinirSenhaDto
 
 ## God Nodes (most connected - your core abstractions)
 1. `ContextoIA` - 122 edges
-2. `Usuario` - 88 edges
-3. `useTheme()` - 83 edges
+2. `useTheme()` - 91 edges
+3. `Usuario` - 88 edges
 4. `Pc.Servico.Interfaces` - 78 edges
 5. `Loja` - 63 edges
 6. `Produto` - 60 edges
-7. `Pc.Dominio.Enums` - 60 edges
-8. `react-native` - 59 edges
+7. `react-native` - 60 edges
+8. `Pc.Dominio.Enums` - 60 edges
 9. `PedidoAnaliseIA` - 54 edges
 10. `AppDbContext` - 51 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `3.6. Frontend (`Mobile/src/services/iaService.js` & `Mobile/src/screens/user/AiChatScreen.js`)` --references--> `AdminDebugPanel()`  [INFERRED]
+  docs/superpowers/specs/2026-10-25-motor-ia-v3-omnirouter-design.md → Mobile/src/screens/user/AiChatScreen.js
 - `1. Intent & Why` --references--> `MotorIA`  [INFERRED]
   docs/superpowers/specs/2026-10-25-motor-ia-v3-omnirouter-design.md → BackEnd/Pc.Servico/Implementacoes/MotorIA/MotorIA.cs
 - `3.4. Novas Rotinas de Carga no `MotorIA.cs`` --references--> `CandidatoIA`  [INFERRED]
   docs/superpowers/specs/2026-10-25-motor-ia-v3-omnirouter-design.md → BackEnd/Pc.Servico/Modelos/MotorIA/ContextoIA.cs
 - `Etapa 4 — AppShell e Navegação (Desktop Sidebar Ink + Pílula Mobile)` --references--> `setAppMode()`  [INFERRED]
   TAREFAS.md → Mobile/src/context/AuthContext.js
-- `3.6. Frontend (`Mobile/src/services/iaService.js` & `Mobile/src/screens/user/AiChatScreen.js`)` --references--> `AdminDebugPanel()`  [INFERRED]
-  docs/superpowers/specs/2026-10-25-motor-ia-v3-omnirouter-design.md → Mobile/src/screens/user/AiChatScreen.js
-- `Etapa 10 — Perfil (`ProfileScreen`)` --references--> `ProfileScreen()`  [INFERRED]
-  TAREFAS.md → Mobile/src/screens/user/ProfileScreen.js
+- `Etapa 2 — Utilitários Puros (TDD) e Componentes Base` --references--> `BrandLogo()`  [INFERRED]
+  TAREFAS.md → Mobile/src/components/ui/DesignPrimitives.js
 
 ## Import Cycles
 - None detected.
 
-## Communities (333 total, 107 thin omitted)
+## Communities (336 total, 104 thin omitted)
 
 ### Community 0 - "Guid"
 Cohesion: 0.04
-Nodes (27): Conversa, Cliente, ClienteId, Loja, LojaId, Mensagens, UltimaMensagemEm, Mensagem (+19 more)
+Nodes (33): Conversa, Cliente, ClienteId, Loja, LojaId, Mensagens, UltimaMensagemEm, Mensagem (+25 more)
 
 ### Community 1 - "Task"
-Cohesion: 0.09
-Nodes (17): Loja, Cnpj, Descricao, Email, Endereco, EnderecoId, NomeFantasia, Ofertas (+9 more)
+Cohesion: 0.10
+Nodes (16): Loja, Cnpj, Descricao, Email, Endereco, EnderecoId, NomeFantasia, Ofertas (+8 more)
 
 ### Community 2 - "chatService.js"
-Cohesion: 0.07
-Nodes (64): ChatBadgeContext, ChatBadgeProvider(), conectar(), ChatScreen(), ChatThreadPanel(), carregarInicial(), carregarMensagens(), handleEnviar() (+56 more)
+Cohesion: 0.06
+Nodes (60): App(), styles, ThemedStatusBar(), ChatBadgeContext, ChatBadgeProvider(), conectar(), useChatBadge(), ThemeProvider() (+52 more)
 
-### Community 3 - "SearchScreen"
-Cohesion: 0.07
-Nodes (52): handleToggleFavorito(), SearchScreen(), abrirCatalogoLoja(), abrirProduto(), abrirProdutoDoMapa(), abrirRotaParaItem(), focarRotaNoMapa(), handleAbrirChatItem() (+44 more)
+### Community 3 - "FavoritosScreen"
+Cohesion: 0.12
+Nodes (30): FavoritosScreen(), abrirLojaFavorita(), abrirProdutoFavorito(), handleRemoverFavorito(), obterDistanciaLoja(), renderLojaCard(), renderProdutoCard(), removerFavorito() (+22 more)
 
 ### Community 4 - "Task"
-Cohesion: 0.07
+Cohesion: 0.09
 Nodes (18): BaseEntity, Ativo, DataAtualizacao, DataCriacao, Id, Avaliacao, Cliente, ClienteId (+10 more)
 
 ### Community 5 - "ContextoIA"
 Cohesion: 0.04
-Nodes (59): Regras, MotorRegrasIA, RegraChuva, Nome, RegraEconomizar, Nome, RegraEntrega, Nome (+51 more)
+Nodes (62): Regras, InterpretadorIA, MotorRegrasIA, RegraChuva, Nome, RegraEconomizar, Nome, RegraEntrega (+54 more)
 
 ### Community 6 - "Pc.Servico.Interfaces"
-Cohesion: 0.11
-Nodes (15): ValidadorEmailServico, IValidadorEmail, AuthPolicies, PapelClaims, Pc.WebApi.DTOs.Usuarios, Pc.WebApi.Controllers, Pc.WebApi.Helpers, Pc.WebApi.Services (+7 more)
+Cohesion: 0.13
+Nodes (12): AuthPolicies, Pc.WebApi.DTOs.Usuarios, Pc.WebApi.Controllers, Pc.WebApi.Helpers, Pc.Dominio.Validacoes, Pc.WebApi.Services, Pc.WebApi.DTOs.Interacoes, Pc.WebApi.Hubs (+4 more)
 
 ### Community 7 - "useTheme"
 Cohesion: 0.07
-Nodes (67): 3. Contratos de Primitivos (`DesignPrimitives.js` & `FormScreen.js`), CustomTabBar(), ICONS, iniciaisUsuario(), MOBILE_STORE_ROUTES, MOBILE_USER_ROUTES, SidebarNavItem(), styles (+59 more)
+Nodes (73): 3. Contratos de Primitivos (`DesignPrimitives.js` & `FormScreen.js`), HIDDEN_MOBILE_NESTED_ROUTES, ICONS, MOBILE_STORE_ROUTES, MOBILE_USER_ROUTES, styles, ICONES, styles (+65 more)
 
 ### Community 8 - "ClimaResposta"
 Cohesion: 0.08
-Nodes (26): ClimaAtual, CodigoClima, Descricao, Icone, Momento, Precipitacao, ProbabilidadePrecipitacao, SensacaoTermica (+18 more)
+Nodes (26): ClimaLocalidade, Cidade, Estado, Latitude, Longitude, Pais, ClimaPrevisao, CodigoClima (+18 more)
 
 ### Community 9 - "Produto"
-Cohesion: 0.06
-Nodes (26): PaginacaoParametros, Page, PageSize, Skip, PaginacaoResultado, HasNext, Items, Page (+18 more)
+Cohesion: 0.05
+Nodes (28): PaginacaoParametros, Page, PageSize, Skip, PaginacaoResultado, HasNext, Items, Page (+20 more)
 
 ### Community 10 - "ProductDetailScreen.js"
-Cohesion: 0.05
-Nodes (65): CategoriaPicker(), styles, ProductActionBar(), ProductImageGallery(), styles, useGalleryDimensions(), aplicarMascaraDataBr(), PromocaoSection() (+57 more)
+Cohesion: 0.07
+Nodes (44): ProductGridCard(), styles, formatarData(), PriceHistoryBlock(), ProductActionBar(), ProductImageGallery(), aplicarMascaraDataBr(), PromocaoSection() (+36 more)
 
 ### Community 11 - "server.cjs"
 Cohesion: 0.05
 Nodes (57): bootstrapPage(), brandMarkup(), broadcast(), browserLauncherForPlatform(), chmodOwnerOnly(), clients, companionUrl(), computeAcceptKey() (+49 more)
 
-### Community 12 - "system"
-Cohesion: 0.06
-Nodes (24): InitialCreate, FixLojaLojistaId, RemoveCategoriaFromProduto, RemoveCategoria, AddPrecoToProduto, ConsolidateAuthenticationLayer, OptionalLojistaStoreFlow, AddLojaIdToProduto (+16 more)
-
 ### Community 13 - "RegisterScreen.js"
-Cohesion: 0.05
-Nodes (98): MAP_SEARCH_OVERLAY_HEIGHT, MapSearchOverlay(), styles, ViewModeToggle(), PrimaryButton(), SecondaryButton(), FormErrorBanner(), FormField (+90 more)
+Cohesion: 0.07
+Nodes (71): MAP_SEARCH_OVERLAY_HEIGHT, MapSearchOverlay(), styles, ViewModeToggle(), PrimaryButton(), SecondaryButton(), FormErrorBanner(), FormField (+63 more)
 
-### Community 14 - "DecisaoIA"
-Cohesion: 0.06
-Nodes (27): IMotorRecomendacaoIA, CriteriosNormalizadosIA, Avaliacao, Conveniencia, Disponibilidade, Distancia, Entrega, Preco (+19 more)
+### Community 14 - "MotorIA v2 — Documentação técnica"
+Cohesion: 0.08
+Nodes (22): API, Arquitetura, Confiança, ContextoIA, Evolução LLM (futuro), Fallbacks, Fórmula de pontuação, Intenções (`IntencaoIA`) (+14 more)
 
-### Community 15 - "Oferta"
-Cohesion: 0.06
-Nodes (22): Oferta, DataAtualizacaoPreco, DataFimPromocao, DataInicioPromocao, Disponivel, EmPromocao, Loja, LojaId (+14 more)
+### Community 15 - "IRagIndexFila.Enfileirar"
+Cohesion: 0.28
+Nodes (5): RagCascadeIndexador, RagIndexAcao, Indexar, Remover, RagCascadeAndDlqTests
 
 ### Community 16 - "Pc.Servico.Modelos.Rag"
 Cohesion: 0.07
-Nodes (9): RagHashHelper, Pc.Servico.Implementacoes.Rag, Pc.Servico.Tests, Pc.Servico.Excecoes, Pc.WebApi.DTOs.Catalogo, Pc.Dominio.Enums, Pc.Dominio.Entities.Rag, Pc.Servico.Modelos.Rag (+1 more)
+Nodes (10): Pc.Servico.Implementacoes.Rag, Pc.Servico.Modelos, Pc.RagReindexCli, Pc.WebApi.DTOs.Catalogo, Pc.Dominio.Enums, Pc.Dominio.Entities.Rag, Pc.WebApi.Mappings, Pc.Servico.Modelos.Rag (+2 more)
 
 ### Community 17 - "Pc.Repositorio.Interfaces"
-Cohesion: 0.09
-Nodes (9): Pc.Dominio.Comum, Pc.Repositorio.Interfaces, Pc.Dominio.Entities.Usuarios, Pc.Dominio.Entities.Catalogo, Pc.Repositorio.Implementacoes, Pc.RagReindexCli, Pc.Dominio.Entities.Interacoes, Pc.Dominio.Entities.Base (+1 more)
+Cohesion: 0.11
+Nodes (8): Pc.Dominio.Comum, Pc.Repositorio.Interfaces, Pc.Dominio.Entities.Usuarios, Pc.Dominio.Entities.Catalogo, Pc.Repositorio.Implementacoes, Pc.Dominio.Entities.Interacoes, Pc.Dominio.Entities.Base, Pc.Dominio.Entities.Estabelecimentos
 
 ### Community 18 - "MotorIA"
-Cohesion: 0.11
-Nodes (12): GeoHelper, MotorIA, CestaLojaAcumulador, Encontrados, Loja, NomesItens, TemPromo, Total (+4 more)
+Cohesion: 0.14
+Nodes (6): GeoHelper, MotorIA, MotorIAEvolucaoOrquestracaoTests, MotorIAOrquestracaoV3Tests, Pc.Repositorio.Comum, Task 5: MotorIA v3 Orchestration (OmniRouter Integration, Basket, Store Catalog & Merchant Competitor BI)
 
 ### Community 19 - "AuthContext.js"
-Cohesion: 0.15
-Nodes (31): handleLogout(), aplicarModo(), AuthContext, AuthProvider(), atualizarPerfilSessao(), carregarSessao(), gravarSessaoEmMemoria(), logout() (+23 more)
+Cohesion: 0.11
+Nodes (38): CustomTabBar(), handleLogout(), iniciaisUsuario(), SidebarNavItem(), aplicarModo(), AuthContext, AuthProvider(), atualizarPerfilSessao() (+30 more)
 
 ### Community 20 - "Favorito"
-Cohesion: 0.11
-Nodes (11): Favorito, Cliente, ClienteId, Loja, LojaId, Produto, ProdutoId, FavoritoRepositorio (+3 more)
+Cohesion: 0.13
+Nodes (12): Favorito, Cliente, ClienteId, Loja, LojaId, Produto, ProdutoId, FavoritoRepositorio (+4 more)
+
+### Community 21 - "LlmRouterService"
+Cohesion: 0.06
+Nodes (25): LlmRouterService, GeminiCandidate, Content, GeminiContent, Parts, GeminiGenerateResponse, Candidates, GeminiPart (+17 more)
 
 ### Community 22 - "IAAnalisarRequestDto"
 Cohesion: 0.17
 Nodes (12): IAAnalisarRequestDto, Historico, Latitude, LojaIdUsuario, Longitude, Mensagem, ModoOperacional, SessaoId (+4 more)
 
 ### Community 23 - "IActionResult"
-Cohesion: 0.12
-Nodes (4): Authz, FavoritosController, OfertasController, PreferenciasClienteController
+Cohesion: 0.04
+Nodes (23): IAdminServico, IConsultaCnpjServico, IEmailService, Authz, AdminsController, AuthController, AvaliacoesController, ClientesController (+15 more)
+
+### Community 24 - "MigrationBuilder"
+Cohesion: 0.07
+Nodes (10): InitialCreate, AddPrecoToProduto, OptionalLojistaStoreFlow, AddLojaIdToProduto, AddImagemUrlToProduto, RemoveRedundantLojistaLojaId, AddBiFieldsToHistoricoPesquisa, AddCarrinho (+2 more)
 
 ### Community 25 - "IntencaoIA"
-Cohesion: 0.05
-Nodes (43): API, Arquitetura, Confiança, ContextoIA, Fallbacks, Fórmula de pontuação, Intenções (`IntencaoIA`), MotorIA v2 — Documentação técnica (+35 more)
+Cohesion: 0.06
+Nodes (34): Objetivos (`ObjetivoIA`), IntencaoIA, AnalisarConcorrenciaLojista, BuscarLoja, BuscarLojaMaisProxima, BuscarOferta, BuscarProduto, BuscarProdutoMaisBarato (+26 more)
 
 ### Community 26 - "package.json"
 Cohesion: 0.05
-Nodes (49): App(), styles, ThemedStatusBar(), dependencies, axios@^1.15.0, expo@54.0.33, expo-file-system@~19.0.23, expo-image-picker@~17.0.11 (+41 more)
+Nodes (55): dependencies, axios@^1.15.0, expo@54.0.33, expo-file-system@~19.0.23, expo-image-picker@~17.0.11, expo-location@~19.0.8, expo-secure-store@~15.0.7, expo-status-bar@~3.0.9 (+47 more)
 
 ### Community 27 - "brandkit/SKILL.md"
 Cohesion: 0.05
 Nodes (43): 1. Logo Cover, 1. Monogram + Meaning, 2 × 3 REFERENCE-STYLE LAYOUT, 2. Logo Construction, 2. Product Action, 3. Digital Application, 3. Metaphor Fusion, 4. Brand Essence (+35 more)
 
 ### Community 28 - "leafletMapHtml.js"
-Cohesion: 0.06
-Nodes (49): FavoritoListCard(), ProductGridCard(), LeafletMapFrame, styles, formatarDistancia(), haversineKm(), LojasMapView(), renderCard() (+41 more)
+Cohesion: 0.09
+Nodes (33): LeafletMapFrame, styles, formatarDistancia(), haversineKm(), LojasMapView(), renderCard(), PinLoja(), REGIAO_INICIAL (+25 more)
 
 ### Community 29 - "Fact"
-Cohesion: 0.11
-Nodes (11): PedidoAnaliseIA, Historico, Latitude, LojaIdUsuario, Longitude, Mensagem, ModoOperacional, SessaoId (+3 more)
+Cohesion: 0.10
+Nodes (12): PedidoAnaliseIA, Historico, Latitude, LojaIdUsuario, Longitude, Mensagem, ModoOperacional, SessaoId (+4 more)
 
 ### Community 30 - "LojistaRespostaDto"
 Cohesion: 0.12
 Nodes (16): LojistaRespostaDto, Ativo, Cargo, CodigoPublico, DataCriacao, Email, Id, LatitudeAtual (+8 more)
 
-### Community 31 - "AiChatScreen.js"
-Cohesion: 0.07
-Nodes (39): Task 6: Frontend Interactive Cards, Quick Suggestion Chips & Multi-turn Context (`AiChatScreen` & `iaService`), @react-navigation/bottom-tabs@^7.15.9, @react-navigation/native-stack@^7.14.11, useChatBadge(), AppRoutes(), BuscarStack(), Stack, MensagensFocusEffect() (+31 more)
+### Community 31 - "AiChatScreen"
+Cohesion: 0.13
+Nodes (18): Task 6: Frontend Interactive Cards, Quick Suggestion Chips & Multi-turn Context (`AiChatScreen` & `iaService`), AdminDebugPanel(), AiChatScreen(), enviarMensagemTexto(), handleChipPress(), handleEnviar(), formatPreco(), idMsg() (+10 more)
 
 ### Community 32 - "IAAnalisarItemDto"
-Cohesion: 0.17
-Nodes (12): IAAnalisarItemDto, DistanciaKm, EmPromocao, Loja, LojaId, Motivos, Preco, Produto (+4 more)
+Cohesion: 0.06
+Nodes (36): MensagemHistoricoIA, Papel, Texto, IAAnalisarItemDto, DistanciaKm, EmPromocao, Loja, LojaId (+28 more)
 
 ### Community 33 - "ConsultaCnpjServico"
-Cohesion: 0.07
-Nodes (24): CnpjConsultaIndisponivelException, ConsultaCnpjServico, BrasilApiCnpjResponse, DescricaoSituacaoCadastral, NomeFantasia, RazaoSocial, ConsultaProvedorResultado, IsIndisponivel (+16 more)
+Cohesion: 0.06
+Nodes (27): CnpjValidator, CnpjConsultaIndisponivelException, ProdutoOperacaoException, AcessoNegado, ConsultaCnpjServico, BrasilApiCnpjResponse, DescricaoSituacaoCadastral, NomeFantasia (+19 more)
 
 ### Community 34 - "RagDlqItemResponseDto"
 Cohesion: 0.05
 Nodes (41): RagDlqItemResponseDto, Acao, CriadoEmUtc, EntidadeId, Id, ReprocessadoEmUtc, Status, Tentativas (+33 more)
 
-### Community 35 - "LoginValidacaoResult.Ok"
-Cohesion: 0.15
-Nodes (5): ProdutosController, PaginacaoConsultaDto, Page, PageSize, PaginacaoHelper
+### Community 35 - "PaginacaoConsultaDto"
+Cohesion: 0.50
+Nodes (3): PaginacaoConsultaDto, Page, PageSize
 
 ### Community 36 - "GeminiEmbeddingService"
-Cohesion: 0.08
+Cohesion: 0.09
 Nodes (13): GeminiEmbeddingService, GeminiEmbeddingValues, Values, GeminiEmbedResponse, Embedding, OpenAIEmbeddingService, OpenAiEmbeddingItem, Embedding (+5 more)
 
-### Community 37 - "IIdCodificador"
-Cohesion: 0.14
-Nodes (5): IdCodificadorServico, IIdCodificador, ConversasController, ChatNotificacaoHelper, LojaMapper
+### Community 37 - "CreateStoreScreen.js"
+Cohesion: 0.11
+Nodes (28): StoreLocationMapView(), CreateStoreScreen(), avancar(), buscarDadosCnpj(), garantirCnpjNaReceita(), handleBuscarCep(), handleCreateStore(), handleGeocodificar() (+20 more)
 
 ### Community 38 - "DocumentoRag"
-Cohesion: 0.10
-Nodes (21): DocumentoRag, Ativo, Conteudo, DataAtualizacao, DataCriacao, Embedding, EntidadeId, HashConteudo (+13 more)
-
-### Community 39 - "RagSettings"
-Cohesion: 0.10
-Nodes (18): RAG, RagConhecimentoIA, IRagServico, IRagConhecimentoIA, RagHitIA, Conteudo, EntidadeId, Score (+10 more)
-
-### Community 40 - "ClientesController"
 Cohesion: 0.16
-Nodes (5): ClientesController, LojistasController, AlterarSenhaDto, NovaSenha, SenhaAtual
+Nodes (10): RagDocumentoTipo, Avaliacao, Loja, Markdown, Oferta, Produto, DocumentoRagRepositorio, IDocumentoRagRepositorio (+2 more)
+
+### Community 39 - "DocumentoRag"
+Cohesion: 0.08
+Nodes (23): DocumentoRag, Ativo, Conteudo, DataAtualizacao, DataCriacao, Embedding, EntidadeId, HashConteudo (+15 more)
+
+### Community 40 - "AlterarSenhaDto"
+Cohesion: 0.50
+Nodes (3): AlterarSenhaDto, NovaSenha, SenhaAtual
 
 ### Community 41 - "Usuario"
-Cohesion: 0.04
-Nodes (28): Usuario, Avaliacoes, Cargo, Email, EmailConfirmado, Favoritos, HistoricosPesquisa, LatitudeAtual (+20 more)
+Cohesion: 0.08
+Nodes (24): Usuario, Avaliacoes, Cargo, Email, EmailConfirmado, Favoritos, HistoricosPesquisa, LatitudeAtual (+16 more)
 
 ### Community 42 - "Skill Creator"
 Cohesion: 0.06
@@ -542,15 +548,15 @@ Nodes (34): 10. DEVICE MOCKUP FRAME RULE, 11. ONBOARDING FLOW RULE, 12. FIRST SC
 
 ### Community 45 - "TextoNormalizador.Normalizar"
 Cohesion: 0.13
-Nodes (8): Como estender, Vocabulário, TextoNormalizador, ClassificadorIntencaoIA, ExtratorEntidadesIA, VocabularioIA, Global Constraints, 3.3. Correções no Extrator e Classificador Determinísticos (Fallback Garantido)
+Nodes (6): Como estender, Vocabulário, ClassificadorIntencaoIA, ExtratorEntidadesIA, VocabularioIA, 3.3. Correções no Extrator e Classificador Determinísticos (Fallback Garantido)
 
 ### Community 46 - "expo"
 Cohesion: 0.06
 Nodes (33): backgroundColor, foregroundImage, adaptiveIcon, edgeToEdgeEnabled, permissions, expo, android, icon (+25 more)
 
 ### Community 47 - "ResultadoAnaliseIA"
-Cohesion: 0.05
-Nodes (36): ILlmRouterService, ResultadoAnaliseIA, Confianca, Fallbacks, Intencao, Motivos, Objetivo, ProvedorLlm (+28 more)
+Cohesion: 0.04
+Nodes (49): TextoNormalizador, ILlmRouterService, IMotorIA, ResultadoAnaliseIA, Confianca, Fallbacks, Intencao, Motivos (+41 more)
 
 ### Community 48 - "OfertaRespostaDto"
 Cohesion: 0.12
@@ -564,25 +570,25 @@ Nodes (30): 10. FINAL PRE-FLIGHT CHECK, 1. ACTIVE BASELINE CONFIGURATION, 2. DEF
 Cohesion: 0.06
 Nodes (29): Common Rationalizations, Debugging Integration, Example: Bug Fix, Final Rule, Good Tests, GREEN - Minimal Code, Overview, Red Flags - STOP and Start Over (+21 more)
 
-### Community 51 - "ClimaPrevisao"
-Cohesion: 0.18
-Nodes (11): ClimaPrevisao, CodigoClima, DataHora, Descricao, Icone, Precipitacao, ProbabilidadePrecipitacao, SensacaoTermica (+3 more)
+### Community 51 - "CreateOfertaScreen.js"
+Cohesion: 0.15
+Nodes (21): FavoritoListCard(), CreateOfertaScreen(), handleSalvar(), ProdutoThumbnail(), styles, criarOferta(), buscarProdutoPorId(), buscarProdutosPorNome() (+13 more)
 
 ### Community 52 - "CandidatoIA"
-Cohesion: 0.10
-Nodes (20): MotorPontuacaoIA, MotorRecomendacaoIA, IMotorPontuacaoIA, CandidatoIA, Criterios, Disponivel, DistanciaKm, EmPromocao (+12 more)
+Cohesion: 0.06
+Nodes (35): MotorPontuacaoIA, MotorRecomendacaoIA, CandidatoIA, Criterios, Disponivel, DistanciaKm, EmPromocao, LojaId (+27 more)
 
 ### Community 53 - "RagSettings"
-Cohesion: 0.11
-Nodes (19): RagServico, RagSettings, ApiBaseUrl, ApiKey, BatchSize, DelayEntreEmbeddingsMs, EhGemini, EhOpenAi (+11 more)
+Cohesion: 0.06
+Nodes (34): RagConhecimentoIA, RagServico, IRagServico, RagHitIA, Conteudo, EntidadeId, Score, Tipo (+26 more)
 
 ### Community 54 - "Executing Plans"
 Cohesion: 0.07
 Nodes (26): 1. Take the task, 2. Work the steps, 3. The completion contract, 4. Complete the task, Common Rationalizations, Example Workflow, Executing Plans, Final Review (+18 more)
 
 ### Community 55 - "ClimaServico.ObterPorCoordenadasAsync"
-Cohesion: 0.13
-Nodes (9): Provedor, ClimaCacheEntry, Dados, FrescoAteUtc, ClimaServico, IClimaProvedor, Nome, IClimaServico (+1 more)
+Cohesion: 0.18
+Nodes (5): ClimaCacheEntry, Dados, FrescoAteUtc, ClimaServico, ClimaServicoTests
 
 ### Community 56 - "Process"
 Cohesion: 0.07
@@ -593,47 +599,47 @@ Cohesion: 0.12
 Nodes (9): build_run(), embed_file(), find_runs(), _find_runs_recursive(), generate_html(), get_mime_type(), load_previous_iteration(), main() (+1 more)
 
 ### Community 58 - "ContextoOperacional.ResolverPapel"
-Cohesion: 0.06
-Nodes (28): ContextoOperacionalTests, ContextoOperacional, ConversaRespostaDto, CodigoCliente, CodigoLoja, CodigoPublico, NaoLidas, NomeContato (+20 more)
+Cohesion: 0.19
+Nodes (3): ContextoOperacionalTests, ContextoOperacional, ClaimsPrincipalExtensions
 
 ### Community 59 - "OpenMeteoClimaProvedor.ConsultarAsync"
 Cohesion: 0.21
 Nodes (5): ClimaIndisponivelException, OpenMeteoClimaProvedorTests, ScriptHttpHandler, Responder, FakeEmbedHttpHandler
 
+### Community 60 - "Admin"
+Cohesion: 0.14
+Nodes (12): Admin, Email, NivelAcesso, NomeUsuario, Permissoes, SenhaHash, Telefone, Tipo (+4 more)
+
 ### Community 61 - "ValidadorRespostaIA"
-Cohesion: 0.29
+Cohesion: 0.23
 Nodes (3): ValidadorRespostaIA, IValidadorRespostaIA, ValidadorRespostaIATests
 
-### Community 62 - "IAAnalisarResponseDto"
-Cohesion: 0.18
-Nodes (11): IAAnalisarResponseDto, Confianca, Fallbacks, Intencao, Motivos, Objetivo, ProvedorLlm, Resposta (+3 more)
+### Community 62 - "DateTime"
+Cohesion: 0.11
+Nodes (5): RemoveCategoria, ConsolidateAuthenticationLayer, RemoverCarrinhoAdicionarChat, AddDocumentosRagPgvector, AddRagIndexDlq
 
 ### Community 63 - "MotorIATests.cs"
-Cohesion: 0.10
-Nodes (10): IMotorIA, Pc.Servico.Modelos.MotorIA, Pc.Servico.Implementacoes.IA, Pc.Servico.Implementacoes.MotorIA, Pc.Servico.Implementacoes.MotorIA.Vocabulario, Pc.Dominio.Enums.MotorIA, Pc.Servico.Tests.Rag, Pc.Servico.Implementacoes.MotorIA.Regras (+2 more)
+Cohesion: 0.05
+Nodes (14): RagConhecimentoFallbackTests, RagIndexFilaTests, Pc.Servico.Modelos.MotorIA, Pc.Servico.Implementacoes.IA, Pc.WebApi.Configuration, Pc.Servico.Implementacoes.MotorIA, Pc.Servico.Tests, Pc.Servico.Implementacoes.MotorIA.Vocabulario (+6 more)
 
 ### Community 64 - "FeedItem"
 Cohesion: 0.14
 Nodes (12): FeedItem, Categoria, EmPromocao, ImagemUrl, LojaId, LojaNome, Nome, PrecoAnterior (+4 more)
 
 ### Community 65 - "RagDocumentoConstruido"
-Cohesion: 0.19
+Cohesion: 0.21
 Nodes (9): RagDocumentBuilder, IRagDocumentBuilder, RagDocumentoConstruido, Conteudo, DeveIndexar, EntidadeId, Metadata, Tipo (+1 more)
 
-### Community 66 - "LlmSettings"
-Cohesion: 0.20
-Nodes (9): LlmSettings, CooldownSegundos, GeminiApiKey, GeminiBaseUrl, GeminiModel, NvidiaApiKey, NvidiaBaseUrl, NvidiaModel (+1 more)
-
 ### Community 67 - "OpenMeteoClimaProvedor"
-Cohesion: 0.17
-Nodes (5): ClimaWmo, OpenMeteoClimaProvedor, Nome, NominatimReverseDto, Address
+Cohesion: 0.15
+Nodes (6): ClimaWmo, OpenMeteoClimaProvedor, Nome, NominatimReverseDto, Address, ClimaWmoTests
 
 ### Community 68 - "RagIndexEvento"
-Cohesion: 0.12
-Nodes (12): RagIndexFila, Reader, IRagIndexFila, Reader, RagIndexEvento, Acao, EntidadeId, Tentativas (+4 more)
+Cohesion: 0.16
+Nodes (10): RagIndexFila, Reader, RagIndexWorker, IRagIndexFila, Reader, RagIndexEvento, Acao, EntidadeId (+2 more)
 
 ### Community 69 - "AppDbContext"
-Cohesion: 0.07
+Cohesion: 0.08
 Nodes (17): AppDbContext, Admins, Avaliacoes, Conversas, DocumentosRag, Enderecos, Favoritos, HistoricosPesquisa (+9 more)
 
 ### Community 70 - "run_loop.py"
@@ -657,8 +663,8 @@ Cohesion: 0.11
 Nodes (18): 1. Define the Atmosphere, 2. Map the Color Palette, 3. Establish Typography Rules, 4. Define the Hero Section, 5. Describe Component Stylings, 6. Define Layout Principles, 7. Define Responsive Rules, 8. Encode Motion Philosophy (+10 more)
 
 ### Community 75 - "EmailSettings"
-Cohesion: 0.20
-Nodes (10): EmailSettings, AppBaseUrl, Configurado, EnableSsl, From, FromName, Host, Password (+2 more)
+Cohesion: 0.14
+Nodes (11): EmailSettings, AppBaseUrl, Configurado, EnableSsl, From, FromName, Host, Password (+3 more)
 
 ### Community 76 - "run_eval.py"
 Cohesion: 0.18
@@ -673,8 +679,8 @@ Cohesion: 0.11
 Nodes (17): CategoriaProduto, Acougue, Alimentos, Bebes, Bebidas, Casa, Congelados, Eletronicos (+9 more)
 
 ### Community 79 - "SessaoChat"
-Cohesion: 0.14
-Nodes (11): MensagemChat, Papel, SessaoChat, SessaoChatId, Texto, SessaoChat, Mensagens, UltimaInteracaoEm (+3 more)
+Cohesion: 0.15
+Nodes (10): MensagemChat, Papel, SessaoChat, SessaoChatId, Texto, SessaoChat, Mensagens, UltimaInteracaoEm (+2 more)
 
 ### Community 80 - "Grader Agent"
 Cohesion: 0.12
@@ -689,20 +695,20 @@ Cohesion: 0.12
 Nodes (16): 1. Skill Meta, 2.1 Swiss Industrial Print, 2.2 Tactical Telemetry & CRT Terminal, 2. Visual Archetypes, 3.1 Macro-Typography (Structural Headers), 3.2 Micro-Typography (Data & Telemetry), 3.3 Textural Contrast (Artistic Disruption), 3. Typographic Architecture (+8 more)
 
 ### Community 83 - "ClienteRespostaDto"
-Cohesion: 0.07
-Nodes (24): AdminRespostaDto, Ativo, DataCriacao, Email, Id, NivelAcesso, NomeUsuario, Permissoes (+16 more)
+Cohesion: 0.14
+Nodes (13): ClienteRespostaDto, Ativo, CodigoPublico, DataCriacao, Email, Id, LatitudeAtual, LongitudeAtual (+5 more)
 
 ### Community 84 - "ILogger"
-Cohesion: 0.14
-Nodes (4): RagIndexWorker, RagInitialIndexHostedService, AdminSeedHostedService, MigracaoStartupHostedService
+Cohesion: 0.16
+Nodes (3): RagInitialIndexHostedService, AdminSeedHostedService, MigracaoStartupHostedService
 
 ### Community 85 - "ProdutoRespostaDto"
 Cohesion: 0.12
 Nodes (17): ProdutoRespostaDto, Categoria, CategoriaNome, Cidade, CodigoBarras, Descricao, Id, ImagemUrl (+9 more)
 
-### Community 86 - "AuthController"
-Cohesion: 0.14
-Nodes (11): AuthController, AuthLoginDto, Email, Senha, Tipo, AuthLoginRespostaDto, Perfil, Tipo (+3 more)
+### Community 86 - "AuthLoginDto"
+Cohesion: 0.40
+Nodes (4): AuthLoginDto, Email, Senha, Tipo
 
 ### Community 87 - "Root Cause Tracing"
 Cohesion: 0.12
@@ -765,20 +771,12 @@ Cohesion: 0.14
 Nodes (14): 2. THE COMBINATORIAL VARIATION ENGINE, Background Character, Background Mode (per-section), Composition Anchor (per-section), CTA Variation, Hero Architecture, Hero Scale (per-page), Motion-Implied Language (+6 more)
 
 ### Community 102 - "Clima (Weather)"
-Cohesion: 0.29
-Nodes (6): Cache, Clima (Weather), Configuração, Endpoint, Frontend, Futuro (não implementado)
+Cohesion: 0.18
+Nodes (9): Cache, Clima (Weather), Configuração, Endpoint, Frontend, Futuro (não implementado), Provedor, IClimaProvedor (+1 more)
 
 ### Community 103 - "JwtSettings"
-Cohesion: 0.29
+Cohesion: 0.26
 Nodes (6): JwtTokenServiceModoClienteTests, JwtSettings, Audience, ExpirationHours, Issuer, Secret
-
-### Community 104 - "Program.ConfigureServices"
-Cohesion: 0.27
-Nodes (3): Program, LogFile, IRagIndexadorServico
-
-### Community 105 - "TipoUsuario"
-Cohesion: 0.16
-Nodes (8): TipoUsuario, Admin, Cliente, Lojista, Vendedor, LoginLojaResolverTests, PapelClaimsTests, LoginLojaResolver
 
 ### Community 106 - "FavoritoRespostaDto"
 Cohesion: 0.14
@@ -788,25 +786,25 @@ Nodes (13): FavoritoRespostaDto, ClienteId, DataCriacao, EmPromocao, Id, ImagemU
 Cohesion: 0.15
 Nodes (12): 1. Ferramentas obrigatórias (instalar uma vez no PC), 2. Instalar dependências do app mobile (CMD), 3. Comandos para rodar o app mobile, 4. Principais dependências do Mobile, 5. Backend (.NET) — fora do Node.js, 6. Problemas comuns e soluções, 7. Resumo rápido (copiar e colar), Ferramentas e dependências — Preço Certo (+4 more)
 
-### Community 108 - "InterpretadorIA"
-Cohesion: 0.28
-Nodes (5): Evolução LLM (futuro), InterpretadorIA, IClassificadorIntencaoIA, IExtratorEntidadesIA, IInterpretadorIA
+### Community 108 - "ModelBuilder"
+Cohesion: 0.11
+Nodes (4): FixLojaLojistaId, RemoveCategoriaFromProduto, MensagemRecebidaEmEIntegridadeFavoritos, AppDbContextModelSnapshot
 
 ### Community 109 - "system_componentmodel_dataannotations"
 Cohesion: 0.15
-Nodes (9): AlterarEmailDto, NovoEmail, SenhaAtual, EsqueciSenhaDto, Email, PreferenciaValorDto, Valor, Pc.Dominio.Validacoes (+1 more)
+Nodes (8): AlterarEmailDto, NovoEmail, SenhaAtual, EsqueciSenhaDto, Email, PreferenciaValorDto, Valor, Pc.WebApi.Validacao
 
 ### Community 110 - "AvaliacaoRespostaDto"
-Cohesion: 0.16
-Nodes (9): AvaliacoesController, AvaliacaoRespostaDto, ClienteId, Comentario, DataAvaliacao, Id, LojaId, NomeLoja (+1 more)
+Cohesion: 0.22
+Nodes (8): AvaliacaoRespostaDto, ClienteId, Comentario, DataAvaliacao, Id, LojaId, NomeLoja, Nota
 
 ### Community 111 - "Pc.Servico"
 Cohesion: 0.15
 Nodes (13): Pc.Servico, net8.0, Microsoft.EntityFrameworkCore.Relational (8.0.5), Microsoft.Extensions.Caching.Memory (8.0.1), Microsoft.Extensions.Http (8.0.1), Microsoft.Extensions.Logging.Abstractions (8.0.2), Microsoft.Extensions.Options (8.0.2), Pgvector (0.3.1) (+5 more)
 
 ### Community 112 - "HistoricoPesquisaRespostaDto"
-Cohesion: 0.12
-Nodes (12): HistoricoPesquisaController, HistoricoPesquisaRespostaDto, ClienteId, DataPesquisa, Id, LojaId, ProdutoId, TermoPesquisa (+4 more)
+Cohesion: 0.25
+Nodes (7): HistoricoPesquisaRespostaDto, ClienteId, DataPesquisa, Id, LojaId, ProdutoId, TermoPesquisa
 
 ### Community 113 - "services"
 Cohesion: 0.15
@@ -829,7 +827,7 @@ Cohesion: 0.17
 Nodes (11): Execution Handoff, File Structure, Overview, Plan Document Header, Scope Check, Self-Review, Step Granularity, Task Right-Sizing (+3 more)
 
 ### Community 118 - "FeedProdutoLinha"
-Cohesion: 0.18
+Cohesion: 0.17
 Nodes (11): FeedProdutoLinha, Categoria, EmPromocao, ImagemUrl, LojaId, LojaNome, Nome, PrecoAnterior (+3 more)
 
 ### Community 119 - "Pc.RagReindexCli"
@@ -837,16 +835,20 @@ Cohesion: 0.17
 Nodes (12): Pc.RagReindexCli, net8.0, Microsoft.Extensions.Configuration.EnvironmentVariables (8.0.0), Microsoft.Extensions.Configuration.Json (8.0.1), Microsoft.Extensions.Http (8.0.1), Npgsql.EntityFrameworkCore.PostgreSQL (8.0.11), Pgvector.EntityFrameworkCore (0.2.2), Microsoft.NET.Sdk (+4 more)
 
 ### Community 120 - "RagIndexDlq"
-Cohesion: 0.06
-Nodes (26): RagDlqStatus, Discarded, Pending, Reprocessed, RagIndexDlq, Acao, CriadoEmUtc, EntidadeId (+18 more)
+Cohesion: 0.10
+Nodes (16): RagDlqStatus, Discarded, Pending, Reprocessed, RagIndexDlq, Acao, CriadoEmUtc, EntidadeId (+8 more)
 
 ### Community 121 - "ProdutoAtualizarDto"
-Cohesion: 0.20
+Cohesion: 0.22
 Nodes (9): ProdutoAtualizarDto, Categoria, CodigoBarras, Descricao, ImagemUrl, LojaId, Marca, NomeProduto (+1 more)
 
-### Community 122 - "IaChatLegadoFacadeTests.Chat_legado_delega_para_IMotorIA"
-Cohesion: 0.18
-Nodes (8): IaChatLegadoFacadeTests, IAController, Task 1: Remove Legacy v1 AI Engine & Hardcoded Debug Logs, 2. Goals, Non-Goals & Anti-Goals, Anti-Goals (O que seria uma falha mesmo funcionando), Goals, Non-Goals, perguntaPrecisaLocalizacao()
+### Community 122 - "ConversaRespostaDto"
+Cohesion: 0.13
+Nodes (14): ConversaRespostaDto, CodigoCliente, CodigoLoja, CodigoPublico, NaoLidas, NomeContato, UltimaMensagemEm, UltimaMensagemTexto (+6 more)
+
+### Community 123 - "ClienteServico"
+Cohesion: 0.22
+Nodes (4): EmailJaRegistradoException, ClienteServico, ValidadorEmailServico, IValidadorEmail
 
 ### Community 125 - "ProdutoFeedDto"
 Cohesion: 0.17
@@ -861,16 +863,16 @@ Cohesion: 0.18
 Nodes (10): Acknowledgments, Contributing, Creating a New Rule, File Naming Convention, Getting Started, Impact Levels, React Best Practices, Rule File Structure (+2 more)
 
 ### Community 128 - "PreferenciaClienteRespostaDto"
-Cohesion: 0.25
+Cohesion: 0.29
 Nodes (6): PreferenciaClienteRespostaDto, Chave, ClienteId, DataCriacao, Id, Valor
 
 ### Community 129 - "LojistaCriarDto"
 Cohesion: 0.33
 Nodes (6): LojistaCriarDto, Cargo, Email, NomeUsuario, Senha, Telefone
 
-### Community 131 - "IAChatRequestDto"
-Cohesion: 0.25
-Nodes (6): IAChatRequestDto, Latitude, Longitude, Mensagem, SessaoId, Pc.WebApi.DTOs.IA
+### Community 131 - "IAChatResponseDto"
+Cohesion: 0.12
+Nodes (15): IAChatRequestDto, Latitude, Longitude, Mensagem, SessaoId, IAChatResponseDto, Dados, Fallbacks (+7 more)
 
 ### Community 132 - "Pc.Servico.Tests"
 Cohesion: 0.18
@@ -928,25 +930,25 @@ Nodes (10): NominatimAddressDto, City, Country, CountryCode, Hamlet, Iso3166, Mu
 Cohesion: 0.40
 Nodes (4): PromoverVendedorDto, Cargo, Email, UsuarioId
 
-### Community 147 - "IAChatResponseDto"
-Cohesion: 0.25
-Nodes (8): IAChatResponseDto, Dados, Fallbacks, Intencao, ProvedorLlm, Resposta, SessaoId, Sucesso
+### Community 147 - "AdminRespostaDto"
+Cohesion: 0.17
+Nodes (11): AdminRespostaDto, Ativo, DataCriacao, Email, Id, NivelAcesso, NomeUsuario, Permissoes (+3 more)
 
-### Community 148 - "ControllerBase"
-Cohesion: 0.13
-Nodes (6): CnpjValidator, IConsultaCnpjServico, ConsultasController, HealthController, LojasController, WeatherController
+### Community 148 - "ClimaAtual"
+Cohesion: 0.18
+Nodes (11): ClimaAtual, CodigoClima, Descricao, Icone, Momento, Precipitacao, ProbabilidadePrecipitacao, SensacaoTermica (+3 more)
 
 ### Community 149 - "EnderecoDto"
-Cohesion: 0.10
-Nodes (20): EnderecoDto, Bairro, Cep, Cidade, Complemento, Estado, Latitude, Logradouro (+12 more)
+Cohesion: 0.20
+Nodes (10): EnderecoDto, Bairro, Cep, Cidade, Complemento, Estado, Latitude, Logradouro (+2 more)
 
-### Community 150 - "LlmInterpretacaoResultado"
-Cohesion: 0.15
-Nodes (13): LlmInterpretacaoResultado, Categoria, DistanciaMaxKm, Intencao, ItensBusca, LojaReferenciaTermo, LojaTermo, NecessitaEntrega (+5 more)
+### Community 150 - "MensagemRespostaDto"
+Cohesion: 0.18
+Nodes (10): MensagemCriarDto, Texto, MensagemRespostaDto, CodigoPublico, CodigoRemetente, EnviadaEm, Lida, RecebidaEm (+2 more)
 
-### Community 151 - "WeatherCard.js"
-Cohesion: 0.32
-Nodes (7): formatarAtualizacao(), formatarGraus(), ICONES, styles, WEATHER_CARD_SLOT_HEIGHT, WeatherCard(), renderMapPanel()
+### Community 151 - "SearchScreen.js"
+Cohesion: 0.07
+Nodes (55): formatarAtualizacao(), formatarGraus(), WeatherCard(), AiBannerCard(), SegmentedControl(), navegarParaChat(), handleChatLoja(), DEFAULT_CHIPS (+47 more)
 
 ### Community 152 - "enderecoService.js"
 Cohesion: 0.47
@@ -969,7 +971,7 @@ Cohesion: 0.22
 Nodes (9): Endereco, Bairro, Cep, Cidade, Estado, Latitude, Logradouro, Longitude (+1 more)
 
 ### Community 157 - "ProdutoCriarDto"
-Cohesion: 0.22
+Cohesion: 0.20
 Nodes (9): ProdutoCriarDto, Categoria, CodigoBarras, Descricao, ImagemUrl, LojaId, Marca, NomeProduto (+1 more)
 
 ### Community 158 - "manifest.json"
@@ -1005,8 +1007,8 @@ Cohesion: 0.29
 Nodes (6): 📞 Contato, 🤝 Contribuição, 📦 Instalação, 📄 Licença, PreçoCerto, 🚀 Uso
 
 ### Community 166 - "List"
-Cohesion: 0.09
-Nodes (14): HistoricoPesquisa, Cliente, ClienteId, DataPesquisa, Loja, LojaId, Produto, ProdutoId (+6 more)
+Cohesion: 0.04
+Nodes (30): Oferta, DataAtualizacaoPreco, DataFimPromocao, DataInicioPromocao, Disponivel, EmPromocao, Loja, LojaId (+22 more)
 
 ### Community 167 - "stop-server.sh"
 Cohesion: 0.52
@@ -1108,9 +1110,9 @@ Nodes (5): Platform Adaptation, Red Flags, Skill Priority, The Rule, User Instru
 Cohesion: 0.33
 Nodes (5): Pc.Dominio, net8.0, Pgvector (0.3.1), Microsoft.NET.Sdk, DnsClient (1.8.0)
 
-### Community 193 - "Admin"
-Cohesion: 0.03
-Nodes (29): PreferenciaCliente, Chave, Cliente, ClienteId, Valor, Admin, Email, NivelAcesso (+21 more)
+### Community 193 - "Task"
+Cohesion: 0.04
+Nodes (12): PreferenciaCliente, Chave, Cliente, ClienteId, Valor, PreferenciaClienteRepositorio, IPreferenciaClienteRepositorio, OfertaServico (+4 more)
 
 ### Community 194 - "ProdutoBuscarDto"
 Cohesion: 0.33
@@ -1125,12 +1127,12 @@ Cohesion: 0.33
 Nodes (5): HistoricoPesquisaCriarDto, ClienteId, LojaId, ProdutoId, TermoPesquisa
 
 ### Community 197 - "CnpjValidoAttribute"
-Cohesion: 0.17
+Cohesion: 0.15
 Nodes (4): TelefoneValidator, CnpjValidoAttribute, EmailValidoAttribute, TelefoneValidoAttribute
 
-### Community 198 - "AdminsController"
-Cohesion: 0.15
-Nodes (10): AdminsController, LoginDto, Email, Senha, AdminCriarDto, Email, NivelAcesso, NomeUsuario (+2 more)
+### Community 198 - "AdminCriarDto"
+Cohesion: 0.33
+Nodes (6): AdminCriarDto, Email, NivelAcesso, NomeUsuario, Senha, Telefone
 
 ### Community 199 - "12. THE BLOCK LIBRARY (Contract - Implementations Land Here Iteratively)"
 Cohesion: 0.40
@@ -1169,8 +1171,8 @@ Cohesion: 0.40
 Nodes (4): Guidelines Source, How It Works, Usage, Web Interface Guidelines
 
 ### Community 208 - "RagReindexResultado"
-Cohesion: 0.16
-Nodes (11): RagIndexadorServico, RagReindexResultado, AvaliacoesIndexadas, Erros, IgnoradosPorHash, LojasIndexadas, OfertasIndexadas, ProdutosIndexados (+3 more)
+Cohesion: 0.20
+Nodes (10): RagReindexResultado, AvaliacoesIndexadas, Erros, IgnoradosPorHash, LojasIndexadas, OfertasIndexadas, ProdutosIndexados, TempoMs (+2 more)
 
 ### Community 209 - "OfertaCriarDto"
 Cohesion: 0.20
@@ -1183,6 +1185,10 @@ Nodes (4): FavoritoCriarDto, ClienteId, LojaId, ProdutoId
 ### Community 212 - "LocalizacaoDto"
 Cohesion: 0.50
 Nodes (3): LocalizacaoDto, Latitude, Longitude
+
+### Community 213 - "LojaRespostaDto"
+Cohesion: 0.20
+Nodes (10): LojaRespostaDto, Cnpj, CodigoPublico, Email, Endereco, Id, MediaAvaliacoes, NomeFantasia (+2 more)
 
 ### Community 214 - "PaginacaoRespostaDto"
 Cohesion: 0.29
@@ -1241,16 +1247,24 @@ Cohesion: 0.18
 Nodes (10): ClimaSettings, ApiKey, CacheMinutos, CacheStaleHoras, DiasPrevisao, ForecastBaseUrl, GeocodingBaseUrl, HorasPrevisao (+2 more)
 
 ### Community 230 - "SessaoChatRepositorio"
-Cohesion: 0.38
-Nodes (3): SessaoChatRepositorio, SessaoChatRepositorioTests, TestAppDbContext
+Cohesion: 0.29
+Nodes (4): SessaoChatRepositorio, ISessaoChatRepositorio, SessaoChatRepositorioTests, TestAppDbContext
 
 ### Community 231 - "OpenMeteoForecastDto"
 Cohesion: 0.18
 Nodes (8): OpenMeteoForecastDto, Current, Daily, Error, Hourly, Latitude, Longitude, Reason
 
 ### Community 237 - "IdEncodingSettings"
-Cohesion: 0.40
+Cohesion: 0.67
 Nodes (3): IdEncodingSettings, Alphabet, MinLength
+
+### Community 238 - "WeatherControllerTests"
+Cohesion: 0.26
+Nodes (3): IClimaServico, WeatherControllerTests, WeatherController
+
+### Community 316 - "CestaLojaAcumulador"
+Cohesion: 0.29
+Nodes (6): CestaLojaAcumulador, Encontrados, Loja, NomesItens, TemPromo, Total
 
 ### Community 318 - "LojaCriarDto"
 Cohesion: 0.20
@@ -1260,37 +1274,49 @@ Nodes (10): LojaCriarDto, Cnpj, Descricao, Email, Endereco, EnderecoId, NomeFant
 Cohesion: 0.29
 Nodes (7): OpenMeteoHourlyDto, ApparentTemperature, Precipitation, PrecipitationProbability, Temperature2m, Time, WeatherCode
 
-### Community 320 - "Pc.Servico.Modelos"
-Cohesion: 0.14
-Nodes (7): FeedServico, IFeedServico, LoginErroCodigo, EmailNaoEncontrado, None, SenhaIncorreta, Pc.Servico.Modelos
+### Community 320 - "ClienteServico.ValidarLoginDetalhadoAsync"
+Cohesion: 0.21
+Nodes (8): LoginErroCodigo, EmailNaoEncontrado, None, SenhaIncorreta, LoginValidacaoResult, Erro, Sucesso, Usuario
+
+### Community 321 - "TipoUsuario"
+Cohesion: 0.40
+Nodes (5): TipoUsuario, Admin, Cliente, Lojista, Vendedor
 
 ### Community 322 - "PreferenciaClienteCriarDto"
 Cohesion: 0.40
 Nodes (4): PreferenciaClienteCriarDto, Chave, ClienteId, Valor
+
+### Community 323 - "RelatorioPesquisaTermoDto"
+Cohesion: 0.40
+Nodes (4): RelatorioPesquisaTermoDto, Quantidade, Termo, UltimaPesquisa
+
+### Community 332 - "LoginDto"
+Cohesion: 0.50
+Nodes (3): LoginDto, Email, Senha
 
 ### Community 335 - "RedefinirSenhaDto"
 Cohesion: 0.50
 Nodes (3): RedefinirSenhaDto, NovaSenha, Token
 
 ## Knowledge Gaps
-- **970 isolated node(s):** `Candidates`, `Content`, `Parts`, `Text`, `Choices` (+965 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 2417 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **107 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **970 isolated node(s):** `Cliente`, `ClienteId`, `Loja`, `LojaId`, `Mensagens` (+965 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 2422 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **104 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Etapa 7 — Assistente IA (`AiChatScreen`)` connect `AiChatScreen.js` to `Admin`, `MotorIA`?**
-  _High betweenness centrality (0.076) - this node is a cross-community bridge._
+- **Why does `Etapa 7 — Assistente IA (`AiChatScreen`)` connect `AiChatScreen` to `MotorIA`, `Admin`?**
+  _High betweenness centrality (0.093) - this node is a cross-community bridge._
 - **Are the 14 inferred relationships involving `ContextoIA` (e.g. with `MotorRecomendacaoFiltroEstritoTests.DistanciaMaxKm_descarta_distancia_nula_e_acima_do_limite()` and `MotorRecomendacaoFiltroEstritoTests.OrcamentoMax_descarta_preco_nulo_e_acima_do_limite()`) actually correct?**
   _`ContextoIA` has 14 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `Candidates`, `Content`, `Parts` to the rest of the system?**
+- **What connects `Cliente`, `ClienteId`, `Loja` to the rest of the system?**
   _970 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Guid` be split into smaller, more focused modules?**
-  _Cohesion score 0.042756782945736434 - nodes in this community are weakly interconnected._
-- **Why does `AiChatScreen()` connect `AiChatScreen.js` to `RegisterScreen.js`, `useTheme`?**
-  _High betweenness centrality (0.074) - this node is a cross-community bridge._
+  _Cohesion score 0.044069112793632306 - nodes in this community are weakly interconnected._
+- **Why does `AiChatScreen()` connect `AiChatScreen` to `chatService.js`, `RegisterScreen.js`, `useTheme`?**
+  _High betweenness centrality (0.092) - this node is a cross-community bridge._
 - **Should `Task` be split into smaller, more focused modules?**
-  _Cohesion score 0.09497882637628555 - nodes in this community are weakly interconnected._
-- **Why does `Admin` connect `Admin` to `Guid`, `Task`, `AdminsController`, `TipoUsuario`, `Pc.Repositorio.Interfaces`, `AuthController`, `AiChatScreen.js`?**
-  _High betweenness centrality (0.054) - this node is a cross-community bridge._
+  _Cohesion score 0.1 - nodes in this community are weakly interconnected._
+- **Why does `Admin` connect `Admin` to `TipoUsuario`, `Task`, `Task`, `List`, `Pc.Repositorio.Interfaces`, `ILogger`, `IActionResult`, `ClienteServico.VerificarSenhaAsync`, `DateTime`, `AiChatScreen`?**
+  _High betweenness centrality (0.064) - this node is a cross-community bridge._

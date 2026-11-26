@@ -55,6 +55,7 @@ import { labelCategoria } from '../../utils/categoriasProduto';
 import { mapApiError } from '../../utils/apiErrorUtils';
 import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import { useTheme } from '../../context/ThemeContext';
+import { fonts } from '../../theme';
 
 function preencherFormularioProduto(prod, ofertaLoja) {
   return {
@@ -491,7 +492,8 @@ export default function ProductDetailScreen({ route, navigation }) {
         label="Excluir produto"
         onPress={confirmarExclusao}
         disabled={salvando}
-        style={styles.botaoExcluir}
+        style={{ borderColor: colors.destructive }}
+        textStyle={{ color: colors.destructive }}
       />
     </View>
   ) : undefined;
@@ -631,17 +633,17 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   marca: {
+    fontFamily: fonts.sansSemiBold,
     fontSize: 13,
-    color: '#64748B',
     marginBottom: 4,
   },
   marcaWeb: {
     fontSize: 15,
   },
   nome: {
+    fontFamily: fonts.display,
     fontSize: 22,
-    fontWeight: '600',
-    color: '#0F172A',
+    fontWeight: '700',
     lineHeight: 28,
   },
   nomeWeb: {
@@ -649,34 +651,34 @@ const styles = StyleSheet.create({
     lineHeight: 34,
   },
   descricao: {
+    fontFamily: fonts.sans,
     fontSize: 15,
-    color: '#475569',
     marginTop: 12,
     lineHeight: 22,
   },
   descricaoWeb: {
-    fontSize: 18,
+    fontSize: 17,
     lineHeight: 26,
   },
   meta: {
+    fontFamily: fonts.sans,
     fontSize: 13,
-    color: '#64748B',
     marginTop: 12,
   },
   metaWeb: {
     fontSize: 15,
   },
   loja: {
+    fontFamily: fonts.sansSemiBold,
     fontSize: 14,
-    color: '#64748B',
     marginTop: 12,
   },
   lojaWeb: {
     fontSize: 16,
   },
   endereco: {
+    fontFamily: fonts.sans,
     fontSize: 13,
-    color: '#94A3B8',
     marginTop: 4,
   },
   enderecoWeb: {
@@ -685,8 +687,5 @@ const styles = StyleSheet.create({
   fotoActions: {
     marginTop: 8,
     marginBottom: 4,
-  },
-  botaoExcluir: {
-    borderColor: '#dc2626',
   },
 });

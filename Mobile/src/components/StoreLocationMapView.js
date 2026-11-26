@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import MapView, { Marker, UrlTile, PROVIDER_DEFAULT } from 'react-native-maps';
 import { SAQUAREMA_CENTER } from '../utils/mapaUtils';
+import { colors, radii } from '../theme';
 
 /**
  * Mapa para escolher a localização da loja (Android/iOS): toque no mapa ou
@@ -60,7 +61,7 @@ export default function StoreLocationMapView({
           <Marker
             coordinate={coord}
             title={titulo || 'Local da loja'}
-            pinColor="#14B8A6"
+            pinColor={colors.primary}
             draggable
             onDragEnd={(e) => emitir(e.nativeEvent.coordinate)}
           />
@@ -74,17 +75,17 @@ export default function StoreLocationMapView({
 const styles = StyleSheet.create({
   map: {
     height: 260,
-    borderRadius: 12,
+    borderRadius: radii.md,
     overflow: 'hidden',
-    backgroundColor: '#e2e8f0',
+    backgroundColor: colors.map,
   },
   atribuicao: {
     position: 'absolute',
     right: 4,
     bottom: 2,
     fontSize: 10,
-    color: '#334155',
-    backgroundColor: 'rgba(255,255,255,0.7)',
+    color: colors.textMuted,
+    backgroundColor: 'rgba(255,255,255,0.75)',
     paddingHorizontal: 4,
   },
 });

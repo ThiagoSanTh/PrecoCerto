@@ -4,6 +4,7 @@ import { formatarPrecoBrl } from '../../utils/mapaUtils';
 import { formatarPrecoMl } from '../../utils/precoUtils';
 import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import { useTheme } from '../../context/ThemeContext';
+import { fonts, radii, tabularNums } from '../../theme';
 
 function formatarData(data) {
   if (!data) return null;
@@ -18,16 +19,15 @@ const baseStyles = StyleSheet.create({
   },
   badge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#DCFCE7',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 4,
+    borderRadius: radii.sm,
     marginBottom: 8,
   },
   badgeText: {
-    color: '#15803D',
-    fontSize: 12,
-    fontWeight: '700',
+    fontFamily: fonts.sansBold,
+    fontSize: 11,
+    fontWeight: '800',
   },
   precoHeaderRow: {
     flexDirection: 'row',
@@ -49,34 +49,33 @@ const baseStyles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   moeda: {
+    fontFamily: fonts.sansSemiBold,
     fontSize: 18,
-    fontWeight: '400',
-    color: '#0F172A',
+    fontWeight: '600',
     marginTop: 6,
     marginRight: 2,
   },
   inteiro: {
+    fontFamily: fonts.display,
     fontSize: 36,
-    fontWeight: '300',
-    color: '#0F172A',
+    fontWeight: '700',
     lineHeight: 40,
   },
   centavos: {
+    fontFamily: fonts.display,
     fontSize: 18,
-    fontWeight: '400',
-    color: '#0F172A',
+    fontWeight: '700',
     marginTop: 4,
   },
   historico: {
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
   },
   historicoTitulo: {
+    fontFamily: fonts.sansSemiBold,
     fontSize: 13,
     fontWeight: '600',
-    color: '#64748B',
     marginBottom: 6,
   },
   antigoRow: {
@@ -86,13 +85,13 @@ const baseStyles = StyleSheet.create({
     marginBottom: 4,
   },
   antigoPreco: {
+    fontFamily: fonts.sans,
     fontSize: 14,
-    color: '#94A3B8',
     textDecorationLine: 'line-through',
   },
   antigoData: {
+    fontFamily: fonts.sans,
     fontSize: 12,
-    color: '#CBD5E1',
   },
 });
 
@@ -138,12 +137,12 @@ export default function PriceHistoryBlock({
       container: baseStyles.container,
       badge: [
         baseStyles.badge,
-        { backgroundColor: colors.successSoft || colors.primarySoft },
+        { backgroundColor: colors.highlight },
       ],
       badgeText: [
         baseStyles.badgeText,
         isWeb && webStyles.badgeText,
-        { color: colors.successForeground || colors.success },
+        { color: colors.highlightForeground },
       ],
       precoHeaderRow: baseStyles.precoHeaderRow,
       precoCol: baseStyles.precoCol,
@@ -152,17 +151,20 @@ export default function PriceHistoryBlock({
       moeda: [
         baseStyles.moeda,
         isWeb && webStyles.moeda,
-        { color: colors.text, fontVariant: ['tabular-nums'] },
+        { color: colors.text },
+        tabularNums,
       ],
       inteiro: [
         baseStyles.inteiro,
         isWeb && webStyles.inteiro,
-        { color: colors.text, fontVariant: ['tabular-nums'] },
+        { color: colors.text },
+        tabularNums,
       ],
       centavos: [
         baseStyles.centavos,
         isWeb && webStyles.centavos,
-        { color: colors.text, fontVariant: ['tabular-nums'] },
+        { color: colors.text },
+        tabularNums,
       ],
       historico: [baseStyles.historico, { borderTopColor: colors.border }],
       historicoTitulo: [
@@ -174,7 +176,8 @@ export default function PriceHistoryBlock({
       antigoPreco: [
         baseStyles.antigoPreco,
         isWeb && webStyles.antigoPreco,
-        { color: colors.textMuted, fontVariant: ['tabular-nums'] },
+        { color: colors.textMuted },
+        tabularNums,
       ],
       antigoData: [
         baseStyles.antigoData,

@@ -24,6 +24,7 @@ import {
   ListCardText,
 } from '../../components/form';
 import { useTheme } from '../../context/ThemeContext';
+import { fonts, radii, shadows } from '../../theme';
 
 export default function VendedoresScreen({ navigation, route }) {
   const lojaId = route?.params?.lojaId;
@@ -170,20 +171,19 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 10,
-    padding: 12,
+    borderRadius: radii.xl,
+    padding: 14,
     marginBottom: 10,
+    ...shadows.soft,
   },
-  nome: { fontSize: 15, fontWeight: '700' },
-  email: { fontSize: 13, marginTop: 2 },
-  cargo: { fontSize: 12, marginTop: 2, fontWeight: '600' },
+  nome: { fontFamily: fonts.sansSemiBold, fontSize: 15, fontWeight: '700' },
+  email: { fontFamily: fonts.sans, fontSize: 13, marginTop: 2 },
+  cargo: { fontFamily: fonts.sansSemiBold, fontSize: 12, marginTop: 2, fontWeight: '600' },
   removerBtn: {
     minHeight: 44,
     paddingHorizontal: 12,
     justifyContent: 'center',
   },
-  remover: { fontWeight: '700', fontSize: 13 },
+  remover: { fontFamily: fonts.sansBold, fontWeight: '700', fontSize: 13 },
 });

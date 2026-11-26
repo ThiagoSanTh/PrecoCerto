@@ -2,9 +2,11 @@ import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
 import { useMemo } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
+import { PillBadge } from '../ui/DesignPrimitives';
 import { formatarPrecoMl } from '../../utils/precoUtils';
 import { formatarPrecoBrl } from '../../utils/mapaUtils';
 import { nomeProduto } from '../../utils/produtoUtils';
+import { fonts, radii, shadows, tabularNums } from '../../theme';
 
 export default function ProductGridCard({
   produto,
@@ -23,19 +25,17 @@ export default function ProductGridCard({
       StyleSheet.create({
         card: {
           ...(fillCell ? { flex: 1 } : { width: '100%' }),
-          backgroundColor: colors.surface,
-          borderRadius: 8,
+          backgroundColor: colors.card,
+          borderRadius: radii.xl,
+          borderWidth: 1,
+          borderColor: colors.border,
           overflow: 'hidden',
-          marginBottom: 8,
-          elevation: 2,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.08,
-          shadowRadius: 3,
+          marginBottom: 10,
+          ...shadows.soft,
         },
         imageWrap: {
           aspectRatio: 1,
-          backgroundColor: colors.surface,
+          backgroundColor: colors.surfaceSubtle,
           position: 'relative',
         },
         image: {
@@ -44,11 +44,12 @@ export default function ProductGridCard({
         },
         imagePlaceholder: {
           flex: 1,
-          backgroundColor: colors.card,
+          backgroundColor: colors.surfaceSubtle,
           alignItems: 'center',
           justifyContent: 'center',
         },
         placeholderLetter: {
+          fontFamily: fonts.display,
           fontSize: 32,
           fontWeight: '700',
           color: colors.textMuted,
@@ -57,15 +58,6 @@ export default function ProductGridCard({
           position: 'absolute',
           top: 8,
           left: 8,
-          backgroundColor: '#15803D',
-          paddingHorizontal: 6,
-          paddingVertical: 2,
-          borderRadius: 4,
-        },
-        promoText: {
-          color: '#fff',
-          fontSize: 10,
-          fontWeight: '700',
         },
         heartBtn: {
           position: 'absolute',
@@ -74,57 +66,68 @@ export default function ProductGridCard({
           width: 34,
           height: 34,
           borderRadius: 17,
-          backgroundColor: 'rgba(255,255,255,0.92)',
+          backgroundColor: colors.card,
+          borderWidth: 1,
+          borderColor: colors.border,
           alignItems: 'center',
           justifyContent: 'center',
-          elevation: 3,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.12,
-          shadowRadius: 3,
+          ...shadows.soft,
         },
         heartBtnAtivo: {
-          backgroundColor: '#FEF2F2',
+          backgroundColor: colors.destructiveSoft,
+          borderColor: colors.destructive,
         },
         body: {
-          padding: 10,
+          padding: 12,
         },
         title: {
-          fontSize: 13,
+          fontFamily: fonts.sansSemiBold,
+          fontSize: 13.5,
+          fontWeight: '600',
           color: colors.text,
-          lineHeight: 17,
+          lineHeight: 18,
           marginBottom: 6,
         },
         precoAnterior: {
+          fontFamily: fonts.sans,
           fontSize: 11,
           color: colors.textMuted,
           textDecorationLine: 'line-through',
           marginBottom: 2,
+          ...tabularNums,
         },
         precoRow: {
           flexDirection: 'row',
           alignItems: 'flex-start',
         },
         moeda: {
+          fontFamily: fonts.sansSemiBold,
           fontSize: 12,
           color: colors.text,
           marginTop: 4,
+          ...tabularNums,
         },
         inteiro: {
-          fontSize: 22,
-          fontWeight: '300',
+          fontFamily: fonts.display,
+          fontSize: 21,
+          fontWeight: '700',
           color: colors.text,
           lineHeight: 26,
+          ...tabularNums,
         },
         centavos: {
+          fontFamily: fonts.display,
           fontSize: 11,
+          fontWeight: '600',
           color: colors.text,
-          marginTop: 2,
+          marginTop: 3,
+          ...tabularNums,
         },
         loja: {
-          fontSize: 11,
+          fontFamily: fonts.sans,
+          fontSize: 11.5,
           color: colors.textMuted,
-          marginTop: 4,
+          marginTop: 5,
         },
       }),
     [colors, fillCell]
@@ -157,7 +160,7 @@ export default function ProductGridCard({
         )}
         {emPromocao ? (
           <View style={styles.promoBadge}>
-            <Text style={styles.promoText}>Oferta</Text>
+            <PillBadge label="OFERTA" variant="highlight" />
           </View>
         ) : null}
         {mostrarFavorito ? (
@@ -174,7 +177,7 @@ export default function ProductGridCard({
             <Ionicons
               name={ehFavorito ? 'heart' : 'heart-outline'}
               size={18}
-              color={ehFavorito ? '#EF4444' : colors.textMuted}
+              color={ehFavorito ? colors.destructive : colors.textMuted}
             />
           </Pressable>
         ) : null}

@@ -18,13 +18,14 @@ import {
 } from '../../services/historicoService';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import { FormScreen, ListCardText } from '../../components/form';
 import { PageHeader, SurfaceCard } from '../../components/ui/DesignPrimitives';
 import {
   agruparHistoricoPorDia,
   calcularIndicadoresHistorico,
 } from '../../utils/insights';
-import { fonts, radii } from '../../theme';
+import { fonts, radii, tabularNums } from '../../theme';
 
 export default function HistoricoScreen() {
   const navigation = useNavigation();
@@ -32,6 +33,7 @@ export default function HistoricoScreen() {
   const [loading, setLoading] = useState(true);
   const { session } = useAuth();
   const { colors } = useTheme();
+  const { isCompactPhone, useSidebarNav } = useLayoutProfile();
   const clienteId = session?.perfil?.id;
 
   const carregar = useCallback(async () => {
@@ -130,7 +132,10 @@ export default function HistoricoScreen() {
     >
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          useSidebarNav && styles.scrollContentDesktop,
+        ]}
       >
         <PageHeader
           eyebrow="Suas buscas"
@@ -162,9 +167,9 @@ export default function HistoricoScreen() {
         />
 
         {/* KPI Cards */}
-        <View style={styles.kpiGrid}>
-          <SurfaceCard style={styles.kpiCard}>
-            <Text style={[styles.kpiValue, { color: colors.text }]}>
+        <View style={[styles.kpiGrid, isCompactPhone && styles.kpiGridCompact]}>
+          <SurfaceCard style={[styles.kpiCard, isCompactPhone && styles.kpiCardCompact]}>
+            <Text style={[styles.kpiValue, tabularNums, { color: colors.text }]}>
               {indicadores.buscasMes}
             </Text>
             <Text style={[styles.kpiLabel, { color: colors.textMuted }]}>
@@ -172,8 +177,8 @@ export default function HistoricoScreen() {
             </Text>
           </SurfaceCard>
 
-          <SurfaceCard style={styles.kpiCard}>
-            <Text style={[styles.kpiValue, { color: colors.text }]}>
+          <SurfaceCard style={[styles.kpiCard, isCompactPhone && styles.kpiCardCompact]}>
+            <Text style={[styles.kpiValue, tabularNums, { color: colors.text }]}>
               {indicadores.termosUnicos}
             </Text>
             <Text style={[styles.kpiLabel, { color: colors.textMuted }]}>
@@ -181,8 +186,8 @@ export default function HistoricoScreen() {
             </Text>
           </SurfaceCard>
 
-          <SurfaceCard style={styles.kpiCard}>
-            <Text style={[styles.kpiValue, { color: colors.text }]}>
+          <SurfaceCard style={[styles.kpiCard, isCompactPhone && styles.kpiCardCompact]}>
+            <Text style={[styles.kpiValue, tabularNums, { color: colors.text }]}>
               {indicadores.lojasVisitadas}
             </Text>
             <Text style={[styles.kpiLabel, { color: colors.textMuted }]}>
@@ -311,8 +316,11 @@ export default function HistoricoScreen() {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 108,
     gap: 18,
+  },
+  scrollContentDesktop: {
+    paddingBottom: 32,
   },
   clearAllBtn: {
     flexDirection: 'row',
@@ -332,9 +340,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
+  kpiGridCompact: {
+    gap: 8,
+  },
   kpiCard: {
     flex: 1,
+    minWidth: 0,
     padding: 16,
+  },
+  kpiCardCompact: {
+    padding: 12,
   },
   kpiValue: {
     fontFamily: fonts.display,

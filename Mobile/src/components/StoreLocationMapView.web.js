@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import { buildLeafletPickerMapHtml } from '../utils/leafletMapHtml';
 import LeafletMapFrame from './LeafletMapFrame';
+import { colors, radii } from '../theme';
 
 export default function StoreLocationMapView({
   latitude,
@@ -49,8 +50,8 @@ export default function StoreLocationMapView({
 const styles = StyleSheet.create({
   map: {
     height: 260,
-    borderRadius: 12,
+    borderRadius: radii.md,
     overflow: 'hidden',
-    backgroundColor: '#e2e8f0',
+    backgroundColor: colors.map,
   },
 });

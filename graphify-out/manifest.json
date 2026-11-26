@@ -1794,15 +1794,15 @@
     "semantic_hash": ""
   },
   "Mobile/App.js": {
-    "mtime": 1793753515.7705958,
-    "seen": 1794776891.1075354,
-    "ast_hash": "a8817c6284e6478bb946090ea8a07ddc",
+    "mtime": 1795737033.380952,
+    "seen": 1795737361.1205933,
+    "ast_hash": "4f088150354507f19080f3d35255cb3b",
     "semantic_hash": ""
   },
   "Mobile/app.json": {
-    "mtime": 1792020084.0,
-    "seen": 1794776891.107536,
-    "ast_hash": "8f6001056e2484d25fbe921257ab0f06",
+    "mtime": 1795737035.351155,
+    "seen": 1795737361.1205955,
+    "ast_hash": "e2d62ea99a6d4d70d9e4f5ab69b5a35f",
     "semantic_hash": ""
   },
   "Mobile/index.js": {
@@ -1830,39 +1830,39 @@
     "semantic_hash": ""
   },
   "Mobile/src/components/CustomTabBar.js": {
-    "mtime": 1793933105.7917044,
-    "seen": 1794776891.107541,
-    "ast_hash": "3b1d8b2631b49bb68f52470991a3c613",
+    "mtime": 1795737055.3476303,
+    "seen": 1795737361.1206021,
+    "ast_hash": "06b820a5809d4ca0726090805fbff3ae",
     "semantic_hash": ""
   },
   "Mobile/src/components/LeafletMapFrame.js": {
-    "mtime": 1792020084.0,
-    "seen": 1794776891.107542,
-    "ast_hash": "ad5c18e7a60273931b92c16c20e115fe",
+    "mtime": 1795737337.458027,
+    "seen": 1795737361.1206033,
+    "ast_hash": "4553b1bd613b40e9272d2634e77352a0",
     "semantic_hash": ""
   },
   "Mobile/src/components/LojasMapView.js": {
-    "mtime": 1793933726.3188663,
-    "seen": 1794776891.1075428,
-    "ast_hash": "317676daca2506e7f8c6a36e0b2cb06d",
+    "mtime": 1795737328.4673407,
+    "seen": 1795737361.1206048,
+    "ast_hash": "b4085a8131bf98ee2676eb6280b22f8e",
     "semantic_hash": ""
   },
   "Mobile/src/components/LojasMapView.web.js": {
-    "mtime": 1793933721.1771722,
-    "seen": 1794776891.1075437,
-    "ast_hash": "6bf2a4b38d2eac996dc199113f1a8af1",
+    "mtime": 1795737330.4619179,
+    "seen": 1795737361.120606,
+    "ast_hash": "92d0829136a27fec86091a0b82fab25f",
     "semantic_hash": ""
   },
   "Mobile/src/components/StoreLocationMapView.js": {
-    "mtime": 1792020084.0,
-    "seen": 1794776891.1075447,
-    "ast_hash": "a4e1d4db0db7563415a7d8d1eca38935",
+    "mtime": 1795737333.4237802,
+    "seen": 1795737361.1206071,
+    "ast_hash": "de79f06a321894e12397ceb52ca559a8",
     "semantic_hash": ""
   },
   "Mobile/src/components/StoreLocationMapView.web.js": {
-    "mtime": 1792020084.0,
-    "seen": 1794776891.1075459,
-    "ast_hash": "f884f975ffd9f957884fb3327c844c36",
+    "mtime": 1795737335.3422205,
+    "seen": 1795737361.1206088,
+    "ast_hash": "74d0806dd83506f34afbcd24a60919b1",
     "semantic_hash": ""
   },
   "Mobile/src/components/feed/FavoritoListCard.js": {
@@ -1878,15 +1878,15 @@
     "semantic_hash": ""
   },
   "Mobile/src/components/feed/ProductGridCard.js": {
-    "mtime": 1792020084.0,
-    "seen": 1794776891.1075487,
-    "ast_hash": "38866124fcf83ead3aa9d8a7f91ad1da",
+    "mtime": 1795737249.585984,
+    "seen": 1795737361.1206126,
+    "ast_hash": "f6ebd8c5b93ea7a7529cf8958bea934a",
     "semantic_hash": ""
   },
   "Mobile/src/components/feed/WeatherCard.js": {
-    "mtime": 1793753575.0974789,
-    "seen": 1794776891.1075497,
-    "ast_hash": "a4fb90f1c4c91c48becc5eba9984f860",
+    "mtime": 1795737084.601842,
+    "seen": 1795737361.1206138,
+    "ast_hash": "ba0b70d0537c1120cbf3bced5eaf7886",
     "semantic_hash": ""
   },
   "Mobile/src/components/form/FormButton.js": {
@@ -1938,9 +1938,9 @@
     "semantic_hash": ""
   },
   "Mobile/src/components/layout/ScreenShell.js": {
-    "mtime": 1793932396.8723686,
-    "seen": 1794776891.1075587,
-    "ast_hash": "2498e093dc259593e42794ca7d39ceec",
+    "mtime": 1795737295.7814596,
+    "seen": 1795737361.1206257,
+    "ast_hash": "3a89c840dd7927fe93e575fd4f105110",
     "semantic_hash": ""
   },
   "Mobile/src/components/product/CategoriaPicker.js": {
@@ -1950,51 +1950,51 @@
     "semantic_hash": ""
   },
   "Mobile/src/components/product/PriceHistoryBlock.js": {
-    "mtime": 1793932636.862168,
-    "seen": 1794776891.1075604,
-    "ast_hash": "4599483cb524b9b530904a5c4b28e5c6",
+    "mtime": 1795737285.3725717,
+    "seen": 1795737361.1206279,
+    "ast_hash": "2ba1a5ab1624fdc24344b722f04ecff2",
     "semantic_hash": ""
   },
   "Mobile/src/components/product/ProductActionBar.js": {
-    "mtime": 1792020084.0,
-    "seen": 1794776891.1075616,
-    "ast_hash": "4f8f68b39384ba14f8740e4e332722a0",
+    "mtime": 1795737250.6113598,
+    "seen": 1795737361.120629,
+    "ast_hash": "bbaffef12446a5e03c84a005c1cfebbc",
     "semantic_hash": ""
   },
   "Mobile/src/components/product/ProductImageGallery.js": {
-    "mtime": 1792020084.0,
-    "seen": 1794776891.1075625,
-    "ast_hash": "8c8e3e18c1583123cacc941f792e23ed",
+    "mtime": 1795737286.2260165,
+    "seen": 1795737361.1206303,
+    "ast_hash": "aa03bd8892dd7c9e103d9d6adc059ead",
     "semantic_hash": ""
   },
   "Mobile/src/components/product/PromocaoSection.js": {
-    "mtime": 1793932640.6332011,
-    "seen": 1794776891.1075635,
-    "ast_hash": "bb074a7ad565ab4b4122db4e8786f918",
+    "mtime": 1795737289.8901708,
+    "seen": 1795737361.1206312,
+    "ast_hash": "274174b51defed7580e6c22882acaaf6",
     "semantic_hash": ""
   },
   "Mobile/src/components/product/ReviewList.js": {
-    "mtime": 1793932639.398018,
-    "seen": 1794776891.1075642,
-    "ast_hash": "a92651a8ad07549274a77e7cb4548897",
+    "mtime": 1795737287.0785253,
+    "seen": 1795737361.1206324,
+    "ast_hash": "b2428aa92857c1017d4c5c955812df07",
     "semantic_hash": ""
   },
   "Mobile/src/components/product/StarRating.js": {
-    "mtime": 1793932552.9008183,
-    "seen": 1794776891.1075654,
-    "ast_hash": "65da0a5862aa2e4dda499cc9736aa3ae",
+    "mtime": 1795737251.562883,
+    "seen": 1795737361.1206336,
+    "ast_hash": "0a4469719fe7c5ea4f1e4a1e8a4e8e93",
     "semantic_hash": ""
   },
   "Mobile/src/components/ui/AuthSplitLayout.js": {
-    "mtime": 1793318941.2785072,
-    "seen": 1794776891.1075664,
-    "ast_hash": "1d990ce357212b67ab9a8b9d35e46df1",
+    "mtime": 1795737061.0601392,
+    "seen": 1795737361.1206346,
+    "ast_hash": "97d26825d03048e549966464ba2f08fc",
     "semantic_hash": ""
   },
   "Mobile/src/components/ui/DesignPrimitives.js": {
-    "mtime": 1793933103.159431,
-    "seen": 1794776891.107567,
-    "ast_hash": "010eda2b0002534c3802a502c0614366",
+    "mtime": 1795737318.935205,
+    "seen": 1795737361.1206357,
+    "ast_hash": "9c5ffcd5a45f51efc58db89ba9e21b04",
     "semantic_hash": ""
   },
   "Mobile/src/context/AuthContext.js": {
@@ -2076,9 +2076,9 @@
     "semantic_hash": ""
   },
   "Mobile/src/screens/auth/ForgotPasswordScreen.js": {
-    "mtime": 1792020084.0,
-    "seen": 1794776891.107583,
-    "ast_hash": "91b7ce1b44500a45d9072dfd14ca918d",
+    "mtime": 1795737209.019355,
+    "seen": 1795737361.1206539,
+    "ast_hash": "0304df8b20ecde5e743ba41adafd0e16",
     "semantic_hash": ""
   },
   "Mobile/src/screens/auth/LoginScreen.js": {
@@ -2094,15 +2094,15 @@
     "semantic_hash": ""
   },
   "Mobile/src/screens/catalog/ProductDetailScreen.js": {
-    "mtime": 1793932707.3108537,
-    "seen": 1794776891.107586,
-    "ast_hash": "7f66d680cc2e4b4db2aae8ce60105c18",
+    "mtime": 1795737292.7233086,
+    "seen": 1795737361.1206574,
+    "ast_hash": "496c0374c81d0074a57ed00b72a7fc41",
     "semantic_hash": ""
   },
   "Mobile/src/screens/catalog/SearchScreen.js": {
-    "mtime": 1794008223.1390252,
-    "seen": 1794776891.107587,
-    "ast_hash": "cf7be1e1a86b6e7a540db23e1ee12f6d",
+    "mtime": 1795737125.0345511,
+    "seen": 1795737361.1206586,
+    "ast_hash": "40f69b9efea7a55b63f8e4b54e075a02",
     "semantic_hash": ""
   },
   "Mobile/src/screens/catalog/StoreCatalogScreen.js": {
@@ -2112,9 +2112,9 @@
     "semantic_hash": ""
   },
   "Mobile/src/screens/store/CreateOfertaScreen.js": {
-    "mtime": 1792020084.0,
-    "seen": 1794776891.1075888,
-    "ast_hash": "6a18fe66103d82358b85197fa67ec278",
+    "mtime": 1795737322.3831923,
+    "seen": 1795737361.1206613,
+    "ast_hash": "381041b3604a226687421464b8113881",
     "semantic_hash": ""
   },
   "Mobile/src/screens/store/CreateProductScreen.js": {
@@ -2124,39 +2124,39 @@
     "semantic_hash": ""
   },
   "Mobile/src/screens/store/CreateStoreScreen.js": {
-    "mtime": 1792020084.0,
-    "seen": 1794776891.1075907,
-    "ast_hash": "5a41e53edc10f6b934feeebd7cdd41a9",
+    "mtime": 1795737326.490077,
+    "seen": 1795737361.120664,
+    "ast_hash": "4788049cc1462ae04fd74f2e0cd6f48b",
     "semantic_hash": ""
   },
   "Mobile/src/screens/store/MerchantDashboardScreen.js": {
-    "mtime": 1793753522.8045373,
-    "seen": 1794776891.1075916,
-    "ast_hash": "9cb2a68880b3e2df9a26de8cf853040d",
+    "mtime": 1795737165.9477317,
+    "seen": 1795737361.120665,
+    "ast_hash": "911035b83f3d18353edd3bc7904cfda4",
     "semantic_hash": ""
   },
   "Mobile/src/screens/store/ProductsScreen.js": {
-    "mtime": 1793932497.5043416,
-    "seen": 1794776891.1075928,
-    "ast_hash": "d91ebf7782076bbc71332add7080f072",
+    "mtime": 1795737173.4818418,
+    "seen": 1795737361.120666,
+    "ast_hash": "80a0361f9e5747efdcba73d3d5c226dc",
     "semantic_hash": ""
   },
   "Mobile/src/screens/store/StoreScreen.js": {
-    "mtime": 1792020084.0,
-    "seen": 1794776891.1075938,
-    "ast_hash": "025a2356e526aed4f9343c8a783bdcb4",
+    "mtime": 1795737248.3376386,
+    "seen": 1795737361.1206672,
+    "ast_hash": "e7e9860f016c057ceac80fab73e554c6",
     "semantic_hash": ""
   },
   "Mobile/src/screens/store/VendedoresScreen.js": {
-    "mtime": 1793932651.9055226,
-    "seen": 1794776891.1075945,
-    "ast_hash": "74688daa3a86f6954793f898c6eeed46",
+    "mtime": 1795737297.7183447,
+    "seen": 1795737361.1206682,
+    "ast_hash": "9a27bbab580bf410687ce949ec6c2b93",
     "semantic_hash": ""
   },
   "Mobile/src/screens/user/AiChatScreen.js": {
-    "mtime": 1793753717.177015,
-    "seen": 1794776891.1075954,
-    "ast_hash": "80d7ae7eb2ff0d98fad2c5b5ffeaad46",
+    "mtime": 1795737133.4115279,
+    "seen": 1795737361.1206694,
+    "ast_hash": "779ae3f7c71e1d3992c20ca062a50fee",
     "semantic_hash": ""
   },
   "Mobile/src/screens/user/ChangePasswordScreen.js": {
@@ -2166,15 +2166,15 @@
     "semantic_hash": ""
   },
   "Mobile/src/screens/user/ChatScreen.js": {
-    "mtime": 1793319393.1543803,
-    "seen": 1794776891.1075974,
-    "ast_hash": "d5c9322556251af23f9cb60f625a3a4f",
+    "mtime": 1795737247.3533418,
+    "seen": 1795737361.120672,
+    "ast_hash": "3b30b06c84f35aee63b9550d176694e4",
     "semantic_hash": ""
   },
   "Mobile/src/screens/user/ConversasScreen.js": {
-    "mtime": 1793932547.6014345,
-    "seen": 1794776891.107598,
-    "ast_hash": "171903bbb97227699484fdb85789e57c",
+    "mtime": 1795737245.4538696,
+    "seen": 1795737361.120673,
+    "ast_hash": "e8e95a12cb2894d82ecf30c42a7b7d5f",
     "semantic_hash": ""
   },
   "Mobile/src/screens/user/EditEmailScreen.js": {
@@ -2190,21 +2190,21 @@
     "semantic_hash": ""
   },
   "Mobile/src/screens/user/FavoritosScreen.js": {
-    "mtime": 1793319278.069702,
-    "seen": 1794776891.107601,
-    "ast_hash": "9068bec66a47b2f4c7d0e6eb725cf027",
+    "mtime": 1795737204.1840458,
+    "seen": 1795737361.1206765,
+    "ast_hash": "1911f229d167385bebe1a6b5f4a0d30a",
     "semantic_hash": ""
   },
   "Mobile/src/screens/user/HistoricoScreen.js": {
-    "mtime": 1793672201.3414228,
-    "seen": 1794776891.1076021,
-    "ast_hash": "15bf63732a560bf59fd80d1d0f48b983",
+    "mtime": 1795737208.024122,
+    "seen": 1795737361.120678,
+    "ast_hash": "decae2e4329fd57b95d0f3dc55bd3ebc",
     "semantic_hash": ""
   },
   "Mobile/src/screens/user/ProfileScreen.js": {
-    "mtime": 1793932514.6425207,
-    "seen": 1794776891.1076033,
-    "ast_hash": "259ebd7f296c3f4e9dae78c82f67017d",
+    "mtime": 1795737180.190406,
+    "seen": 1795737361.120679,
+    "ast_hash": "5c83a11dcf4db4cab12c4fe717e56bf4",
     "semantic_hash": ""
   },
   "Mobile/src/services/api.js": {
@@ -2334,9 +2334,9 @@
     "semantic_hash": ""
   },
   "Mobile/src/theme/index.js": {
-    "mtime": 1793933101.8908916,
-    "seen": 1794776891.1076236,
-    "ast_hash": "505b68c6fb3cc6df5975096e8fcd7daf",
+    "mtime": 1795737032.2261796,
+    "seen": 1795737361.120707,
+    "ast_hash": "5a18ffe3907ee5dfb60d993ed49764c6",
     "semantic_hash": ""
   },
   "Mobile/src/utils/__tests__/deviceProfile.test.mjs": {

@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#F4F7F5"
     },
     "ios": {
       "supportsTablet": true,
@@ -33,8 +33,8 @@
       "favicon": "./assets/favicon.png",
       "name": "Preço Certo",
       "shortName": "Preço Certo",
-      "themeColor": "#14B8A6",
-      "backgroundColor": "#ffffff",
+      "themeColor": "#0E7C66",
+      "backgroundColor": "#F4F7F5",
       "display": "standalone",
       "startUrl": "/",
       "orientation": "portrait",

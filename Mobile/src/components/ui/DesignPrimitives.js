@@ -1,8 +1,8 @@
-import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useLayoutProfile } from '../../hooks/useLayoutProfile';
-import { fonts, radii, shadows } from '../../theme';
+import { fonts, gradients, radii, shadows } from '../../theme';
 
 export function BrandLogo({ dark = true, subtitle = 'Saquarema · RJ' }) {
   const { colors } = useTheme();
@@ -144,7 +144,7 @@ export function PillBadge({ label, variant = 'highlight', style, textStyle }) {
     bg = colors.primarySoft;
     fg = colors.success;
   } else if (variant === 'destructive') {
-    bg = '#FEE2E2';
+    bg = colors.destructiveSoft || '#FEE2E2';
     fg = colors.destructive;
   }
 
@@ -167,11 +167,7 @@ export function AiBannerCard({ children, icon = 'sparkles', onPress, style }) {
       style={[
         styles.aiBanner,
         { backgroundColor: colors.ink },
-        Platform.OS === 'web'
-          ? {
-              backgroundImage: 'linear-gradient(135deg, #0F1D22 0%, #103A35 100%)',
-            }
-          : null,
+        gradients.aiWeb,
         style,
       ]}
     >
