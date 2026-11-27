@@ -270,7 +270,7 @@ export function buildLeafletMapHtml(dadosMapa) {
     function safeImgUrl(url) {
       if (typeof url !== 'string') return null;
       var trimmed = url.trim();
-      if (!/^https?:\/\//i.test(trimmed) || /[\s"'<>\\]/.test(trimmed)) return null;
+      if (!/^https?:\\/\\//i.test(trimmed) || /[\\s"'<>\\\\]/.test(trimmed)) return null;
       return trimmed;
     }
 
@@ -862,10 +862,11 @@ export function buildLojasMapHtml(dadosMapa) {
         .replace(/'/g, '&#39;');
     }
 
+    // Barras invertidas dobradas para preservar a regex literal no HTML gerado e bloquear esquemas/atributos inseguros.
     function safeImgUrl(url) {
       if (typeof url !== 'string') return null;
       var trimmed = url.trim();
-      if (!/^https?:\/\//i.test(trimmed) || /[\s"'<>\\]/.test(trimmed)) return null;
+      if (!/^https?:\\/\\//i.test(trimmed) || /[\\s"'<>\\\\]/.test(trimmed)) return null;
       return trimmed;
     }
 

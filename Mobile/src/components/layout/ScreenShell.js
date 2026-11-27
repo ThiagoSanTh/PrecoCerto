@@ -21,7 +21,8 @@ export default function ScreenShell({ children, variant = 'default', fullBleed =
     authCardMaxWidth,
     contentFullWidth,
   } = useLayoutProfile();
-  const { colors } = useTheme();
+  // colors fornece os tokens visuais ativos e isDark indica o modo escuro para cálculo seguro do canvas em authCanvasColor.
+  const { colors, isDark } = useTheme();
 
   const shellVariant = fullBleed ? 'fullBleed' : variant;
   const isAuth = shellVariant === 'auth';
