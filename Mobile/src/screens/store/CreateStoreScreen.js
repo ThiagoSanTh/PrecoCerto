@@ -17,13 +17,12 @@ import {
 import { apenasDigitosCnpj, isCnpjValido } from '../../utils/validacaoUtils';
 import {
   FRASES,
+  executarCriacaoLoja,
   mensagemErroConsultaCnpj,
-  montarPayloadCriarLoja,
   planejarPreenchimento,
   validarDadosEndereco,
   validarDadosLoja,
 } from '../../utils/cnpjLoja';
-import { formatApiError, mapApiError } from '../../utils/apiErrorUtils';
 import { useTheme } from '../../context/ThemeContext';
 import { useFormStyles } from '../../hooks/useFormStyles';
 
@@ -301,51 +300,16 @@ export default function CreateStoreScreen({ navigation }) {
     if (loading) return;
     setFeedback(null);
 
-    if (!validarPassoLoja()) {
-      setStep(0);
-      return;
-    }
-    if (!validarPassoEndereco()) {
-      setStep(1);
-      return;
-    }
-
-    if (!session?.perfil?.id) {
-      setFeedback({ title: 'Sessão necessária', message: 'Faça login para abrir uma loja.' });
-      return;
-    }
-
     setLoading(true);
     let finalizou = false;
     try {
-      if (!(await garantirCnpjNaReceita())) {
-        setStep(0);
-        return;
-      }
-
-      let lat = latitude;
-      let lng = longitude;
-
-      if (lat === null || lng === null) {
-        try {
-          const coords = await resolverCoordenadas();
-          lat = coords.latitude;
-          lng = coords.longitude;
-        } catch {
-          lat = null;
-          lng = null;
-        }
-      }
-
-      // O backend define o usuário autenticado como dono e o promove a Lojista.
-      await criarLoja(
-        montarPayloadCriarLoja({
+      const resultado = await executarCriacaoLoja({
+        dados: {
           nomeFantasia,
           razaoSocial,
           cnpj,
           telefone,
           emailLoja,
-          sessionEmail: session.perfil.email,
           endereco: {
             cep,
             logradouro,
@@ -353,29 +317,28 @@ export default function CreateStoreScreen({ navigation }) {
             bairro,
             cidade,
             estado,
-            latitude: lat,
-            longitude: lng,
+            latitude,
+            longitude,
           },
-        })
-      );
-
-      finalizou = true;
-      await concluirCriacaoLoja({
-        title: 'Loja criada!',
-        message: 'Sua conta agora é de lojista. Entre novamente para acessar o painel da loja.',
-        variant: 'success',
+        },
+        session,
+        garantirCnpjNaReceita,
+        resolverCoordenadas,
+        criarLojaFn: criarLoja,
+        concluirParaLogin: concluirCriacaoLoja,
       });
-    } catch (error) {
-      if (error.response?.status === 409) {
+
+      if (resultado.status === 'created' || resultado.status === 'conflict_completed') {
         finalizou = true;
-        await concluirCriacaoLoja({
-          title: 'Loja já cadastrada',
-          message: formatApiError(error),
-          variant: 'info',
-        });
         return;
       }
-      setFeedback(mapApiError(error));
+
+      if (typeof resultado.step === 'number') {
+        setStep(resultado.step);
+      }
+      if (resultado.feedback) {
+        setFeedback(resultado.feedback);
+      }
     } finally {
       if (!finalizou) setLoading(false);
     }

@@ -5,6 +5,7 @@ import {
   isEmailValido,
   isTelefoneValido,
 } from './validacaoUtils.js';
+import { formatApiError, mapApiError } from './apiErrorUtils.js';
 
 export const FRASES = {
   cnpj_invalido: 'CNPJ inválido. Confira os números.',
@@ -177,3 +178,95 @@ export function montarPayloadCriarLoja({
     },
   };
 }
+
+/**
+ * Orquestra validação, geocodificação opcional, criação na API e transição final para Login.
+ * Extraída da tela para permitir testes automatizados determinísticos contra regressões do bug #97.
+ */
+export async function executarCriacaoLoja({
+  dados,
+  session,
+  garantirCnpjNaReceita,
+  resolverCoordenadas,
+  criarLojaFn,
+  concluirParaLogin,
+}) {
+  const erroLoja = validarDadosLoja({
+    nomeFantasia: dados?.nomeFantasia,
+    cnpj: dados?.cnpj,
+    telefone: dados?.telefone,
+    email: dados?.emailLoja,
+  });
+  if (erroLoja) {
+    return { status: 'validation_error', step: 0, feedback: erroLoja };
+  }
+
+  const erroEndereco = validarDadosEndereco(dados?.endereco);
+  if (erroEndereco) {
+    return { status: 'validation_error', step: 1, feedback: erroEndereco };
+  }
+
+  if (!session?.perfil?.id) {
+    return {
+      status: 'unauthenticated',
+      feedback: { title: 'Sessão necessária', message: 'Faça login para abrir uma loja.' },
+    };
+  }
+
+  if (!(await garantirCnpjNaReceita())) {
+    return { status: 'cnpj_error', step: 0 };
+  }
+
+  let lat = dados?.endereco?.latitude ?? null;
+  let lng = dados?.endereco?.longitude ?? null;
+
+  if (lat === null || lng === null) {
+    try {
+      const coords = await resolverCoordenadas();
+      lat = coords?.latitude ?? null;
+      lng = coords?.longitude ?? null;
+    } catch {
+      lat = null;
+      lng = null;
+    }
+  }
+
+  try {
+    await criarLojaFn(
+      montarPayloadCriarLoja({
+        nomeFantasia: dados.nomeFantasia,
+        razaoSocial: dados.razaoSocial,
+        cnpj: dados.cnpj,
+        telefone: dados.telefone,
+        emailLoja: dados.emailLoja,
+        sessionEmail: session.perfil.email,
+        endereco: {
+          ...dados.endereco,
+          latitude: lat,
+          longitude: lng,
+        },
+      })
+    );
+
+    const notice = {
+      title: 'Loja criada!',
+      message: 'Sua conta agora é de lojista. Entre novamente para acessar o painel da loja.',
+      variant: 'success',
+    };
+    await concluirParaLogin(notice);
+    return { status: 'created', notice };
+  } catch (error) {
+    if (error?.response?.status === 409) {
+      const notice = {
+        title: 'Loja já cadastrada',
+        message: formatApiError(error),
+        variant: 'info',
+      };
+      await concluirParaLogin(notice);
+      return { status: 'conflict_completed', notice };
+    }
+
+    return { status: 'api_error', feedback: mapApiError(error) };
+  }
+}
+

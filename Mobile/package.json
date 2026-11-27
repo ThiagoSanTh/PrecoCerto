@@ -8,7 +8,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build:web": "expo export --platform web",
-    "preview:web": "npx serve dist -s -l 3000"
+    "preview:web": "npx serve dist -s -l 3000",
+    "test:unit": "cd .. && node --test Mobile/src/utils/*.test.mjs Mobile/src/utils/__tests__/*.test.mjs Mobile/src/services/__tests__/*.test.mjs"
   },
   "dependencies": {
     "@microsoft/signalr": "^10.0.0",
