@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import { buildLeafletPickerMapHtml } from '../utils/leafletMapHtml';
+import { parsePickerMapMessage } from '../utils/securityUtils';
 import LeafletMapFrame from './LeafletMapFrame';
 import { colors, radii } from '../theme';
 
@@ -24,16 +25,12 @@ export default function StoreLocationMapView({
   const mapKey = `${latitude ?? 'x'}-${longitude ?? 'y'}`;
 
   function handleMessage(event) {
-    try {
-      const msg = JSON.parse(event.nativeEvent.data);
-      if (msg.type === 'coords' && onCoordsChange) {
-        onCoordsChange({
-          latitude: msg.latitude,
-          longitude: msg.longitude,
-        });
-      }
-    } catch {
-      /* ignore */
+    const msg = parsePickerMapMessage(event?.nativeEvent?.data);
+    if (msg && onCoordsChange) {
+      onCoordsChange({
+        latitude: msg.latitude,
+        longitude: msg.longitude,
+      });
     }
   }
 

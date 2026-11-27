@@ -3,6 +3,7 @@ using Pc.Dominio.Comum;
 using Pc.Dominio.Entities.Catalogo;
 using Pc.Dominio.Enums;
 using Pc.Infraestrutura;
+using Pc.Repositorio.Comum;
 using Pc.Repositorio.Interfaces;
 
 namespace Pc.Repositorio.Implementacoes
@@ -34,24 +35,24 @@ namespace Pc.Repositorio.Implementacoes
             if (t.Length < 2)
                 return query.Where(_ => false);
 
-            var pattern = $"%{t}%";
+            var pattern = $"%{SqlLikeHelper.EscapeLike(t)}%";
             // Postgres ILIKE não ignora acento: "camera" não acha "Câmera".
             // Gera variante com acentos comuns do PT-BR a partir do termo já normalizado.
             var comAcento = TentarFormaComAcento(t);
             if (comAcento is not null && !string.Equals(comAcento, t, StringComparison.OrdinalIgnoreCase))
             {
-                var patternAcc = $"%{comAcento}%";
+                var patternAcc = $"%{SqlLikeHelper.EscapeLike(comAcento)}%";
                 return query.Where(p =>
-                    EF.Functions.ILike(p.NomeProduto, pattern) ||
-                    EF.Functions.ILike(p.NomeProduto, patternAcc) ||
-                    (p.Marca != null && (EF.Functions.ILike(p.Marca, pattern) || EF.Functions.ILike(p.Marca, patternAcc))) ||
-                    (p.Descricao != null && (EF.Functions.ILike(p.Descricao, pattern) || EF.Functions.ILike(p.Descricao, patternAcc))));
+                    EF.Functions.ILike(p.NomeProduto, pattern, "\\") ||
+                    EF.Functions.ILike(p.NomeProduto, patternAcc, "\\") ||
+                    (p.Marca != null && (EF.Functions.ILike(p.Marca, pattern, "\\") || EF.Functions.ILike(p.Marca, patternAcc, "\\"))) ||
+                    (p.Descricao != null && (EF.Functions.ILike(p.Descricao, pattern, "\\") || EF.Functions.ILike(p.Descricao, patternAcc, "\\"))));
             }
 
             return query.Where(p =>
-                EF.Functions.ILike(p.NomeProduto, pattern) ||
-                (p.Marca != null && EF.Functions.ILike(p.Marca, pattern)) ||
-                (p.Descricao != null && EF.Functions.ILike(p.Descricao, pattern)));
+                EF.Functions.ILike(p.NomeProduto, pattern, "\\") ||
+                (p.Marca != null && EF.Functions.ILike(p.Marca, pattern, "\\")) ||
+                (p.Descricao != null && EF.Functions.ILike(p.Descricao, pattern, "\\")));
         }
 
         private static string? TentarFormaComAcento(string termoNormalizado)

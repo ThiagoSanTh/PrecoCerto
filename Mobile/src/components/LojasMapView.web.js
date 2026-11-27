@@ -6,8 +6,8 @@ import {
   buildLojasMapHtml,
   normalizarLojaParaMapa,
   prepararDadosMapaLojas,
-  sanitizarLojasParaHtml,
 } from '../utils/leafletMapHtml';
+import { parseLojasMapMessage } from '../utils/securityUtils';
 import { colors, radii, styles as appStyles } from '../theme';
 
 /**
@@ -85,7 +85,6 @@ export default function LojasMapView({
 
   const mapHtml = useMemo(() => {
     const dados = prepararDadosMapaLojas(null, lojasNoMapa);
-    dados.marcadores = sanitizarLojasParaHtml(dados.marcadores);
     return buildLojasMapHtml(dados);
   }, [lojasNoMapa]);
 
@@ -148,22 +147,19 @@ export default function LojasMapView({
   }, [mapKey]);
 
   function handleMessage(event) {
-    try {
-      const data = JSON.parse(event.nativeEvent.data);
-      if (data.type === 'ready') {
-        mapaProntoRef.current = true;
-        enviarDestaques();
-        enviarCliente();
-        enviarSelecaoRota();
-      } else if (data.type === 'storeSelected' && data.lojaId && onStoreSelect) {
-        onStoreSelect(data.lojaId);
-      } else if (data.type === 'product' && data.productId && onProductPress) {
-        onProductPress(data.productId);
-      } else if (data.type === 'store' && data.lojaId && onStorePress) {
-        onStorePress(data.lojaId);
-      }
-    } catch {
-      /* ignore */
+    const data = parseLojasMapMessage(event?.nativeEvent?.data);
+    if (!data) return;
+    if (data.type === 'ready') {
+      mapaProntoRef.current = true;
+      enviarDestaques();
+      enviarCliente();
+      enviarSelecaoRota();
+    } else if (data.type === 'storeSelected' && onStoreSelect) {
+      onStoreSelect(data.lojaId);
+    } else if (data.type === 'product' && onProductPress) {
+      onProductPress(data.productId);
+    } else if (data.type === 'store' && onStorePress) {
+      onStorePress(data.lojaId);
     }
   }
 

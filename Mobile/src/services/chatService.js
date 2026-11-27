@@ -255,7 +255,7 @@ export async function listarMensagens(conversaCodigo, { apos, antes, pageSize = 
   if (apos) params.apos = apos;
   if (antes) params.antes = antes;
   if (pageSize) params.pageSize = pageSize;
-  const { data } = await api.get(`/Conversas/${conversaCodigo}/mensagens`, { params });
+  const { data } = await api.get(`/Conversas/${encodeURIComponent(String(conversaCodigo))}/mensagens`, { params });
   return data;
 }
 
@@ -269,6 +269,6 @@ export async function enviarMensagem(conversaCodigo, texto) {
     }
   }
 
-  const { data } = await api.post(`/Conversas/${conversaCodigo}/mensagens`, { texto });
+  const { data } = await api.post(`/Conversas/${encodeURIComponent(String(conversaCodigo))}/mensagens`, { texto });
   return data;
 }

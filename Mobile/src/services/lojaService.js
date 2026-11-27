@@ -71,7 +71,7 @@ export function invalidarLojasCache() {
 }
 
 export async function obterLoja(id) {
-  const { data } = await api.get(`/Lojas/${id}`);
+  const { data } = await api.get(`/Lojas/${encodeURIComponent(String(id))}`);
   return data;
 }
 
@@ -82,7 +82,7 @@ export async function criarLoja(loja) {
 }
 
 export async function atualizarLoja(id, loja) {
-  await api.put(`/Lojas/${id}`, loja);
+  await api.put(`/Lojas/${encodeURIComponent(String(id))}`, loja);
   invalidarLojasCache();
 }
 

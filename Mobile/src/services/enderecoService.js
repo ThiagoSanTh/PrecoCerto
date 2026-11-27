@@ -11,7 +11,7 @@ export async function buscarEnderecoPorCep(cep) {
     throw new Error('CEP deve ter 8 dígitos.');
   }
 
-  const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+  const response = await fetch(`https://viacep.com.br/ws/${encodeURIComponent(cepLimpo)}/json/`);
   const data = await response.json();
 
   if (data.erro) {
@@ -99,7 +99,7 @@ async function nominatimBuscar(params) {
 
 /** BrasilAPI CEP v2 — boa cobertura no Brasil, retorna coordenadas. */
 async function geocodificarPorCepBrasilApi(cep) {
-  const response = await fetch(`https://brasilapi.com.br/api/cep/v2/${cep}`);
+  const response = await fetch(`https://brasilapi.com.br/api/cep/v2/${encodeURIComponent(cep)}`);
   if (!response.ok) {
     return null;
   }

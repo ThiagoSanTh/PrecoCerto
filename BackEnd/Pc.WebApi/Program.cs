@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -136,10 +137,15 @@ var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<
 if (string.IsNullOrWhiteSpace(jwtSettings.Secret) || jwtSettings.Secret.Length < 32)
 {
     if (builder.Environment.IsDevelopment())
+    {
         jwtSettings.Secret = "DEV-ONLY-PrecoCerto-Jwt-Secret-32chars!";
+        Console.Error.WriteLine("WARN Jwt:Secret ausente em Development; usando segredo de desenvolvimento.");
+    }
     else
-        jwtSettings.Secret = "RAILWAY-PLACEHOLDER-JWT-SECRET-32CHARS";
-    Console.Error.WriteLine("WARN Jwt:Secret ausente ou curto. Defina Jwt__Secret no Railway.");
+    {
+        jwtSettings.Secret = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+        Console.Error.WriteLine("CRITICAL Jwt:Secret ausente ou curto em produção. Usando chave efêmera aleatória; defina Jwt__Secret no Railway.");
+    }
 }
 
 builder.Services.PostConfigure<JwtSettings>(o =>

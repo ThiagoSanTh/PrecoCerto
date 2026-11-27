@@ -70,6 +70,9 @@ namespace Pc.WebApi.Controllers
             if (historico == null)
                 return NotFound("Histórico não encontrado.");
 
+            if (!Authz.IsSelfOrAdmin(this, historico.ClienteId))
+                return Forbid();
+
             var resposta = new HistoricoPesquisaRespostaDto
             {
                 Id = historico.Id,
@@ -134,19 +137,20 @@ namespace Pc.WebApi.Controllers
         /// </summary>
         [HttpGet("sugestoes")]
         [AllowAnonymous]
-        public async Task<IActionResult> ObterSugestoes([FromQuery] string termo)
+        public async Task<IActionResult> ObterSugestoes([FromQuery] string? termo = null)
         {
-            var sugestoes = await _historicoPesquisaServico.ObterSugestoesAsync(termo);
+            var limpo = termo?.Trim();
+            if (string.IsNullOrWhiteSpace(limpo) || limpo.Length < 2 || limpo.Length > 100)
+                return Ok(Array.Empty<object>());
+
+            var sugestoes = await _historicoPesquisaServico.ObterSugestoesAsync(limpo);
 
             var resposta = sugestoes
                 .GroupBy(h => h.TermoPesquisa)
                 .Select(g => g.First())
-                .Select(h => new HistoricoPesquisaRespostaDto
+                .Select(h => new
                 {
-                    Id = h.Id,
-                    ClienteId = h.ClienteId,
-                    TermoPesquisa = h.TermoPesquisa,
-                    DataPesquisa = h.DataPesquisa
+                    termoPesquisa = h.TermoPesquisa
                 });
 
             return Ok(resposta);

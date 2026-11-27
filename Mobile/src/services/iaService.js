@@ -9,17 +9,12 @@ export async function enviarPerguntaIA(
   mensagem,
   {
     incluirLocalizacao = true,
-    usuarioId = null,
     lojaId = null,
     modoOperacional = null,
     historico = [],
   } = {}
 ) {
   const body = { mensagem: String(mensagem || '').trim() };
-
-  if (usuarioId) {
-    body.usuarioId = usuarioId;
-  }
 
   if (lojaId) {
     body.lojaIdUsuario = lojaId;

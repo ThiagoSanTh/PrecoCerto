@@ -79,7 +79,7 @@ namespace Pc.WebApi.Controllers
                     });
                 }
 
-                return StatusCode(500, new { message = "Erro ao processar login.", detail = ex.Message });
+                return StatusCode(500, new { message = "Erro ao processar login." });
             }
         }
 

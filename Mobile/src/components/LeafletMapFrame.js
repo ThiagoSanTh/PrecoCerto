@@ -33,6 +33,7 @@ const LeafletMapFrame = forwardRef(function LeafletMapFrame(
 
     function handleWindowMessage(event) {
       if (event.source !== iframeRef.current?.contentWindow) return;
+      if (event.origin !== 'null' && event.origin !== window.location.origin) return;
       onMessage?.({ nativeEvent: { data: event.data } });
     }
 
@@ -49,7 +50,7 @@ const LeafletMapFrame = forwardRef(function LeafletMapFrame(
           title="Mapa"
           srcDoc={html}
           style={styles.iframe}
-          sandbox="allow-scripts allow-same-origin"
+          sandbox="allow-scripts"
         />
       </View>
     );
@@ -60,7 +61,7 @@ const LeafletMapFrame = forwardRef(function LeafletMapFrame(
       ref={webViewRef}
       key={mapKey}
       style={[styles.frame, style]}
-      originWhitelist={['*']}
+      originWhitelist={['about:blank', 'https://*', 'http://*']}
       source={{ html }}
       javaScriptEnabled
       domStorageEnabled

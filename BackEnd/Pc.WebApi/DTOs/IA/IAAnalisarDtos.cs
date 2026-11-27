@@ -4,7 +4,10 @@ namespace Pc.WebApi.DTOs.IA
 {
     public class IAMensagemHistoricoDto
     {
+        [MaxLength(20)]
         public string Papel { get; set; } = "user";
+
+        [MaxLength(500)]
         public string Texto { get; set; } = string.Empty;
     }
 
@@ -20,14 +23,14 @@ namespace Pc.WebApi.DTOs.IA
         [Range(-180, 180)]
         public double? Longitude { get; set; }
 
-        public Guid? UsuarioId { get; set; }
-
         public Guid? SessaoId { get; set; }
 
         public Guid? LojaIdUsuario { get; set; }
 
+        [MaxLength(20)]
         public string? ModoOperacional { get; set; }
 
+        [MaxLength(10)]
         public List<IAMensagemHistoricoDto>? Historico { get; set; }
     }
 

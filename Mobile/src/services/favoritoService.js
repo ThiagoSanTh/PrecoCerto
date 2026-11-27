@@ -48,7 +48,7 @@ function normalizarPaginado(data) {
 }
 
 export async function listarFavoritosCliente(clienteId, page = 1, pageSize = 20) {
-  const { data } = await api.get(`/Favoritos/cliente/${clienteId}`, {
+  const { data } = await api.get(`/Favoritos/cliente/${encodeURIComponent(String(clienteId))}`, {
     params: { page, pageSize },
   });
   return normalizarPaginado(data);
@@ -60,21 +60,25 @@ export async function adicionarFavorito(favorito) {
 }
 
 export async function removerFavorito(id) {
-  await api.delete(`/Favoritos/${id}`);
+  await api.delete(`/Favoritos/${encodeURIComponent(String(id))}`);
 }
 
 export async function removerFavoritoProduto(clienteId, produtoId) {
-  await api.delete(`/Favoritos/cliente/${clienteId}/produto/${produtoId}`);
+  await api.delete(
+    `/Favoritos/cliente/${encodeURIComponent(String(clienteId))}/produto/${encodeURIComponent(String(produtoId))}`
+  );
 }
 
 export async function removerFavoritoLoja(clienteId, lojaId) {
-  await api.delete(`/Favoritos/cliente/${clienteId}/loja/${lojaId}`);
+  await api.delete(
+    `/Favoritos/cliente/${encodeURIComponent(String(clienteId))}/loja/${encodeURIComponent(String(lojaId))}`
+  );
 }
 
 export async function verificarFavorito(clienteId, produtoId = null, lojaId = null) {
   const params = new URLSearchParams();
   if (produtoId) params.append('produtoId', produtoId);
   if (lojaId) params.append('lojaId', lojaId);
-  const { data } = await api.get(`/Favoritos/verificar/${clienteId}?${params}`);
+  const { data } = await api.get(`/Favoritos/verificar/${encodeURIComponent(String(clienteId))}?${params}`);
   return data.ehFavorito;
 }

@@ -4,6 +4,7 @@ import { atualizarLocalizacao } from '../services/clienteService';
 import { obterLocalizacaoAtual } from '../services/locationService';
 import { clearToken, getToken } from '../services/tokenStorage';
 import { invalidarCache } from '../services/feedCache';
+import { isValidSessionObject, parseValidSession } from '../utils/securityUtils';
 import {
   MODO_CLIENTE,
   MODO_LOJA,
@@ -52,9 +53,9 @@ export function AuthProvider({ children }) {
       const token = await getToken();
       const raw = await AsyncStorage.getItem(SESSION_KEY);
       const savedMode = await AsyncStorage.getItem(MODE_KEY);
+      const parsed = token && raw ? parseValidSession(raw) : null;
 
-      if (token && raw) {
-        const parsed = JSON.parse(raw);
+      if (token && parsed) {
         gravarSessaoEmMemoria(parsed);
 
         const modoValido = resolverModoSalvo(savedMode, parsed);
@@ -62,11 +63,19 @@ export function AuthProvider({ children }) {
         if (modoValido !== savedMode) {
           await AsyncStorage.setItem(MODE_KEY, modoValido);
         }
-      } else if (!token) {
+      } else {
+        if (token && !parsed) {
+          await clearToken();
+        }
         await AsyncStorage.multiRemove([SESSION_KEY, MODE_KEY]);
         gravarSessaoEmMemoria(null);
         setAppModeState(aplicarModo(MODO_CLIENTE, null));
       }
+    } catch {
+      await clearToken().catch(() => {});
+      await AsyncStorage.multiRemove([SESSION_KEY, MODE_KEY]).catch(() => {});
+      gravarSessaoEmMemoria(null);
+      setAppModeState(aplicarModo(MODO_CLIENTE, null));
     } finally {
       setLoading(false);
     }
@@ -79,6 +88,9 @@ export function AuthProvider({ children }) {
   }
 
   async function salvarSessao(novaSessao, modo) {
+    if (!isValidSessionObject(novaSessao)) {
+      throw new Error('Sessão inválida.');
+    }
     await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(novaSessao));
     gravarSessaoEmMemoria(novaSessao);
 

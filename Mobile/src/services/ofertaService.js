@@ -19,7 +19,7 @@ export async function listarOfertas(page = 1, pageSize = 50) {
 }
 
 export async function listarOfertasPorProduto(produtoId) {
-  const { data } = await api.get(`/Ofertas/produto/${produtoId}`);
+  const { data } = await api.get(`/Ofertas/produto/${encodeURIComponent(String(produtoId))}`);
   return data;
 }
 
@@ -29,9 +29,9 @@ export async function criarOferta(oferta) {
 }
 
 export async function atualizarOferta(id, oferta) {
-  await api.put(`/Ofertas/${id}`, oferta);
+  await api.put(`/Ofertas/${encodeURIComponent(String(id))}`, oferta);
 }
 
 export async function removerOferta(id) {
-  await api.delete(`/Ofertas/${id}`);
+  await api.delete(`/Ofertas/${encodeURIComponent(String(id))}`);
 }

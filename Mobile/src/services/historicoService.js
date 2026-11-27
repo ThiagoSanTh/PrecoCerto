@@ -12,26 +12,26 @@ export async function registrarPesquisa(clienteId, termoPesquisa, opcoes = {}) {
 }
 
 export async function listarHistoricoCliente(clienteId) {
-  const { data } = await api.get(`/HistoricoPesquisa/cliente/${clienteId}`);
+  const { data } = await api.get(`/HistoricoPesquisa/cliente/${encodeURIComponent(String(clienteId))}`);
   return data;
 }
 
 export async function limparHistoricoCliente(clienteId) {
-  await api.delete(`/HistoricoPesquisa/cliente/${clienteId}/limpar`);
+  await api.delete(`/HistoricoPesquisa/cliente/${encodeURIComponent(String(clienteId))}/limpar`);
 }
 
 export async function removerItemHistorico(id) {
-  await api.delete(`/HistoricoPesquisa/${id}`);
+  await api.delete(`/HistoricoPesquisa/${encodeURIComponent(String(id))}`);
 }
 
 export async function listarUltimosTermosCliente(clienteId, quantidade = 6) {
-  const { data } = await api.get(`/HistoricoPesquisa/cliente/${clienteId}/ultimos`, {
+  const { data } = await api.get(`/HistoricoPesquisa/cliente/${encodeURIComponent(String(clienteId))}/ultimos`, {
     params: { quantidade },
   });
   return Array.isArray(data) ? data : [];
 }
 
 export async function obterRelatorioPesquisasLoja(lojaId) {
-  const { data } = await api.get(`/HistoricoPesquisa/loja/${lojaId}/relatorio`);
+  const { data } = await api.get(`/HistoricoPesquisa/loja/${encodeURIComponent(String(lojaId))}/relatorio`);
   return Array.isArray(data) ? data : [];
 }
