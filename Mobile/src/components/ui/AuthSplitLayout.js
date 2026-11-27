@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, StyleSheet, Platform } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLayoutProfile } from '../../hooks/useLayoutProfile';
@@ -18,6 +18,8 @@ export default function AuthSplitLayout({
   subtitle,
   error,
   onErrorAction,
+  onBack,
+  backLabel = 'Voltar para busca',
   children,
 }) {
   const { isDesktopWeb } = useLayoutProfile();
@@ -91,6 +93,21 @@ export default function AuthSplitLayout({
               <View style={styles.mobileLogoWrap}>
                 <BrandLogo dark={false} />
               </View>
+            ) : null}
+
+            {onBack ? (
+              <Pressable
+                onPress={onBack}
+                style={styles.backBtn}
+                accessibilityRole="button"
+                accessibilityLabel={backLabel}
+                hitSlop={8}
+              >
+                <Ionicons name="arrow-back" size={15} color={colors.primary} />
+                <Text style={[styles.backText, { color: colors.primary }]}>
+                  {backLabel}
+                </Text>
+              </Pressable>
             ) : null}
 
             <Text style={[styles.formTitle, { color: colors.text }]}>
@@ -179,6 +196,18 @@ const styles = StyleSheet.create({
   },
   mobileLogoWrap: {
     marginBottom: 28,
+  },
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    marginBottom: 14,
+  },
+  backText: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 13,
+    fontWeight: '600',
   },
   formTitle: {
     fontFamily: fonts.display,

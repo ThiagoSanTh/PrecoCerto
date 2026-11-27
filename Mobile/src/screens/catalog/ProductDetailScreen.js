@@ -32,6 +32,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { abrirConversa } from '../../services/chatService';
 import { navegarParaChat } from '../../navigation/chatNavigation';
+import { redirecionarParaCadastro } from '../../navigation/authGate';
 import { nomeProduto, produtoPertenceALoja } from '../../utils/produtoUtils';
 import { formatarPrecoBrl } from '../../utils/mapaUtils';
 import { formatarDataBr, parseDataBr } from '../../utils/dataUtils';
@@ -382,6 +383,10 @@ export default function ProductDetailScreen({ route, navigation }) {
   }
 
   async function handleChatLoja() {
+    if (!session) {
+      redirecionarParaCadastro(navigation);
+      return;
+    }
     if (!clienteId) {
       Alert.alert('Atenção', 'Faça login como cliente para conversar com a loja.');
       return;
@@ -410,6 +415,10 @@ export default function ProductDetailScreen({ route, navigation }) {
   }
 
   async function handleToggleFavorito() {
+    if (!session) {
+      redirecionarParaCadastro(navigation);
+      return;
+    }
     if (!clienteId) return;
 
     setFavoritoLoading(true);
@@ -503,7 +512,7 @@ export default function ProductDetailScreen({ route, navigation }) {
       ehFavorito={ehFavorito}
       onFavorito={handleToggleFavorito}
       favoritoLoading={favoritoLoading}
-      mostrarFavorito={Boolean(clienteId)}
+      mostrarFavorito={Boolean(clienteId) || !session}
       onChat={handleChatLoja}
       onCompartilhar={handleCompartilhar}
     />

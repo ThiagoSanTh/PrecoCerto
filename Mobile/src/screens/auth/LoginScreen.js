@@ -1,6 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useState, useRef } from 'react';
+import { CommonActions } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { login as authLogin } from '../../services/authService';
 import { mapApiError } from '../../utils/apiErrorUtils';
@@ -33,7 +34,12 @@ export default function LoginScreen({ navigation }) {
       const novaSessao = { tipo, perfil };
       const modo = podeUsarModoLoja(novaSessao) ? 'store' : 'user';
       await salvarSessao(novaSessao, modo);
-      navigation.replace('Home');
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'Home' }],
+        })
+      );
 
       if (perfil?.id) {
         sincronizarGpsCliente(perfil.id, { force: true }).catch(() => {});
@@ -50,6 +56,9 @@ export default function LoginScreen({ navigation }) {
       title="Bem-vindo de volta"
       subtitle="Após entrar, sua localização é obtida pelo GPS para mostrar as lojas próximas."
       error={error}
+      onBack={() =>
+        navigation.canGoBack() ? navigation.goBack() : navigation.replace('Home')
+      }
     >
       <FormField
         label="E-mail"

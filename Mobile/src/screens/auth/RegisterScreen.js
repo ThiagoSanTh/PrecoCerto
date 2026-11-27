@@ -1,5 +1,6 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useState, useRef } from 'react';
+import { CommonActions } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { registrarCliente } from '../../services/clienteService';
 import { login as authLogin } from '../../services/authService';
@@ -34,7 +35,8 @@ async function loginComRetry(email, senha) {
   throw lastError;
 }
 
-export default function RegisterScreen({ navigation }) {
+export default function RegisterScreen({ navigation, route }) {
+  const authNotice = route?.params?.authNotice || null;
   const [nomeUsuario, setNomeUsuario] = useState('');
   const [email, setEmail] = useState('');
   const [telefone, setTelefone] = useState('');
@@ -53,7 +55,12 @@ export default function RegisterScreen({ navigation }) {
 
   async function concluirSessao(tipo, perfil) {
     await salvarSessao({ tipo: tipo || 'cliente', perfil }, 'user');
-    navigation.replace('Home');
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: 'Home' }],
+      })
+    );
 
     if (perfil?.id) {
       sincronizarGpsCliente(perfil.id, { force: true }).catch(() => {});
@@ -159,12 +166,25 @@ export default function RegisterScreen({ navigation }) {
     }
   }
 
+  const bannerError =
+    error ||
+    (authNotice
+      ? {
+          title: 'Cadastro necessário',
+          message: authNotice,
+          variant: 'info',
+        }
+      : null);
+
   return (
     <AuthSplitLayout
       title="Crie sua conta"
       subtitle="Após entrar, sua localização é obtida pelo GPS para mostrar as lojas próximas."
-      error={error}
+      error={bannerError}
       onErrorAction={() => navigation.navigate('Login')}
+      onBack={() =>
+        navigation.canGoBack() ? navigation.goBack() : navigation.replace('Home')
+      }
     >
       <FormField
         label="Nome"

@@ -28,6 +28,7 @@ import {
 } from '../../services/favoritoService';
 import { abrirConversa } from '../../services/chatService';
 import { navegarParaChat } from '../../navigation/chatNavigation';
+import { redirecionarParaCadastro } from '../../navigation/authGate';
 import { obterLocalizacaoAtual } from '../../services/locationService';
 import { obterClima, normalizarCoordenadasClima } from '../../services/weatherService';
 import { useAuth } from '../../context/AuthContext';
@@ -467,6 +468,10 @@ export default function SearchScreen() {
 
   async function handleAbrirChatItem(item) {
     if (!item) return;
+    if (!session) {
+      redirecionarParaCadastro(navigation);
+      return;
+    }
     if (!clienteId) {
       Alert.alert('Chat', 'Faça login como cliente para conversar com a loja.');
       return;
@@ -499,6 +504,10 @@ export default function SearchScreen() {
   }
 
   async function handleFavorito(item) {
+    if (!session) {
+      redirecionarParaCadastro(navigation);
+      return;
+    }
     if (!clienteId || !item?.id) return;
     const id = String(item.id);
     const jaFavorito = favoritosIds.has(id);
@@ -694,7 +703,7 @@ export default function SearchScreen() {
                 {formatarPrecoBrl(item.precoAnterior)}
               </Text>
             ) : null}
-            {clienteId ? (
+            {clienteId || !session ? (
               <Pressable
                 onPress={(e) => {
                   e?.stopPropagation?.();
@@ -736,7 +745,6 @@ export default function SearchScreen() {
           onPress={() => setCardMapaRecolhido(false)}
           style={[
             styles.floatingStoreCollapsed,
-            !useSidebarNav && styles.floatingStoreCollapsedMobile,
             { backgroundColor: colors.card, borderColor: colors.border },
           ]}
           accessibilityRole="button"
@@ -764,7 +772,6 @@ export default function SearchScreen() {
         style={[
           styles.floatingStoreCard,
           !useSplitView && styles.floatingStoreCardMobile,
-          !useSidebarNav && styles.floatingStoreCardMobileDock,
           { backgroundColor: colors.card, borderColor: colors.border },
         ]}
       >
@@ -846,7 +853,7 @@ export default function SearchScreen() {
             <Ionicons name="compass-outline" size={17} color={colors.text} />
           </Pressable>
 
-          {clienteId ? (
+          {clienteId || !session ? (
             <Pressable
               onPress={() => handleFavorito(selectedItem)}
               style={[
@@ -946,7 +953,13 @@ export default function SearchScreen() {
               </Text>
             </View>
             <Pressable
-              onPress={() => navigation.navigate('Favoritos')}
+              onPress={() => {
+                if (!session) {
+                  redirecionarParaCadastro(navigation);
+                  return;
+                }
+                navigation.navigate('Favoritos');
+              }}
               style={[
                 styles.bellBtn,
                 { backgroundColor: colors.card, borderColor: colors.border },
@@ -1285,7 +1298,7 @@ export default function SearchScreen() {
           {renderMapPanel()}
         </View>
       ) : modoVisualizacao === MODO_MAPA ? (
-        <View style={styles.mobileSplitWrap}>
+        <View style={[styles.mobileSplitWrap, !useSidebarNav && styles.mobileSplitWrapDock]}>
           <View style={styles.mobileTopControls}>
             {renderSearchHeaderControls({ compactMapMode: true })}
           </View>
@@ -1602,9 +1615,6 @@ const styles = StyleSheet.create({
     zIndex: 10,
     ...shadows.float,
   },
-  floatingStoreCollapsedMobile: {
-    bottom: 92,
-  },
   floatingCollapsedLeft: {
     flex: 1,
     flexDirection: 'row',
@@ -1644,9 +1654,6 @@ const styles = StyleSheet.create({
     width: undefined,
     padding: 14,
     borderRadius: radii.xl,
-  },
-  floatingStoreCardMobileDock: {
-    bottom: 92,
   },
   floatingHeader: {
     flexDirection: 'row',
@@ -1717,6 +1724,9 @@ const styles = StyleSheet.create({
   },
   mobileSplitWrap: {
     flex: 1,
+  },
+  mobileSplitWrapDock: {
+    paddingBottom: 88,
   },
   mobileTopControls: {
     paddingHorizontal: 16,

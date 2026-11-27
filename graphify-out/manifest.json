@@ -1830,9 +1830,9 @@
     "semantic_hash": ""
   },
   "Mobile/src/components/CustomTabBar.js": {
-    "mtime": 1795737055.3476303,
-    "seen": 1795737361.1206021,
-    "ast_hash": "06b820a5809d4ca0726090805fbff3ae",
+    "mtime": 1795738259.1592004,
+    "seen": 1795738313.9978123,
+    "ast_hash": "b40c3cd736d4f40c8fc5e36f4d5f99b7",
     "semantic_hash": ""
   },
   "Mobile/src/components/LeafletMapFrame.js": {
@@ -1896,9 +1896,9 @@
     "semantic_hash": ""
   },
   "Mobile/src/components/form/FormErrorBanner.js": {
-    "mtime": 1792020084.0,
-    "seen": 1794776891.1075516,
-    "ast_hash": "559434f51679f104a58dd81ac40f1a4f",
+    "mtime": 1795738219.490063,
+    "seen": 1795738313.9978323,
+    "ast_hash": "22fdd01c7521b9a739e78882a14283f9",
     "semantic_hash": ""
   },
   "Mobile/src/components/form/FormField.js": {
@@ -1986,9 +1986,9 @@
     "semantic_hash": ""
   },
   "Mobile/src/components/ui/AuthSplitLayout.js": {
-    "mtime": 1795737061.0601392,
-    "seen": 1795737361.1206346,
-    "ast_hash": "97d26825d03048e549966464ba2f08fc",
+    "mtime": 1795738223.693587,
+    "seen": 1795738313.9978535,
+    "ast_hash": "2aebfe4d5c2db11a91e9f4d1c650e6f5",
     "semantic_hash": ""
   },
   "Mobile/src/components/ui/DesignPrimitives.js": {
@@ -2052,9 +2052,9 @@
     "semantic_hash": ""
   },
   "Mobile/src/navigation/index.js": {
-    "mtime": 1793672911.8844993,
-    "seen": 1794776891.1075795,
-    "ast_hash": "07172f1b968df46ac8bb535a1f0c468d",
+    "mtime": 1795738218.3992736,
+    "seen": 1795738313.9978707,
+    "ast_hash": "ca73d58bcc64a73c5ebcbb6717ff6999",
     "semantic_hash": ""
   },
   "Mobile/src/navigation/mensagensStack.routes.js": {
@@ -2082,33 +2082,33 @@
     "semantic_hash": ""
   },
   "Mobile/src/screens/auth/LoginScreen.js": {
-    "mtime": 1793318942.3216877,
-    "seen": 1794776891.107584,
-    "ast_hash": "7c3a251e66c462421625ba06ed1ab3bc",
+    "mtime": 1795738254.1874256,
+    "seen": 1795738313.997878,
+    "ast_hash": "c138a9dba37a70108c6fc2c7476e713b",
     "semantic_hash": ""
   },
   "Mobile/src/screens/auth/RegisterScreen.js": {
-    "mtime": 1793318943.8003175,
-    "seen": 1794776891.107585,
-    "ast_hash": "c455e9bfd997eaaa1598f5e20ac2ce51",
+    "mtime": 1795738250.6240363,
+    "seen": 1795738313.997879,
+    "ast_hash": "f4e5d830d9b6eb68879fc13b32f8a0b7",
     "semantic_hash": ""
   },
   "Mobile/src/screens/catalog/ProductDetailScreen.js": {
-    "mtime": 1795737292.7233086,
-    "seen": 1795737361.1206574,
-    "ast_hash": "496c0374c81d0074a57ed00b72a7fc41",
+    "mtime": 1795738271.120705,
+    "seen": 1795738313.9978805,
+    "ast_hash": "7be17f1754dc6372ba9863db23411698",
     "semantic_hash": ""
   },
   "Mobile/src/screens/catalog/SearchScreen.js": {
-    "mtime": 1795737125.0345511,
-    "seen": 1795737361.1206586,
-    "ast_hash": "40f69b9efea7a55b63f8e4b54e075a02",
+    "mtime": 1795738513.611514,
+    "seen": 1795738544.702805,
+    "ast_hash": "2c1ca35041ee6d21f427a739c7b4910f",
     "semantic_hash": ""
   },
   "Mobile/src/screens/catalog/StoreCatalogScreen.js": {
-    "mtime": 1793319306.9448068,
-    "seen": 1794776891.1075878,
-    "ast_hash": "83d747cd5ba8ca135500a9656c5f2dba",
+    "mtime": 1795738277.0337496,
+    "seen": 1795738313.9978828,
+    "ast_hash": "ce72f49b21fcb114273dcc8ab812b3d3",
     "semantic_hash": ""
   },
   "Mobile/src/screens/store/CreateOfertaScreen.js": {
@@ -3405,6 +3405,18 @@
     "mtime": 1792020084.0,
     "seen": 1794780135.124689,
     "ast_hash": "e630dbe08c41516e75fb2c6d60cfd28c",
+    "semantic_hash": ""
+  },
+  "Mobile/src/navigation/authGate.js": {
+    "mtime": 1795738216.2347813,
+    "seen": 1795738313.9978652,
+    "ast_hash": "66f51814d45f35e87af580248ac83175",
+    "semantic_hash": ""
+  },
+  "Mobile/src/utils/__tests__/authGate.test.mjs": {
+    "mtime": 1795738217.3838418,
+    "seen": 1795738313.9979334,
+    "ast_hash": "d1de7f4e4f67221c6bda7bfad2d83be7",
     "semantic_hash": ""
   },
   "Mobile/package-lock.json": {

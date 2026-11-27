@@ -6,6 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useLayoutProfile } from '../hooks/useLayoutProfile';
 import { BrandLogo } from './ui/DesignPrimitives';
+import { isGuestTabAllowed, redirecionarParaCadastro } from '../navigation/authGate';
 import { fonts, radii, shadows } from '../theme';
 
 const ICONS = {
@@ -113,7 +114,7 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
       ? 'Modo Cliente · Loja vinculada'
       : session
         ? 'Conta Cliente'
-        : 'Convidado';
+        : 'Entrar ou cadastrar';
 
   async function handleLogout() {
     await logout();
@@ -126,6 +127,10 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
   }
 
   function handleRoutePress(route, focused) {
+    if (!session && !isGuestTabAllowed(route.name)) {
+      redirecionarParaCadastro(navigation);
+      return;
+    }
     const event = navigation.emit({
       type: 'tabPress',
       target: route.key,
@@ -239,7 +244,13 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
           ) : null}
         </ScrollView>
 
-        <View
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={session ? 'Conta do usuário' : 'Cadastrar ou entrar'}
+          disabled={Boolean(session)}
+          onPress={() => {
+            if (!session) redirecionarParaCadastro(navigation);
+          }}
           style={[
             styles.userCard,
             { backgroundColor: colors.sidebarAccent },
@@ -282,8 +293,14 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
           </View>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Sair da conta"
-            onPress={handleLogout}
+            accessibilityLabel={session ? 'Sair da conta' : 'Cadastrar ou entrar'}
+            onPress={() => {
+              if (!session) {
+                redirecionarParaCadastro(navigation);
+                return;
+              }
+              handleLogout();
+            }}
             hitSlop={10}
             style={({ hovered }) => [
               styles.logoutBtn,
@@ -291,12 +308,12 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
             ]}
           >
             <Ionicons
-              name="log-out-outline"
+              name={session ? 'log-out-outline' : 'log-in-outline'}
               size={18}
               color="rgba(201, 216, 219, 0.7)"
             />
           </Pressable>
-        </View>
+        </Pressable>
       </View>
     );
   }
