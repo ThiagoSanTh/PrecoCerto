@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -36,6 +37,7 @@ export default function FormScreen({
 }) {
   const s = useFormStyles();
   const { colors, isDark } = useTheme();
+  const scrollRef = useRef(null);
   const {
     contentFullWidth,
     isPhone,
@@ -67,6 +69,13 @@ export default function FormScreen({
       ? { paddingTop: 10 }
       : null;
 
+  // Rola o formulário para o topo quando surge um erro/aviso, garantindo visibilidade imediata em telas longas.
+  useEffect(() => {
+    if (error && scrollable) {
+      scrollRef.current?.scrollTo?.({ y: 0, animated: true });
+    }
+  }, [error, scrollable]);
+
   const rawInnerContent = (
     <>
       <FormErrorBanner error={error} onAction={onErrorAction} />
@@ -89,6 +98,7 @@ export default function FormScreen({
 
   const content = scrollable ? (
     <ScrollView
+      ref={scrollRef}
       style={s.flex}
       contentContainerStyle={[
         s.scrollContent,

@@ -11,11 +11,18 @@ import AuthSplitLayout from '../../components/ui/AuthSplitLayout';
 import { fonts } from '../../theme';
 import { touchTarget } from '../../components/form/formStyles';
 
-export default function LoginScreen({ navigation }) {
+export default function LoginScreen({ navigation, route }) {
+  const initialNotice = route?.params?.authNotice || null;
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  // Aviso vindo da navegação (ex.: loja criada com sucesso e necessidade de novo login).
+  const [notice, setNotice] = useState(
+    typeof initialNotice === 'string'
+      ? { title: 'Aviso', message: initialNotice, variant: 'info' }
+      : initialNotice
+  );
   const senhaRef = useRef(null);
   const { salvarSessao, sincronizarGpsCliente } = useAuth();
   const { colors } = useTheme();
@@ -23,16 +30,19 @@ export default function LoginScreen({ navigation }) {
   async function handleLogin() {
     if (loading) return;
     if (!email || !senha) {
+      setNotice(null);
       setError({ title: 'Campos obrigatórios', message: 'Preencha todos os campos.' });
       return;
     }
 
     if (!isEmailValido(email)) {
+      setNotice(null);
       setError({ title: 'E-mail inválido', message: 'Informe um e-mail válido.' });
       return;
     }
 
     setError(null);
+    setNotice(null);
     setLoading(true);
     try {
       const { tipo, perfil } = await authLogin(email.trim().toLowerCase(), senha);
@@ -55,7 +65,7 @@ export default function LoginScreen({ navigation }) {
     <AuthSplitLayout
       title="Bem-vindo de volta"
       subtitle="Após entrar, sua localização é obtida pelo GPS para mostrar as lojas próximas."
-      error={error}
+      error={error || notice}
       onBack={() =>
         navigation.canGoBack() ? navigation.goBack() : navigation.replace('Home')
       }
@@ -70,6 +80,7 @@ export default function LoginScreen({ navigation }) {
         onChangeText={(v) => {
           setEmail(v);
           if (error) setError(null);
+          if (notice) setNotice(null);
         }}
         autoCapitalize="none"
         keyboardType="email-address"
@@ -90,6 +101,7 @@ export default function LoginScreen({ navigation }) {
         onChangeText={(v) => {
           setSenha(v);
           if (error) setError(null);
+          if (notice) setNotice(null);
         }}
         secureTextEntry
         returnKeyType="go"
