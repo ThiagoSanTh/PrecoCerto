@@ -81,6 +81,9 @@ export default function ForgotPasswordScreen({ navigation }) {
       {!modoToken ? (
         <>
           <FormField
+            id="recuperar-email"
+            name="email"
+            autoComplete="email"
             label="E-mail"
             placeholder="voce@email.com"
             value={email}
@@ -110,6 +113,11 @@ export default function ForgotPasswordScreen({ navigation }) {
       ) : (
         <>
           <FormField
+            id="recuperar-token"
+            name="token"
+            autoComplete="one-time-code"
+            spellCheck={false}
+            autoCorrect={false}
             label="Token"
             placeholder="Código recebido por e-mail"
             value={token}
@@ -125,6 +133,9 @@ export default function ForgotPasswordScreen({ navigation }) {
 
           <FormField
             ref={novaSenhaRef}
+            id="recuperar-nova-senha"
+            name="new-password"
+            autoComplete="new-password"
             label="Nova senha"
             placeholder="••••••••"
             value={novaSenha}

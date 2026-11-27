@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Pc.Dominio.Entities.Catalogo;
 using Pc.Dominio.Entities.Estabelecimentos;
+using Pc.Dominio.Enums;
 using Pc.Dominio.Validacoes;
 using Pc.Servico.Excecoes;
 using Pc.Servico.Interfaces;
@@ -11,6 +12,7 @@ using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Estabelecimentos;
 using Pc.WebApi.Extensions;
 using Pc.WebApi.Helpers;
+using Pc.WebApi.Hubs;
 using Pc.WebApi.Mappings;
 
 namespace Pc.WebApi.Controllers
@@ -23,17 +25,23 @@ namespace Pc.WebApi.Controllers
         private readonly IClienteServico _usuarioServico;
         private readonly IConsultaCnpjServico _consultaCnpj;
         private readonly IIdCodificador _idCodificador;
+        private readonly PresencaChat? _presenca;
+        private readonly ILojaAcesso? _lojaAcesso;
 
         public LojasController(
             ILojaServico lojaServico,
             IClienteServico usuarioServico,
             IConsultaCnpjServico consultaCnpj,
-            IIdCodificador idCodificador)
+            IIdCodificador idCodificador,
+            PresencaChat? presenca = null,
+            ILojaAcesso? lojaAcesso = null)
         {
             _lojaServico = lojaServico;
             _usuarioServico = usuarioServico;
             _consultaCnpj = consultaCnpj;
             _idCodificador = idCodificador;
+            _presenca = presenca;
+            _lojaAcesso = lojaAcesso;
         }
 
         [HttpGet]
@@ -43,7 +51,7 @@ namespace Pc.WebApi.Controllers
         {
             var paginacao = PaginacaoHelper.Normalizar(page, pageSize);
             var lojas = await _lojaServico.ListarPaginadoAsync(paginacao);
-            return Ok(PaginacaoHelper.ParaResposta(lojas, l => LojaMapper.ParaRespostaDto(l, _idCodificador)));
+            return Ok(PaginacaoHelper.ParaResposta(lojas, RespostaLoja));
         }
 
         [HttpGet("mapa")]
@@ -70,7 +78,7 @@ namespace Pc.WebApi.Controllers
             if (loja is null)
                 return NotFound("Loja não encontrada.");
 
-            return Ok(LojaMapper.ParaRespostaDto(loja, _idCodificador));
+            return Ok(RespostaLoja(loja));
         }
 
         [HttpPost("buscar")]
@@ -83,7 +91,7 @@ namespace Pc.WebApi.Controllers
         {
             var paginacao = PaginacaoHelper.Normalizar(page, pageSize);
             var lojas = await _lojaServico.BuscarPorNomePaginadoAsync(nome, paginacao);
-            return Ok(PaginacaoHelper.ParaResposta(lojas, l => LojaMapper.ParaRespostaDto(l, _idCodificador)));
+            return Ok(PaginacaoHelper.ParaResposta(lojas, RespostaLoja));
         }
 
         [HttpPost]
@@ -108,6 +116,10 @@ namespace Pc.WebApi.Controllers
 
             if (usuarioId is null || usuarioId == Guid.Empty)
                 return BadRequest("Usuário inválido.");
+
+            var dono = await _usuarioServico.ObterPorIdAsync(usuarioId.Value);
+            if (dono is null)
+                return Forbid();
 
             var lojaDoUsuario = await _lojaServico.ObterPorUsuarioIdAsync(usuarioId.Value);
             if (lojaDoUsuario is not null)
@@ -170,10 +182,28 @@ namespace Pc.WebApi.Controllers
             if (lojaExistente is null)
                 return NotFound("Loja não encontrada.");
 
-            if (!Authz.OwnsLoja(this, id) && !User.IsAdmin())
+            var donoAnterior = lojaExistente.UsuarioId;
+
+            if (!User.IsAdmin() && (_lojaAcesso is null || !await Authz.PertenceAsync(User, id, _lojaAcesso)))
+                return Forbid();
+
+            if (dto.UsuarioId.HasValue && dto.UsuarioId != lojaExistente.UsuarioId && !User.IsAdmin())
+                return Forbid();
+
+            if (dto.UsuarioId.HasValue && dto.UsuarioId != lojaExistente.UsuarioId)
             {
-                if (lojaExistente.UsuarioId != User.GetUserId())
-                    return Forbid();
+                var destino = await _usuarioServico.ObterPorIdAsync(dto.UsuarioId.Value);
+                if (destino is null)
+                    return BadRequest("Usuário de destino não encontrado.");
+
+                if (destino.Papel == PapelUsuario.Vendedor
+                    && destino.LojaVinculadaId is Guid vinculada
+                    && vinculada != lojaExistente.Id)
+                    return BadRequest("O novo dono é vendedor de outra loja.");
+
+                var outraLoja = await _lojaServico.ObterPorUsuarioIdAsync(dto.UsuarioId.Value);
+                if (outraLoja is not null && outraLoja.Id != lojaExistente.Id)
+                    return Conflict("Este usuário já possui uma loja.");
             }
 
             if (!string.IsNullOrWhiteSpace(dto.Cnpj) && !CnpjValidator.IsValido(dto.Cnpj))
@@ -196,6 +226,13 @@ namespace Pc.WebApi.Controllers
                 lojaExistente.Endereco = CriarEndereco(dto.Endereco);
 
             await _lojaServico.AtualizarAsync(lojaExistente);
+            if (_presenca != null
+                && donoAnterior.HasValue
+                && donoAnterior != lojaExistente.UsuarioId)
+            {
+                await _presenca.RevogarAsync(donoAnterior.Value, lojaExistente.Id);
+            }
+
             return NoContent();
         }
 
@@ -207,7 +244,17 @@ namespace Pc.WebApi.Controllers
             if (lojaExistente is null)
                 return NotFound("Loja não encontrada.");
 
-            await _lojaServico.RemoverAsync(id);
+            try
+            {
+                await _lojaServico.RemoverAsync(id);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return NotFound("Loja não encontrada.");
+            }
+
+            if (_presenca != null)
+                await _presenca.RevogarLojaAsync(id);
             return NoContent();
         }
 
@@ -251,6 +298,28 @@ namespace Pc.WebApi.Controllers
                 Estado = estado,
                 Latitude = endereco.Latitude,
                 Longitude = endereco.Longitude
+            };
+        }
+
+        /// <summary>
+        /// Visitante não recebe e-mail nem telefone do dono. Quem está logado
+        /// (edição da loja) continua recebendo o DTO completo.
+        /// </summary>
+        private object RespostaLoja(Loja loja)
+        {
+            var dto = LojaMapper.ParaRespostaDto(loja, _idCodificador);
+            if (User.Identity?.IsAuthenticated == true)
+                return dto;
+
+            return new
+            {
+                dto.Id,
+                dto.CodigoPublico,
+                dto.NomeFantasia,
+                dto.RazaoSocial,
+                dto.Cnpj,
+                dto.Endereco,
+                dto.MediaAvaliacoes
             };
         }
     }

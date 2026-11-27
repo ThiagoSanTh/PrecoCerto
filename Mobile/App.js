@@ -18,6 +18,20 @@ function ThemedStatusBar() {
   return <StatusBar style={isDark ? 'light' : 'dark'} />;
 }
 
+function ThemedApp() {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
+      <ThemedStatusBar />
+      <AuthProvider>
+        <ChatBadgeProvider>
+          <Routes />
+        </ChatBadgeProvider>
+      </AuthProvider>
+    </View>
+  );
+}
+
 export default function App() {
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') return;
@@ -32,16 +46,14 @@ export default function App() {
       document.head.appendChild(link);
     }
 
-    const viewportMeta = document.querySelector('meta[name="viewport"]');
-    if (viewportMeta) {
-      const content = viewportMeta.getAttribute('content') || '';
-      if (!content.includes('viewport-fit=cover')) {
-        viewportMeta.setAttribute(
-          'content',
-          `${content}, viewport-fit=cover`.replace(/^,\s*/, '')
-        );
-      }
-    }
+    const applyVisualViewport = () => {
+      const vv = window.visualViewport;
+      const height = vv?.height || window.innerHeight;
+      const offset = vv?.offsetTop || 0;
+      document.documentElement.style.setProperty('--app-height', `${Math.round(height)}px`);
+      const root = document.getElementById('root');
+      if (root) root.style.top = `${Math.round(offset)}px`;
+    };
 
     if (!document.getElementById(VIEWPORT_STYLE_ID)) {
       const style = document.createElement('style');
@@ -61,20 +73,23 @@ export default function App() {
       `;
       document.head.appendChild(style);
     }
+
+    applyVisualViewport();
+    window.visualViewport?.addEventListener('resize', applyVisualViewport);
+    window.visualViewport?.addEventListener('scroll', applyVisualViewport);
+    window.addEventListener('resize', applyVisualViewport);
+    return () => {
+      window.visualViewport?.removeEventListener('resize', applyVisualViewport);
+      window.visualViewport?.removeEventListener('scroll', applyVisualViewport);
+      window.removeEventListener('resize', applyVisualViewport);
+    };
   }, []);
 
   return (
     <SafeAreaProvider>
-      <View style={styles.root}>
-        <ThemeProvider>
-          <ThemedStatusBar />
-          <AuthProvider>
-            <ChatBadgeProvider>
-              <Routes />
-            </ChatBadgeProvider>
-          </AuthProvider>
-        </ThemeProvider>
-      </View>
+      <ThemeProvider>
+        <ThemedApp />
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }
@@ -84,9 +99,8 @@ const styles = StyleSheet.create({
     flex: 1,
     ...(Platform.OS === 'web'
       ? {
-          height: '100dvh',
-          minHeight: '100dvh',
-          maxHeight: '100dvh',
+          height: '100%',
+          minHeight: 0,
           width: '100%',
           overflow: 'hidden',
           fontFamily: fonts.sans,

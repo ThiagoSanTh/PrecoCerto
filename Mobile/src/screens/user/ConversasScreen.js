@@ -22,8 +22,9 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useChatBadge } from '../../context/ChatBadgeContext';
 import { useLayoutProfile } from '../../hooks/useLayoutProfile';
+import { usePresencaChat } from '../../hooks/usePresencaChat';
 import { ChatThreadPanel } from './ChatScreen';
-import { fonts, radii } from '../../theme';
+import { fonts, inputFontSize, radii } from '../../theme';
 
 function formatarHorarioConversa(iso) {
   if (!iso) return '';
@@ -53,10 +54,11 @@ export default function ConversasScreen({ navigation }) {
   const [ativaCodigo, setAtivaCodigo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const { emModoLoja } = useAuth();
+  const { session, emModoLoja } = useAuth();
   const { colors } = useTheme();
   const { atualizarFromConversas } = useChatBadge();
   const { useSplitView, useSidebarNav } = useLayoutProfile();
+  usePresencaChat();
 
   const carregar = useCallback(
     async (force = false) => {
@@ -79,6 +81,11 @@ export default function ConversasScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
+      if (!session) {
+        setConversas([]);
+        setLoading(false);
+        return undefined;
+      }
       let ativo = true;
       async function init() {
         setLoading(true);
@@ -89,7 +96,7 @@ export default function ConversasScreen({ navigation }) {
       return () => {
         ativo = false;
       };
-    }, [carregar])
+    }, [session, carregar])
   );
 
   useEffect(() => {
@@ -404,7 +411,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontFamily: fonts.sans,
-    fontSize: 13.5,
+    fontSize: inputFontSize(13.5),
     paddingVertical: 2,
     minWidth: 0,
   },

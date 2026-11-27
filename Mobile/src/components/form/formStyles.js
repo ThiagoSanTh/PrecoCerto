@@ -1,5 +1,5 @@
 import { StyleSheet, Platform } from 'react-native';
-import { colors as defaultColors, fonts, radii, shadows } from '../../theme';
+import { colors as defaultColors, fonts, inputFontSize, radii, shadows } from '../../theme';
 
 function scaleFont(size, scale) {
   return Math.round(size * scale);
@@ -99,12 +99,11 @@ export function createFormStyles(scale = 1, colors = defaultColors) {
       borderRadius: radii.lg,
       paddingHorizontal: 14,
       paddingVertical: Platform.OS === 'ios' ? 13 : 11,
-      fontSize: scaleFont(15, scale),
+      fontSize: inputFontSize(scaleFont(15, scale)),
       fontFamily: fonts.sans,
       minHeight: 46,
       color: colors.text,
       backgroundColor: colors.inputBackground,
-      ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : null),
     },
     row: {
       flexDirection: 'row',
@@ -320,3 +319,10 @@ export function createFormStyles(scale = 1, colors = defaultColors) {
 
 /** Estilos base (escala 1.0) — compatibilidade com imports estáticos. */
 export const formStyles = createFormStyles(1);
+
+/** Área de toque mínima sem alterar o tamanho da fonte do rótulo. */
+export const touchTarget = {
+  minHeight: 44,
+  minWidth: 44,
+  justifyContent: 'center',
+};

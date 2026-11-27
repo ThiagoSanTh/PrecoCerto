@@ -1,3 +1,6 @@
+# O deploy documentado da API é o Railway: Dockerfile na raiz e railway.toml.
+# O estado do projeto está em ESTADO.md. Este blueprint do Render não recebe
+# atualização de comportamento desde o commit 1295ce78 (2026-06-09).
 services:
   - type: web
     name: preco-certo-api

@@ -1,6 +1,5 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useState, useRef } from 'react';
-import { CommonActions } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { registrarCliente } from '../../services/clienteService';
 import { login as authLogin } from '../../services/authService';
@@ -13,6 +12,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { FormField, PrimaryButton } from '../../components/form';
 import AuthSplitLayout from '../../components/ui/AuthSplitLayout';
 import { fonts } from '../../theme';
+import { touchTarget } from '../../components/form/formStyles';
 
 const LOGIN_RETRY_DELAYS_MS = [300, 600, 1200];
 
@@ -53,14 +53,16 @@ export default function RegisterScreen({ navigation, route }) {
   const { salvarSessao, sincronizarGpsCliente } = useAuth();
   const { colors } = useTheme();
 
+  function change(setter) {
+    return (value) => {
+      setter(value);
+      if (error) setError(null);
+    };
+  }
+
   async function concluirSessao(tipo, perfil) {
     await salvarSessao({ tipo: tipo || 'cliente', perfil }, 'user');
-    navigation.dispatch(
-      CommonActions.reset({
-        index: 0,
-        routes: [{ name: 'Home' }],
-      })
-    );
+    navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
 
     if (perfil?.id) {
       sincronizarGpsCliente(perfil.id, { force: true }).catch(() => {});
@@ -187,10 +189,13 @@ export default function RegisterScreen({ navigation, route }) {
       }
     >
       <FormField
+        id="cadastro-nome"
+        name="name"
+        autoComplete="name"
         label="Nome"
         placeholder="Seu nome"
         value={nomeUsuario}
-        onChangeText={setNomeUsuario}
+        onChangeText={change(setNomeUsuario)}
         returnKeyType="next"
         onSubmitEditing={() => emailRef.current?.focus()}
         icon={<Ionicons name="person-outline" size={17} color={colors.textMuted} />}
@@ -198,10 +203,13 @@ export default function RegisterScreen({ navigation, route }) {
 
       <FormField
         ref={emailRef}
+        id="cadastro-email"
+        name="email"
+        autoComplete="email"
         label="E-mail"
         placeholder="voce@email.com"
         value={email}
-        onChangeText={setEmail}
+        onChangeText={change(setEmail)}
         autoCapitalize="none"
         keyboardType="email-address"
         returnKeyType="next"
@@ -211,10 +219,13 @@ export default function RegisterScreen({ navigation, route }) {
 
       <FormField
         ref={telefoneRef}
+        id="cadastro-telefone"
+        name="tel"
+        autoComplete="tel"
         label="Telefone (opcional)"
         placeholder="(22) 99999-9999"
         value={telefone}
-        onChangeText={setTelefone}
+        onChangeText={change(setTelefone)}
         keyboardType="phone-pad"
         returnKeyType="next"
         onSubmitEditing={() => senhaRef.current?.focus()}
@@ -223,10 +234,13 @@ export default function RegisterScreen({ navigation, route }) {
 
       <FormField
         ref={senhaRef}
+        id="cadastro-senha"
+        name="new-password"
+        autoComplete="new-password"
         label="Senha"
-        placeholder="••••••••"
+        placeholder="Crie uma senha"
         value={senha}
-        onChangeText={setSenha}
+        onChangeText={change(setSenha)}
         secureTextEntry
         returnKeyType="next"
         onSubmitEditing={() => confirmarSenhaRef.current?.focus()}
@@ -235,10 +249,13 @@ export default function RegisterScreen({ navigation, route }) {
 
       <FormField
         ref={confirmarSenhaRef}
+        id="cadastro-confirmar-senha"
+        name="confirm-password"
+        autoComplete="new-password"
         label="Confirmar senha"
-        placeholder="••••••••"
+        placeholder="Repita a senha"
         value={confirmarSenha}
-        onChangeText={setConfirmarSenha}
+        onChangeText={change(setConfirmarSenha)}
         secureTextEntry
         returnKeyType="go"
         onSubmitEditing={handleRegister}
@@ -260,6 +277,7 @@ export default function RegisterScreen({ navigation, route }) {
           onPress={() => navigation.navigate('Login')}
           accessibilityRole="button"
           accessibilityLabel="Ir para login"
+          style={touchTarget}
         >
           <Text style={[styles.switchLink, { color: colors.primary }]}>
             Entrar

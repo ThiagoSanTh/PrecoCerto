@@ -1,4 +1,6 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
+using Pc.Servico.Interfaces;
 using Pc.WebApi.Extensions;
 
 namespace Pc.WebApi.Authorization
@@ -21,5 +23,21 @@ namespace Pc.WebApi.Authorization
             controller.User.IsAdmin() ||
             ((controller.User.IsLojista() || controller.User.IsVendedor())
                 && controller.User.GetLojaId() == lojaId);
+
+        /// <summary>
+        /// Admin passa só com o papel ativo no banco. Os demais precisam do vínculo
+        /// atual (dono por Loja.UsuarioId, vendedor por LojaVinculadaId). O claim não basta.
+        /// </summary>
+        public static Task<bool> PertenceAsync(ClaimsPrincipal user, Guid lojaId, ILojaAcesso acesso)
+        {
+            var userId = user.GetUserId();
+            if (!userId.HasValue)
+                return Task.FromResult(false);
+
+            if (user.IsAdmin())
+                return acesso.EhAdminAsync(userId.Value);
+
+            return acesso.PertenceAsync(userId.Value, lojaId);
+        }
     }
 }

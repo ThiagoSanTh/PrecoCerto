@@ -16,6 +16,100 @@ export const MAPBOX_PUBLIC_TOKEN =
   (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_MAPBOX_TOKEN) ||
   '';
 
+/** Minúsculas, sem acento, espaços colapsados. */
+export function normalizarEnderecoMapa(texto) {
+  return String(texto ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function chaveCoordLoja(lat, lng) {
+  return `${Number(lat).toFixed(5)},${Number(lng).toFixed(5)}`;
+}
+
+/** Chave de texto só com número de porta. Sem número, a coordenada decide. */
+function chaveEnderecoComNumero(loja) {
+  if (Object.prototype.hasOwnProperty.call(loja, 'enderecoGrupo')) {
+    const norm = normalizarEnderecoMapa(loja.enderecoGrupo);
+    return /\d/.test(norm) ? norm : '';
+  }
+  const norm = normalizarEnderecoMapa(loja.endereco);
+  return /\d/.test(norm) ? norm : '';
+}
+
+/**
+ * Junta lojas pelo endereço só quando há número, ou pela coordenada (~5 casas).
+ * Grupo com 1 loja continua pin comum; 2+ vira o pin de prédio.
+ */
+export function agruparLojasPorEndereco(lojas) {
+  const items = [];
+  for (const loja of lojas || []) {
+    if (loja?.lat == null || loja?.lat === '' || loja?.lng == null || loja?.lng === '') continue;
+    const lat = Number(loja.lat);
+    const lng = Number(loja.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+    items.push(loja);
+  }
+
+  const parent = items.map((_, i) => i);
+  const find = (i) => {
+    let x = i;
+    while (parent[x] !== x) {
+      parent[x] = parent[parent[x]];
+      x = parent[x];
+    }
+    return x;
+  };
+  const unite = (a, b) => {
+    const ra = find(a);
+    const rb = find(b);
+    if (ra !== rb) parent[rb] = ra;
+  };
+
+  const byEnd = new Map();
+  const byGeo = new Map();
+  items.forEach((loja, i) => {
+    const end = chaveEnderecoComNumero(loja);
+    if (end) {
+      const prev = byEnd.get(end);
+      if (prev == null) byEnd.set(end, i);
+      else unite(prev, i);
+    }
+    const geo = chaveCoordLoja(loja.lat, loja.lng);
+    const prevGeo = byGeo.get(geo);
+    if (prevGeo == null) byGeo.set(geo, i);
+    else unite(prevGeo, i);
+  });
+
+  const grupos = new Map();
+  items.forEach((loja, i) => {
+    const root = find(i);
+    let grupo = grupos.get(root);
+    if (!grupo) {
+      grupo = { lojas: [] };
+      grupos.set(root, grupo);
+    }
+    grupo.lojas.push(loja);
+  });
+
+  return [...grupos.values()].map((grupo) => {
+    let lat = 0;
+    let lng = 0;
+    for (const loja of grupo.lojas) {
+      lat += Number(loja.lat);
+      lng += Number(loja.lng);
+    }
+    return {
+      lat: lat / grupo.lojas.length,
+      lng: lng / grupo.lojas.length,
+      lojas: grupo.lojas,
+    };
+  });
+}
+
 export function prepararDadosMapaLeaflet(localizacaoCliente, produtos) {
   const marcadores = (produtos || []).map((p) => {
     const nome = nomeProduto(p);
@@ -305,6 +399,7 @@ export function normalizarLojaParaMapa(loja) {
     loja?.Endereco?.Longitude;
   const nome = loja?.nomeFantasia ?? loja?.NomeFantasia ?? 'Loja';
   const logradouro = loja?.endereco?.logradouro ?? loja?.Endereco?.Logradouro ?? '';
+  const numero = loja?.endereco?.numero ?? loja?.Endereco?.Numero ?? '';
   const cidade = loja?.endereco?.cidade ?? loja?.Endereco?.Cidade ?? '';
 
   return {
@@ -313,6 +408,9 @@ export function normalizarLojaParaMapa(loja) {
     lng: lng != null && lng !== '' ? Number(lng) : null,
     nome,
     endereco: [logradouro, cidade].filter(Boolean).join(' — '),
+    enderecoGrupo: String(numero).trim()
+      ? [logradouro, numero, cidade].filter(Boolean).join(' ')
+      : '',
     media: loja?.mediaAvaliacoes ?? loja?.MediaAvaliacoes ?? null,
     inicial: inicialPlaceholder(nome),
   };
@@ -344,6 +442,7 @@ export function sanitizarLojasParaHtml(marcadores) {
     ...m,
     nome: escapeHtml(m.nome),
     endereco: escapeHtml(m.endereco),
+    enderecoGrupo: escapeHtml(m.enderecoGrupo),
     inicial: escapeHtml(m.inicial),
   }));
 }
@@ -354,7 +453,13 @@ export function sanitizarLojasParaHtml(marcadores) {
  */
 export function buildLojasMapHtml(dadosMapa) {
   const mapboxToken = dadosMapa?.mapboxToken || MAPBOX_PUBLIC_TOKEN;
-  const payload = safeJsonForScript({ ...dadosMapa, mapboxToken });
+  const marcadores = Array.isArray(dadosMapa?.marcadores) ? dadosMapa.marcadores : [];
+  const grupos = agruparLojasPorEndereco(marcadores).map((g) => ({
+    lat: g.lat,
+    lng: g.lng,
+    ids: g.lojas.map((l) => l.id),
+  }));
+  const payload = safeJsonForScript({ ...dadosMapa, mapboxToken, marcadores, grupos });
 
   return `<!DOCTYPE html>
 <html>
@@ -620,6 +725,116 @@ export function buildLojasMapHtml(dadosMapa) {
       background: #0F1D22;
       color: #B6F035;
     }
+    .popup-btn:focus-visible,
+    .predio-item:focus-visible {
+      outline: 2px solid #0E7C66;
+      outline-offset: 2px;
+    }
+
+    .pin-predio-wrap {
+      width: 56px;
+      height: 52px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .pin-predio {
+      position: relative;
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: #0F1D22;
+      color: #F2FAF6;
+      border: 2.5px solid #FFFFFF;
+      box-shadow: 0 4px 12px rgba(15, 29, 34, 0.26);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .pin-predio-selo {
+      position: absolute;
+      top: -7px;
+      right: -8px;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 4px;
+      border-radius: 999px;
+      background: #B6F035;
+      color: #132A1C;
+      border: 1.5px solid #0F1D22;
+      font-family: 'Sora', sans-serif;
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 15px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+    .predio-lista {
+      list-style: none;
+      margin: 10px 0 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: min(240px, 46vh);
+      overflow: auto;
+      overscroll-behavior: contain;
+    }
+    .predio-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      width: 100%;
+      min-height: 44px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #DDE5E1;
+      background: #F7FBF8;
+      color: #0F1D22;
+      font-family: 'Manrope', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      line-height: 1.2;
+      text-align: left;
+      text-decoration: none;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .predio-item:hover { background: #E2F5EE; }
+    .predio-item-nome {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .predio-item-acao {
+      flex-shrink: 0;
+      color: #0E7C66;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    html.tema-escuro { color-scheme: dark; }
+    html.tema-escuro .leaflet-popup-content-wrapper,
+    html.tema-escuro .leaflet-popup-tip {
+      background: #16272D;
+      border-color: #263C45;
+    }
+    html.tema-escuro .map-card-title { color: #F2FAF6; }
+    html.tema-escuro .map-card-meta,
+    html.tema-escuro .map-card-empty { color: #8FA4AA; }
+    html.tema-escuro .predio-item {
+      background: #1C3038;
+      border-color: #263C45;
+      color: #F2FAF6;
+    }
+    html.tema-escuro .predio-item:hover { background: #15342E; }
+    html.tema-escuro .predio-item-acao { color: #5EEAD4; }
+    html.tema-escuro .predio-item:focus-visible { outline-color: #5EEAD4; }
+    @media (prefers-reduced-motion: reduce) {
+      .pin-predio, .predio-item { transition: none; }
+    }
   </style>
 </head>
 <body>
@@ -632,6 +847,11 @@ export function buildLojasMapHtml(dadosMapa) {
   <script>
     const DATA = ${payload};
     const SAQUAREMA_FALLBACK = [-22.92, -42.51];
+    try {
+      if (localStorage.getItem('@theme') === 'dark') {
+        document.documentElement.classList.add('tema-escuro');
+      }
+    } catch (e) { /* storage indisponível */ }
 
     function esc(text) {
       return String(text == null ? '' : text)
@@ -775,8 +995,18 @@ export function buildLojasMapHtml(dadosMapa) {
       if (ids !== null) {
         destaques.lojaIds.forEach(function(id) { ids[String(id)] = true; });
       }
+      var prediosVistos = [];
       Object.keys(markers).forEach(function(id) {
         var entry = markers[id];
+        if (entry.predio) {
+          if (prediosVistos.indexOf(entry.marker) !== -1) return;
+          prediosVistos.push(entry.marker);
+          var sel = (entry.ids || []).some(function(lojaId) {
+            return lojaSelecionadaId != null && String(lojaId) === String(lojaSelecionadaId);
+          });
+          entry.marker.setZIndexOffset(sel ? 1000 : 0);
+          return;
+        }
         var deveDestacar = ids !== null && ids[String(id)] === true;
         var isSel = lojaSelecionadaId != null && String(id) === String(lojaSelecionadaId);
         var imagemUrl = imagemPinParaLoja(id, deveDestacar);
@@ -1018,9 +1248,10 @@ export function buildLojasMapHtml(dadosMapa) {
     }
 
     function ligarBotoesPopup() {
-      var botoes = document.querySelectorAll('.popup-btn');
+      var botoes = document.querySelectorAll('.popup-btn, .predio-item');
       botoes.forEach(function(btn) {
         btn.onclick = function(e) {
+          e.preventDefault();
           e.stopPropagation();
           var action = btn.getAttribute('data-action');
           var id = btn.getAttribute('data-id');
@@ -1037,23 +1268,133 @@ export function buildLojasMapHtml(dadosMapa) {
       });
     }
 
-    var usarCluster = DATA.marcadores.length > 100;
+    function popupPredioHtml(lojas) {
+      var titulo = lojas.length + ' lojas neste endereço';
+      var itens = lojas.map(function(m) {
+        return '<li><a class="predio-item" href="#catalogo" data-action="store" data-id="' +
+          esc(String(m.id)) + '"><span class="predio-item-nome">' + m.nome +
+          '</span><span class="predio-item-acao">Ver catálogo</span></a></li>';
+      }).join('');
+      return '<div class="map-card" role="dialog" aria-label="' + esc(titulo) + '">' +
+        '<div class="map-card-title">' + esc(titulo) + '</div>' +
+        '<ul class="predio-lista">' + itens + '</ul></div>';
+    }
+
+    function criarIconPredio(contagem) {
+      var html = '<div class="pin-predio-wrap"><div class="pin-predio">' +
+        '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+        '<path fill="currentColor" d="M4 21V9.2L12 4l8 5.2V21h-6.2v-5.2H10.2V21H4zm2.2-2h1.6v-3.2h8.4V19H18V10.1L12 6.2 6.2 10.1V19zM9 10.4h2.3V13H9v-2.6zm3.7 0H15V13h-2.3v-2.6z"/>' +
+        '</svg><span class="pin-predio-selo" aria-hidden="true">' + contagem + '</span></div></div>';
+      return L.divIcon({
+        html: html,
+        className: '',
+        iconSize: [56, 52],
+        iconAnchor: [28, 52],
+        popupAnchor: [0, -48]
+      });
+    }
+
+    function deslocarPopupDoClima() {
+      var popupEl = document.querySelector('.leaflet-popup');
+      var card;
+      var frame;
+      try {
+        card = window.parent.document.querySelector('[data-testid="weather-card"]');
+        frame = window.frameElement;
+      } catch (e) {
+        return;
+      }
+      if (!popupEl || !card || !frame) return;
+      var caixa = popupEl.querySelector('.leaflet-popup-content-wrapper') || popupEl;
+      var rect = caixa.getBoundingClientRect();
+      var clima = card.getBoundingClientRect();
+      var mapa = frame.getBoundingClientRect();
+      var topo = mapa.top + rect.top;
+      var cruza = mapa.left + rect.left < clima.right &&
+        mapa.left + rect.right > clima.left &&
+        topo < clima.bottom;
+      if (!cruza) return;
+      var dy = Math.ceil(clima.bottom - topo) + 8;
+      if (map._mapPane) {
+        map._mapPane.classList.remove('leaflet-pan-anim');
+        map._mapPane.style.transition = 'none';
+      }
+      if (map.stop) map.stop();
+      map.panBy([0, -dy], { animate: false });
+    }
+
+    function rotularPin(marker, rotulo) {
+      function aplicar() {
+        var el = marker.getElement();
+        if (!el) return;
+        el.setAttribute('role', 'button');
+        el.setAttribute('aria-label', rotulo);
+        el.tabIndex = 0;
+        if (el.dataset.rotuloPronto === '1') return;
+        el.dataset.rotuloPronto = '1';
+        el.addEventListener('keydown', function(e) {
+          if (e.key !== 'Enter' && e.key !== ' ') return;
+          e.preventDefault();
+          marker.openPopup();
+        });
+      }
+      marker.on('add', aplicar);
+      aplicar();
+    }
+
+    function colocarMarcador(marker) {
+      if (usarCluster) clusterGroup.addLayer(marker);
+      else marker.addTo(map);
+    }
+
+    var porId = {};
+    DATA.marcadores.forEach(function(m) { porId[String(m.id)] = m; });
+    var grupos = (DATA.grupos && DATA.grupos.length)
+      ? DATA.grupos
+      : DATA.marcadores.map(function(m) {
+          return { lat: m.lat, lng: m.lng, ids: [m.id] };
+        });
+    var usarCluster = grupos.length > 100;
     var clusterGroup = usarCluster ? L.markerClusterGroup({ maxClusterRadius: 50 }) : null;
 
-    DATA.marcadores.forEach(function(m) {
-      var marker = L.marker([m.lat, m.lng], { icon: criarIcon(m, false, null, false) })
+    grupos.forEach(function(g) {
+      var lojas = (g.ids || []).map(function(id) { return porId[String(id)]; }).filter(Boolean);
+      if (lojas.length >= 2) {
+        var rotulo = lojas.length + ' lojas neste endereço';
+        var marker = L.marker([g.lat, g.lng], { icon: criarIconPredio(lojas.length) });
+        marker.bindPopup(function() { return popupPredioHtml(lojas); }, {
+          maxWidth: 280,
+          autoPan: false
+        });
+        marker.on('popupopen', function() {
+          ligarBotoesPopup();
+          deslocarPopupDoClima();
+        });
+        rotularPin(marker, rotulo);
+        colocarMarcador(marker);
+        lojas.forEach(function(m) {
+          markers[m.id] = {
+            marker: marker,
+            dados: m,
+            visivel: true,
+            destaque: false,
+            predio: true,
+            ids: lojas.map(function(l) { return l.id; })
+          };
+        });
+        return;
+      }
+      if (!lojas.length) return;
+      var m = lojas[0];
+      var markerLoja = L.marker([m.lat, m.lng], { icon: criarIcon(m, false, null, false) })
         .bindPopup(function() { return popupHtml(m); });
-      marker.on('click', function() {
+      markerLoja.on('click', function() {
         aplicarRotaParaLoja(m.id, { ajustarBounds: false });
         postToApp({ type: 'storeSelected', lojaId: String(m.id) });
       });
-      marker.on('popupopen', ligarBotoesPopup);
-      if (usarCluster) {
-        clusterGroup.addLayer(marker);
-      } else {
-        marker.addTo(map);
-      }
-      markers[m.id] = { marker: marker, dados: m, visivel: true, destaque: false };
+      markerLoja.on('popupopen', ligarBotoesPopup);
+      colocarMarcador(markerLoja);
+      markers[m.id] = { marker: markerLoja, dados: m, visivel: true, destaque: false };
     });
 
     if (usarCluster) {
@@ -1070,8 +1411,11 @@ export function buildLojasMapHtml(dadosMapa) {
 
       atualizarIconesMarcadores();
 
+      var popupsVistos = [];
       Object.keys(markers).forEach(function(id) {
         var entry = markers[id];
+        if (entry.predio || popupsVistos.indexOf(entry.marker) !== -1) return;
+        popupsVistos.push(entry.marker);
         if (entry.marker.isPopupOpen()) {
           entry.marker.setPopupContent(popupHtml(entry.dados));
           ligarBotoesPopup();

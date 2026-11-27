@@ -224,23 +224,25 @@ export function calcularTotalNaoLidas(conversas) {
   return (conversas ?? []).reduce((acc, c) => acc + (c.naoLidas ?? 0), 0);
 }
 
-export async function temNovasMensagens() {
-  const { data } = await api.get('/Conversas/tem-novas');
+export async function temNovasMensagens(desde) {
+  const params = {};
+  if (desde) params.desde = desde;
+  const { data } = await api.get('/Conversas/tem-novas', { params });
   return data?.temNovas ?? false;
 }
 
-export async function verificarBadgeFallback() {
+export async function verificarBadgeFallback(desde) {
   const cached = obterCache('conversas', conversasCacheParts(), CONVERSAS_TTL_MS);
-  if (cached) return calcularTotalNaoLidas(cached);
+  if (cached) return { total: calcularTotalNaoLidas(cached), consultouRemoto: false };
 
   const stale = obterCacheStale('conversas', conversasCacheParts());
   if (stale) {
     revalidarConversasEmBackground();
-    return calcularTotalNaoLidas(stale);
+    return { total: calcularTotalNaoLidas(stale), consultouRemoto: false };
   }
 
-  const temNovas = await temNovasMensagens();
-  return temNovas ? 1 : 0;
+  const temNovas = await temNovasMensagens(desde);
+  return { total: temNovas ? 1 : 0, consultouRemoto: true };
 }
 
 export async function abrirConversa(lojaCodigo, opcoes = {}) {

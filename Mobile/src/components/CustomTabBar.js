@@ -1,9 +1,18 @@
+import { useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { CommonActions } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import {
+  clearPendingAuthAction,
+  consumePendingAuthAction,
+  irParaLogin,
+  setCompraPendente,
+  peekPendingAuthAction,
+  setPendingAuthAction,
+} from '../navigation/authIntent';
+import { navigationRef } from '../navigation/navigationRef';
 import { useLayoutProfile } from '../hooks/useLayoutProfile';
 import { BrandLogo } from './ui/DesignPrimitives';
 import { isGuestTabAllowed, redirecionarParaCadastro } from '../navigation/authGate';
@@ -25,6 +34,53 @@ const ICONS = {
 const MOBILE_USER_ROUTES = new Set(['Buscar', 'IA', 'Favoritos', 'Mensagens', 'Perfil']);
 const MOBILE_STORE_ROUTES = new Set(['Painel', 'Produtos', 'IA', 'Mensagens', 'Conta']);
 const HIDDEN_MOBILE_NESTED_ROUTES = new Set(['Chat', 'ProductDetail', 'StoreCatalog']);
+const ABAS_COM_SESSAO = new Set([
+  'IA',
+  'Favoritos',
+  'Histórico',
+  'Mensagens',
+  'Perfil',
+  'Painel',
+  'Produtos',
+  'Loja',
+  'Conta',
+]);
+const TELAS_AUTH = new Set(['Login', 'Cadastro', 'EsqueciSenha']);
+
+function retomarAcao(navigation, action) {
+  if (!action) return;
+  if (action.type === 'comprar') {
+    if (action.screen === 'ProductDetail') {
+      navigation.navigate('Buscar', {
+        screen: 'ProductDetail',
+        params: { productId: String(action.item?.id || '') },
+      });
+      return;
+    }
+    setCompraPendente(action.item?.id);
+    navigation.navigate('Buscar', {
+      screen: 'Search',
+      params: { retomarCompraId: String(action.item?.id || '') },
+    });
+    return;
+  }
+
+  const name = action.name || (action.type === 'ia' ? 'IA' : null);
+  if (!name) return;
+  if (name === 'IA' || name === 'AiChat') {
+    navigation.navigate('IA');
+    return;
+  }
+  if (name === 'Mensagens' || name === 'ConversasLista') {
+    navigation.navigate('Mensagens');
+    return;
+  }
+  if (ABAS_COM_SESSAO.has(name) || name === 'Buscar') {
+    navigation.navigate(name);
+    return;
+  }
+  navigation.getParent()?.navigate(name);
+}
 
 function iniciaisUsuario(nome) {
   const partes = String(nome || 'Usuário')
@@ -48,6 +104,8 @@ function SidebarNavItem({
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected: focused }}
+      accessibilityLabel={label}
+      hitSlop={4}
       onPress={onPress}
       style={({ hovered }) => [
         styles.sidebarItem,
@@ -117,17 +175,33 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
         : 'Entrar ou cadastrar';
 
   async function handleLogout() {
+    clearPendingAuthAction();
     await logout();
-    navigation.dispatch(
-      CommonActions.reset({
-        index: 0,
-        routes: [{ name: 'Login' }],
-      })
-    );
+    if (navigationRef.isReady()) {
+      navigationRef.reset({ index: 0, routes: [{ name: 'Home' }] });
+    }
   }
 
+  function entrar() {
+    clearPendingAuthAction();
+    irParaLogin(navigation);
+  }
+
+  useEffect(() => {
+    if (!session) return undefined;
+    if (!navigationRef.isReady()) return undefined;
+    const folha = navigationRef.getCurrentRoute()?.name;
+    if (!folha || TELAS_AUTH.has(folha)) return undefined;
+    const action = peekPendingAuthAction();
+    if (!action) return undefined;
+    consumePendingAuthAction();
+    retomarAcao(navigation, action);
+    return undefined;
+  }, [session, navigation]);
+
   function handleRoutePress(route, focused) {
-    if (!session && !isGuestTabAllowed(route.name)) {
+    if (!session && (!isGuestTabAllowed(route.name) || ABAS_COM_SESSAO.has(route.name))) {
+      setPendingAuthAction({ type: 'route', name: route.name });
       redirecionarParaCadastro(navigation);
       return;
     }
@@ -460,6 +534,7 @@ const styles = StyleSheet.create({
     gap: 12,
     borderRadius: radii.lg,
     paddingHorizontal: 12,
+    minHeight: 44,
     paddingVertical: 10,
   },
   sidebarItemLabel: {
@@ -514,6 +589,27 @@ const styles = StyleSheet.create({
   },
   logoutBtn: {
     padding: 4,
+  },
+  entrarSidebar: {
+    minHeight: 44,
+    minWidth: 44,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  entrarSidebarText: {
+    fontFamily: fonts.sans,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#F4FBFA',
+  },
+  focusRing: {
+    outlineWidth: 3,
+    outlineStyle: 'solid',
+    outlineColor: '#F4FBFA',
+    outlineOffset: 2,
   },
   mobileFloatWrap: {
     position: 'absolute',

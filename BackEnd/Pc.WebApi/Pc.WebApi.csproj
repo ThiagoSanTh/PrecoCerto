@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Pc.Servico\Pc.Servico.csproj" />
+    <InternalsVisibleTo Include="Pc.Servico.Tests" />
   </ItemGroup>
 
   <ItemGroup>

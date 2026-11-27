@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Pc.Dominio.Entities.Interacoes;
 using Pc.Servico.Interfaces;
 using Pc.WebApi.Authorization;
@@ -73,7 +74,7 @@ namespace Pc.WebApi.Controllers
             var resposta = new AvaliacaoRespostaDto
             {
                 Id = avaliacao.Id,
-                ClienteId = avaliacao.ClienteId,
+                ClienteId = Authz.IsSelfOrAdmin(this, avaliacao.ClienteId) ? avaliacao.ClienteId : Guid.Empty,
                 LojaId = avaliacao.LojaId,
                 NomeLoja = avaliacao.Loja?.NomeFantasia ?? string.Empty,
                 Nota = avaliacao.Nota,
@@ -90,22 +91,14 @@ namespace Pc.WebApi.Controllers
         /// </summary>
         [HttpGet("loja/{lojaId:guid}")]
         [AllowAnonymous]
+        [EnableRateLimiting("catalogo")]
         public async Task<IActionResult> ListarPorLoja(Guid lojaId)
         {
+            if (lojaId == Guid.Empty)
+                return BadRequest(new { message = "LojaId é obrigatório." });
+
             var avaliacoes = await _avaliacaoServico.ListarPorLojaAsync(lojaId);
-
-            var resposta = avaliacoes.Select(a => new AvaliacaoRespostaDto
-            {
-                Id = a.Id,
-                ClienteId = a.ClienteId,
-                LojaId = a.LojaId,
-                NomeLoja = a.Loja?.NomeFantasia ?? string.Empty,
-                Nota = a.Nota,
-                Comentario = a.Comentario,
-                DataAvaliacao = a.DataAvaliacao
-            });
-
-            return Ok(resposta);
+            return Ok(avaliacoes.Select(RespostaAvaliacao));
         }
 
         /// <summary>
@@ -113,8 +106,18 @@ namespace Pc.WebApi.Controllers
         /// Retorna todas as avaliações feitas por um cliente
         /// </summary>
         [HttpGet("cliente/{clienteId:guid}")]
+        [Authorize]
         public async Task<IActionResult> ListarPorCliente(Guid clienteId)
         {
+            if (User?.Identity?.IsAuthenticated != true)
+                return Unauthorized();
+
+            var denied = Authz.ForbidUnlessSelfOrAdmin(this, clienteId);
+            if (denied != null) return denied;
+
+            if (clienteId == Guid.Empty)
+                return BadRequest("ClienteId é obrigatório.");
+
             var avaliacoes = await _avaliacaoServico.ListarPorClienteAsync(clienteId);
 
             var resposta = avaliacoes.Select(a => new AvaliacaoRespostaDto
@@ -137,8 +140,12 @@ namespace Pc.WebApi.Controllers
         /// </summary>
         [HttpGet("loja/{lojaId:guid}/media")]
         [AllowAnonymous]
+        [EnableRateLimiting("catalogo")]
         public async Task<IActionResult> ObterMediaAvaliacao(Guid lojaId)
         {
+            if (lojaId == Guid.Empty)
+                return BadRequest(new { message = "LojaId é obrigatório." });
+
             var (media, quantidade) = await _avaliacaoServico.ObterResumoAvaliacaoAsync(lojaId);
 
             return Ok(new { media, quantidade });
@@ -197,6 +204,37 @@ namespace Pc.WebApi.Controllers
 
             await _avaliacaoServico.RemoverAsync(id);
             return NoContent();
+        }
+
+        /// <summary>
+        /// A lista da vitrine não leva o id do cliente. Logado, o DTO permanece o mesmo.
+        /// </summary>
+        private object RespostaAvaliacao(Avaliacao avaliacao)
+        {
+            var nomeLoja = avaliacao.Loja?.NomeFantasia ?? string.Empty;
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                return new AvaliacaoRespostaDto
+                {
+                    Id = avaliacao.Id,
+                    ClienteId = avaliacao.ClienteId,
+                    LojaId = avaliacao.LojaId,
+                    NomeLoja = nomeLoja,
+                    Nota = avaliacao.Nota,
+                    Comentario = avaliacao.Comentario,
+                    DataAvaliacao = avaliacao.DataAvaliacao
+                };
+            }
+
+            return new
+            {
+                avaliacao.Id,
+                avaliacao.LojaId,
+                NomeLoja = nomeLoja,
+                avaliacao.Nota,
+                avaliacao.Comentario,
+                avaliacao.DataAvaliacao
+            };
         }
     }
 }

@@ -1,18 +1,17 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { lightColors, darkColors } from '../theme';
+import { applyDocumentChrome, readSavedTheme, THEME_STORAGE_KEY } from '../theme/webChrome';
 
 const ThemeContext = createContext(null);
 
-const THEME_KEY = '@theme';
-
 export function ThemeProvider({ children }) {
-  const [tema, setTema] = useState('light');
+  const [tema, setTema] = useState(readSavedTheme);
 
   useEffect(() => {
     (async () => {
       try {
-        const salvo = await AsyncStorage.getItem(THEME_KEY);
+        const salvo = await AsyncStorage.getItem(THEME_STORAGE_KEY);
         if (salvo === 'dark' || salvo === 'light') setTema(salvo);
       } catch {
         /* mantém padrão */
@@ -24,7 +23,7 @@ export function ThemeProvider({ children }) {
     const novo = tema === 'light' ? 'dark' : 'light';
     setTema(novo);
     try {
-      await AsyncStorage.setItem(THEME_KEY, novo);
+      await AsyncStorage.setItem(THEME_STORAGE_KEY, novo);
     } catch {
       /* ignora falha de persistência */
     }
@@ -33,9 +32,7 @@ export function ThemeProvider({ children }) {
   const colors = tema === 'dark' ? darkColors : lightColors;
 
   useEffect(() => {
-    if (typeof document !== 'undefined' && document.documentElement) {
-      document.documentElement.style.colorScheme = tema === 'dark' ? 'dark' : 'light';
-    }
+    applyDocumentChrome(tema);
   }, [tema]);
 
   return (

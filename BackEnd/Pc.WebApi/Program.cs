@@ -44,11 +44,12 @@ builder.Host.UseSerilog((context, services, configuration) =>
     }
 });
 
+// Testing usa o TestServer; prender a porta aqui derruba o host de integração.
 if (builder.Environment.IsDevelopment())
 {
     builder.WebHost.UseUrls("http://0.0.0.0:5132");
 }
-else
+else if (!builder.Environment.IsEnvironment("Testing"))
 {
     var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
     builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
@@ -74,6 +75,30 @@ builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    })
+    .AddMvcOptions(options =>
+    {
+        var mensagens = options.ModelBindingMessageProvider;
+        mensagens.SetAttemptedValueIsInvalidAccessor((valor, campo) =>
+            $"O valor '{valor}' não é válido para {campo}.");
+        mensagens.SetNonPropertyAttemptedValueIsInvalidAccessor(valor =>
+            $"O valor '{valor}' não é válido.");
+        mensagens.SetUnknownValueIsInvalidAccessor(campo =>
+            $"O valor informado não é válido para {campo}.");
+        mensagens.SetValueIsInvalidAccessor(campo =>
+            $"O valor não é válido para {campo}.");
+        mensagens.SetNonPropertyUnknownValueIsInvalidAccessor(() =>
+            "O valor informado não é válido.");
+        mensagens.SetValueMustBeANumberAccessor(campo =>
+            $"O campo {campo} deve ser um número.");
+        mensagens.SetNonPropertyValueMustBeANumberAccessor(() =>
+            "O campo deve ser um número.");
+        mensagens.SetMissingBindRequiredValueAccessor(campo =>
+            $"O campo {campo} é obrigatório.");
+        mensagens.SetMissingKeyOrValueAccessor(() =>
+            "É preciso informar um valor.");
+        mensagens.SetMissingRequestBodyRequiredValueAccessor(() =>
+            "O corpo da requisição é obrigatório.");
     });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -126,7 +151,8 @@ builder.Services.AddCors(options =>
                 if (uri.Host.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase)) return true;
 
                 return corsOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase);
-            });
+            })
+            .WithExposedHeaders("X-Error-Code");
     });
 });
 
@@ -177,7 +203,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             {
                 var accessToken = context.Request.Query["access_token"];
                 var path = context.HttpContext.Request.Path;
-                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/chat"))
+                var upgrade = context.Request.Headers.Upgrade.ToString();
+                if (!string.IsNullOrEmpty(accessToken)
+                    && path.StartsWithSegments("/hubs/chat")
+                    && string.Equals(upgrade, "websocket", StringComparison.OrdinalIgnoreCase))
                     context.Token = accessToken;
                 return Task.CompletedTask;
             }
@@ -205,46 +234,49 @@ builder.Services.AddResponseCompression(options =>
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    // Só o hop que o proxy acrescenta (o da direita). Um cliente direto não
+    // escolhe o IP do balde mandando X-Forwarded-For.
+    options.ForwardLimit = 1;
     options.KnownNetworks.Clear();
     options.KnownProxies.Clear();
+    // A Railway não publica um CIDR estável. O template antigo de Caddy usa
+    // 100.0.0.0/8, que inclui IPs públicos. A rede interna observada é a
+    // CGNAT RFC 6598, 100.64.0.0/10. Loopback cobre o dev local. ULA cobre IPv6.
+    Rede("127.0.0.0", 8);
+    Rede("10.0.0.0", 8);
+    Rede("172.16.0.0", 12);
+    Rede("192.168.0.0", 16);
+    Rede("100.64.0.0", 10);
+    Rede("::1", 128);
+    Rede("fc00::", 7);
+
+    void Rede(string prefixo, int bits) =>
+        options.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(
+            System.Net.IPAddress.Parse(prefixo), bits));
 });
 
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    options.AddFixedWindowLimiter("login", limiter =>
+    options.OnRejected = async (context, cancellationToken) =>
     {
-        limiter.Window = TimeSpan.FromMinutes(1);
-        limiter.PermitLimit = 10;
-        limiter.QueueLimit = 0;
-    });
-    options.AddFixedWindowLimiter("catalogo", limiter =>
-    {
-        limiter.Window = TimeSpan.FromMinutes(1);
-        limiter.PermitLimit = 120;
-        limiter.QueueLimit = 0;
-    });
-    options.AddFixedWindowLimiter("api", limiter =>
-    {
-        limiter.Window = TimeSpan.FromMinutes(1);
-        limiter.PermitLimit = 300;
-        limiter.QueueLimit = 0;
-    });
-    options.AddFixedWindowLimiter("ia", limiter =>
-    {
-        limiter.Window = TimeSpan.FromMinutes(1);
-        limiter.PermitLimit = 30;
-        limiter.QueueLimit = 0;
-    });
-    options.AddFixedWindowLimiter("rag", limiter =>
-    {
-        limiter.Window = TimeSpan.FromMinutes(1);
-        limiter.PermitLimit = 20;
-        limiter.QueueLimit = 0;
-    });
+        var http = context.HttpContext.Response;
+        http.StatusCode = StatusCodes.Status429TooManyRequests;
+        var segundos = 60;
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out TimeSpan retryAfter))
+            segundos = Math.Max(1, (int)Math.Ceiling(retryAfter.TotalSeconds));
+        http.Headers.RetryAfter = segundos.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        await http.WriteAsJsonAsync(
+            new { message = "Muitas requisições. Tente novamente em instantes." },
+            cancellationToken);
+    };
+    options.AddPolicy("login", ctx => JanelaPorIp(ctx, "login", 10));
+    options.AddPolicy("catalogo", ctx => JanelaPorIp(ctx, "catalogo", 600));
+    options.AddPolicy("api", ctx => JanelaPorIp(ctx, "api", 1200));
+    options.AddPolicy("ia", ctx => JanelaPorIp(ctx, "ia", 30));
+    options.AddPolicy("rag", ctx => JanelaPorIp(ctx, "rag", 20));
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
     {
-        var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         var path = context.Request.Path.Value ?? string.Empty;
         if (path.Equals("/health", StringComparison.OrdinalIgnoreCase)
             || path.StartsWith("/api/health", StringComparison.OrdinalIgnoreCase))
@@ -254,56 +286,46 @@ builder.Services.AddRateLimiter(options =>
         if (path.Contains("/Auth/login", StringComparison.OrdinalIgnoreCase)
             || path.Contains("/Clientes/login", StringComparison.OrdinalIgnoreCase))
         {
-            return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
-            {
-                Window = TimeSpan.FromMinutes(1),
-                PermitLimit = 10,
-                QueueLimit = 0
-            });
+            return JanelaPorIp(context, "login", 10);
         }
 
         if (path.StartsWith("/api/IA", StringComparison.OrdinalIgnoreCase))
-        {
-            return RateLimitPartition.GetFixedWindowLimiter($"ia:{ip}", _ => new FixedWindowRateLimiterOptions
-            {
-                Window = TimeSpan.FromMinutes(1),
-                PermitLimit = 30,
-                QueueLimit = 0
-            });
-        }
+            return JanelaPorIp(context, "ia", 30);
 
         if (path.StartsWith("/api/Rag", StringComparison.OrdinalIgnoreCase))
-        {
-            return RateLimitPartition.GetFixedWindowLimiter($"rag:{ip}", _ => new FixedWindowRateLimiterOptions
-            {
-                Window = TimeSpan.FromMinutes(1),
-                PermitLimit = 20,
-                QueueLimit = 0
-            });
-        }
+            return JanelaPorIp(context, "rag", 20);
+
+        if (path.StartsWith("/hubs/chat", StringComparison.OrdinalIgnoreCase))
+            return RateLimitPartition.GetNoLimiter("chat");
 
         if (path.StartsWith("/api/Feed", StringComparison.OrdinalIgnoreCase)
             || path.StartsWith("/api/Produtos", StringComparison.OrdinalIgnoreCase)
             || path.StartsWith("/api/Lojas", StringComparison.OrdinalIgnoreCase)
             || path.StartsWith("/api/Ofertas", StringComparison.OrdinalIgnoreCase)
-            || path.StartsWith("/api/Weather", StringComparison.OrdinalIgnoreCase))
+            || path.StartsWith("/api/Weather", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("/api/Avaliacoes", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("/api/HistoricoPesquisa/sugestoes", StringComparison.OrdinalIgnoreCase))
         {
-            return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
-            {
-                Window = TimeSpan.FromMinutes(1),
-                PermitLimit = 120,
-                QueueLimit = 0
-            });
+            return JanelaPorIp(context, "catalogo", 600);
         }
 
-        return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
-        {
-            Window = TimeSpan.FromMinutes(1),
-            PermitLimit = 300,
-            QueueLimit = 0
-        });
+        return JanelaPorIp(context, "api", 1200);
     });
 });
+
+static RateLimitPartition<string> JanelaPorIp(HttpContext context, string faixa, int limite)
+{
+    var ip = context.Connection.RemoteIpAddress;
+    if (ip is not null && ip.IsIPv4MappedToIPv6)
+        ip = ip.MapToIPv4();
+    var chave = $"{faixa}:{ip?.ToString() ?? "unknown"}";
+    return RateLimitPartition.GetFixedWindowLimiter(chave, _ => new FixedWindowRateLimiterOptions
+    {
+        Window = TimeSpan.FromMinutes(1),
+        PermitLimit = limite,
+        QueueLimit = 0
+    });
+}
 
 builder.Services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
@@ -475,6 +497,7 @@ builder.Services.AddScoped<IOfertaServico, OfertaServico>();
 // Serviços — Usuários
 builder.Services.AddScoped<IValidadorEmail, ValidadorEmailServico>();
 builder.Services.AddScoped<IClienteServico, ClienteServico>();
+builder.Services.AddScoped<ILojaAcesso, LojaAcesso>();
 builder.Services.AddScoped<IAdminServico, AdminServico>();
 
 // Serviços — Interações
@@ -484,6 +507,8 @@ builder.Services.AddScoped<IAvaliacaoServico, AvaliacaoServico>();
 builder.Services.AddScoped<IPreferenciaClienteServico, PreferenciaClienteServico>();
 builder.Services.AddScoped<IConversaServico, ConversaServico>();
 builder.Services.AddScoped<ChatNotificacaoHelper>();
+builder.Services.AddSingleton<PresencaChat>();
+builder.Services.AddSingleton(TimeProvider.System);
 
 // MotorIA v2
 builder.Services.AddSingleton<ILlmRouterService, LlmRouterService>();
@@ -533,6 +558,38 @@ var app = builder.Build();
 
 app.UseForwardedHeaders();
 
+var diagnosticoProxy = 0;
+app.Use(async (context, next) =>
+{
+    var xff = context.Request.Headers["X-Forwarded-For"].ToString();
+    var peerOriginal = context.Request.Headers["X-Original-For"].ToString();
+    if (DeveRegistrarProxy(xff, peerOriginal, ref diagnosticoProxy))
+    {
+        var log = context.RequestServices.GetRequiredService<ILoggerFactory>()
+            .CreateLogger("PrecoCerto.Proxy");
+        log.LogInformation(
+            "Proxy: RemoteIp={RemoteIp} XForwardedForAplicado={Aplicado} PeerOriginal={Peer}",
+            context.Connection.RemoteIpAddress,
+            peerOriginal.Length > 0,
+            peerOriginal.Length > 0 ? peerOriginal : context.Connection.RemoteIpAddress);
+    }
+
+    await next(context);
+});
+
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next(context);
+    }
+    catch (Pc.Dominio.Comum.PaginacaoInvalidaException)
+    {
+        context.Response.StatusCode = StatusCodes.Status400BadRequest;
+        await context.Response.WriteAsJsonAsync(new { message = "Página inválida." });
+    }
+});
+
 // CORS antes de redirecionamentos — preflight OPTIONS não pode receber 301/302.
 app.UseCors("AppPolicy");
 
@@ -555,3 +612,13 @@ app.MapControllers();
 app.MapHub<Pc.WebApi.Hubs.ChatHub>("/hubs/chat");
 
 app.Run();
+
+public partial class Program
+{
+    internal static bool DeveRegistrarProxy(string xff, string originalFor, ref int estado)
+    {
+        if (xff.Length == 0 && originalFor.Length == 0)
+            return false;
+        return Interlocked.Exchange(ref estado, 1) == 0;
+    }
+}

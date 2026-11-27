@@ -1,0 +1,128 @@
+using System.Collections.Concurrent;
+using Microsoft.AspNetCore.SignalR;
+
+namespace Pc.WebApi.Hubs
+{
+    /// <summary>
+    /// Conexões do chat ainda abertas. Revogar tira o usuário dos grupos daquela loja.
+    /// </summary>
+    public sealed class PresencaChat
+    {
+        private sealed class Conexao
+        {
+            public Guid UsuarioId { get; init; }
+            public HashSet<Guid> Lojas { get; } = new();
+            public List<(Guid LojaId, string Codigo)> Conversas { get; } = new();
+        }
+
+        private readonly IHubContext<ChatHub> _hub;
+        private readonly ConcurrentDictionary<string, Conexao> _conexoes = new();
+
+        public PresencaChat(IHubContext<ChatHub> hub)
+        {
+            _hub = hub;
+        }
+
+        public void Ligar(string connectionId, Guid usuarioId) =>
+            Obter(connectionId, usuarioId);
+
+        public void Loja(string connectionId, Guid usuarioId, Guid lojaId)
+        {
+            var conexao = Obter(connectionId, usuarioId);
+            lock (conexao) conexao.Lojas.Add(lojaId);
+        }
+
+        public void Conversa(string connectionId, Guid usuarioId, Guid lojaId, string codigo)
+        {
+            if (string.IsNullOrEmpty(codigo))
+                return;
+
+            var conexao = Obter(connectionId, usuarioId);
+            lock (conexao)
+            {
+                if (conexao.Conversas.Exists(c => c.LojaId == lojaId && c.Codigo == codigo))
+                    return;
+                conexao.Conversas.Add((lojaId, codigo));
+            }
+        }
+
+        private Conexao Obter(string connectionId, Guid usuarioId) =>
+            _conexoes.GetOrAdd(connectionId, _ => new Conexao { UsuarioId = usuarioId });
+
+        public void Desligar(string connectionId) =>
+            _conexoes.TryRemove(connectionId, out _);
+
+        public async Task RevogarAsync(Guid usuarioId, Guid lojaId)
+        {
+            foreach (var (connectionId, conexao) in _conexoes)
+            {
+                if (conexao.UsuarioId != usuarioId)
+                    continue;
+
+                var grupos = GruposDaLoja(conexao, lojaId);
+                foreach (var grupo in grupos)
+                    await _hub.Groups.RemoveFromGroupAsync(connectionId, grupo);
+            }
+        }
+
+        public async Task RevogarUsuarioAsync(Guid usuarioId)
+        {
+            foreach (var lojaId in LojasDe(conexao => conexao.UsuarioId == usuarioId))
+                await RevogarAsync(usuarioId, lojaId);
+        }
+
+        public async Task RevogarLojaAsync(Guid lojaId)
+        {
+            var usuarios = new HashSet<Guid>();
+            foreach (var (_, conexao) in _conexoes)
+            {
+                lock (conexao)
+                {
+                    if (conexao.Lojas.Contains(lojaId) || conexao.Conversas.Exists(c => c.LojaId == lojaId))
+                        usuarios.Add(conexao.UsuarioId);
+                }
+            }
+
+            foreach (var usuarioId in usuarios)
+                await RevogarAsync(usuarioId, lojaId);
+        }
+
+        private List<Guid> LojasDe(Func<Conexao, bool> filtro)
+        {
+            var lojas = new HashSet<Guid>();
+            foreach (var (_, conexao) in _conexoes)
+            {
+                if (!filtro(conexao))
+                    continue;
+                lock (conexao)
+                {
+                    foreach (var loja in conexao.Lojas)
+                        lojas.Add(loja);
+                    foreach (var conversa in conexao.Conversas)
+                        lojas.Add(conversa.LojaId);
+                }
+            }
+
+            return lojas.ToList();
+        }
+
+        private static List<string> GruposDaLoja(Conexao conexao, Guid lojaId)
+        {
+            lock (conexao)
+            {
+                var grupos = new List<string>();
+                if (conexao.Lojas.Remove(lojaId))
+                    grupos.Add($"loja:{lojaId}");
+                for (var i = conexao.Conversas.Count - 1; i >= 0; i--)
+                {
+                    if (conexao.Conversas[i].LojaId != lojaId)
+                        continue;
+                    grupos.Add(conexao.Conversas[i].Codigo);
+                    conexao.Conversas.RemoveAt(i);
+                }
+
+                return grupos;
+            }
+        }
+    }
+}

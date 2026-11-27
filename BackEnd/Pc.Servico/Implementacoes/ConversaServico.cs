@@ -1,5 +1,6 @@
 using System.Globalization;
 using Pc.Dominio.Entities.Interacoes;
+using Pc.Dominio.Entities.Usuarios;
 using Pc.Dominio.Enums;
 using Pc.Repositorio.Interfaces;
 using Pc.Servico.Interfaces;
@@ -11,30 +12,41 @@ namespace Pc.Servico.Implementacoes
         private static readonly CultureInfo CulturaPtBr = CultureInfo.GetCultureInfo("pt-BR");
         private static readonly TimeSpan JanelaMensagemInteresse = TimeSpan.FromMinutes(10);
 
+        /// <summary>Chat aberto sem heartbeat mais novo que isto conta como fechado.</summary>
+        public static readonly TimeSpan TtlChatAberto = TimeSpan.FromMinutes(5);
+
         private readonly IConversaRepositorio _repo;
+        private readonly IClienteRepositorio _usuarios;
         private readonly ILojaRepositorio _lojaRepo;
         private readonly IProdutoRepositorio _produtoRepo;
         private readonly IOfertaRepositorio _ofertaRepo;
+        private readonly ILojaAcesso _acesso;
+        private readonly TimeProvider _relogio;
 
         public ConversaServico(
             IConversaRepositorio repo,
+            IClienteRepositorio usuarios,
             ILojaRepositorio lojaRepo,
             IProdutoRepositorio produtoRepo,
-            IOfertaRepositorio ofertaRepo)
+            IOfertaRepositorio ofertaRepo,
+            ILojaAcesso acesso,
+            TimeProvider relogio)
         {
             _repo = repo;
+            _usuarios = usuarios;
             _lojaRepo = lojaRepo;
             _produtoRepo = produtoRepo;
             _ofertaRepo = ofertaRepo;
+            _acesso = acesso;
+            _relogio = relogio;
         }
 
         public async Task<List<Conversa>> ListarDoUsuarioAsync(Guid usuarioId, PapelUsuario papel, Guid? lojaId)
         {
             if (papel is PapelUsuario.Lojista or PapelUsuario.Vendedor)
             {
-                if (!lojaId.HasValue)
-                    return new List<Conversa>();
-                return await _repo.ListarPorLojaAsync(lojaId.Value);
+                await ExigirStaffAsync(usuarioId, papel, lojaId);
+                return await _repo.ListarPorLojaAsync(lojaId!.Value);
             }
 
             return await _repo.ListarPorClienteAsync(usuarioId);
@@ -64,19 +76,20 @@ namespace Pc.Servico.Implementacoes
             _repo.ObterPorIdAsync(conversaId);
 
         public async Task<List<Mensagem>> ListarMensagensAsync(
-            Guid conversaId, Guid usuarioId, PapelUsuario papel, Guid? lojaId, DateTime? apos, DateTime? antes = null, int pageSize = 50)
+            Guid conversaId, Guid usuarioId, PapelUsuario papel, DateTime? apos, DateTime? antes = null, int pageSize = 50)
         {
-            if (!await UsuarioPodeAcessarAsync(conversaId, usuarioId, papel, lojaId))
+            if (!await UsuarioPodeAcessarAsync(conversaId, usuarioId, papel))
                 throw new UnauthorizedAccessException("Acesso negado à conversa.");
 
             return await _repo.ListarMensagensAsync(conversaId, apos, antes, pageSize);
         }
 
-        public Task<Dictionary<Guid, int>> ContarNaoLidasPorConversasAsync(
+        public async Task<Dictionary<Guid, int>> ContarNaoLidasPorConversasAsync(
             Guid usuarioId, PapelUsuario papel, Guid? lojaId)
         {
+            await ExigirStaffAsync(usuarioId, papel, lojaId);
             var ehLojista = papel is PapelUsuario.Lojista or PapelUsuario.Vendedor;
-            return _repo.ContarNaoLidasPorConversasAsync(usuarioId, ehLojista, lojaId);
+            return await _repo.ContarNaoLidasPorConversasAsync(usuarioId, ehLojista, lojaId);
         }
 
         public Task<Dictionary<Guid, string>> ObterUltimasMensagensTextoAsync(IEnumerable<Guid> conversaIds) =>
@@ -94,11 +107,7 @@ namespace Pc.Servico.Implementacoes
             if (conversa.ClienteId == remetenteId)
                 remetentePapel = PapelUsuario.Cliente;
 
-            var lojaId = remetentePapel is PapelUsuario.Lojista or PapelUsuario.Vendedor
-                ? conversa.LojaId
-                : (Guid?)null;
-
-            if (!await UsuarioPodeAcessarAsync(conversaId, remetenteId, remetentePapel, lojaId))
+            if (!await UsuarioPodeAcessarAsync(conversaId, remetenteId, remetentePapel))
                 throw new UnauthorizedAccessException("Acesso negado à conversa.");
 
             var mensagem = new Mensagem
@@ -152,21 +161,75 @@ namespace Pc.Servico.Implementacoes
         public Task MarcarComoRecebidasAsync(Guid conversaId, Guid leitorId) =>
             _repo.MarcarMensagensComoRecebidasAsync(conversaId, leitorId);
 
-        public Task<int> ContarNaoLidasAsync(Guid usuarioId, PapelUsuario papel, Guid? lojaId)
+        public async Task<int> ContarNaoLidasAsync(Guid usuarioId, PapelUsuario papel, Guid? lojaId)
         {
+            await ExigirStaffAsync(usuarioId, papel, lojaId);
             var ehLojista = papel is PapelUsuario.Lojista or PapelUsuario.Vendedor;
-            return _repo.ContarNaoLidasAsync(usuarioId, ehLojista, lojaId);
+            return await _repo.ContarNaoLidasAsync(usuarioId, ehLojista, lojaId);
         }
 
-        public Task<bool> TemNaoLidasAsync(
+        public async Task<bool> TemNaoLidasAsync(
             Guid usuarioId, PapelUsuario papel, Guid? lojaId, DateTime? desde = null)
         {
+            await ExigirStaffAsync(usuarioId, papel, lojaId);
+            if (!desde.HasValue)
+            {
+                var estado = await ObterEstadoChatAsync(usuarioId);
+                desde = estado.ChatFechadoEm;
+            }
+
             var ehLojista = papel is PapelUsuario.Lojista or PapelUsuario.Vendedor;
-            return _repo.TemNaoLidasAsync(usuarioId, ehLojista, lojaId, desde);
+            return await _repo.TemNaoLidasAsync(usuarioId, ehLojista, lojaId, desde);
         }
 
+        public async Task<bool> AbrirChatAsync(Guid usuarioId)
+        {
+            var usuario = await _usuarios.ObterPorIdAsync(usuarioId);
+            if (usuario == null)
+                return false;
+
+            usuario.ChatAberto = true;
+            usuario.ChatAtivoEm = AgoraUtc();
+            await _usuarios.AtualizarAsync(usuario);
+            return true;
+        }
+
+        public async Task<bool> FecharChatAsync(Guid usuarioId)
+        {
+            var usuario = await _usuarios.ObterPorIdAsync(usuarioId);
+            if (usuario == null)
+                return false;
+
+            usuario.ChatAberto = false;
+            usuario.ChatFechadoEm = AgoraUtc();
+            await _usuarios.AtualizarAsync(usuario);
+            return true;
+        }
+
+        public async Task<(bool ChatAberto, DateTime? ChatFechadoEm)> ObterEstadoChatAsync(Guid usuarioId)
+        {
+            var usuario = await _usuarios.ObterPorIdAsync(usuarioId);
+            if (usuario == null)
+                return (false, null);
+
+            if (ChatExpirado(usuario))
+                return (false, EmUtc(usuario.ChatAtivoEm!.Value));
+
+            return (usuario.ChatAberto, usuario.ChatFechadoEm is DateTime fechado ? EmUtc(fechado) : null);
+        }
+
+        private bool ChatExpirado(Usuario usuario) =>
+            usuario.ChatAberto
+            && usuario.ChatAtivoEm is DateTime ativo
+            && AgoraUtc() - EmUtc(ativo) > TtlChatAberto;
+
+        private DateTime AgoraUtc() => _relogio.GetUtcNow().UtcDateTime;
+
+        private static DateTime EmUtc(DateTime valor) =>
+            valor.Kind == DateTimeKind.Utc ? valor : DateTime.SpecifyKind(valor, DateTimeKind.Utc);
+
         public async Task<bool> UsuarioPodeAcessarAsync(
-            Guid conversaId, Guid usuarioId, PapelUsuario papel, Guid? lojaId)
+            Guid conversaId, Guid usuarioId, PapelUsuario papel)
         {
             var conversa = await _repo.ObterPorIdAsync(conversaId);
             if (conversa == null)
@@ -176,9 +239,18 @@ namespace Pc.Servico.Implementacoes
                 return true;
 
             if (papel is PapelUsuario.Lojista or PapelUsuario.Vendedor)
-                return lojaId.HasValue && conversa.LojaId == lojaId.Value;
+                return await _acesso.PertenceAsync(usuarioId, conversa.LojaId);
 
             return false;
+        }
+
+        private async Task ExigirStaffAsync(Guid usuarioId, PapelUsuario papel, Guid? lojaId)
+        {
+            if (papel is not (PapelUsuario.Lojista or PapelUsuario.Vendedor))
+                return;
+
+            if (!lojaId.HasValue || !await _acesso.PertenceAsync(usuarioId, lojaId.Value))
+                throw new UnauthorizedAccessException("Acesso negado à loja.");
         }
 
         internal static string MontarMensagemInteresse(string nomeProduto, decimal preco, string? nomeLoja)

@@ -1,5 +1,6 @@
-import { View, Text, Pressable, Alert, ActivityIndicator } from 'react-native';
-import { useState } from 'react';
+import { View, Text, Pressable, Alert, ActivityIndicator, Platform } from 'react-native';
+import { useRef, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import { criarLoja } from '../../services/lojaService';
 import { useAuth } from '../../context/AuthContext';
 import { buscarEnderecoPorCep, geocodificarEndereco } from '../../services/enderecoService';
@@ -12,7 +13,8 @@ import {
   PrimaryButton,
   SecondaryButton,
 } from '../../components/form';
-import { isCnpjValido, isEmailValido, isTelefoneValido } from '../../utils/validacaoUtils';
+import { apenasDigitosCnpj, isCnpjValido, isEmailValido, isTelefoneValido } from '../../utils/validacaoUtils';
+import { FRASES, mensagemErroConsultaCnpj, planejarPreenchimento } from '../../utils/cnpjLoja';
 import { formatApiError } from '../../utils/apiErrorUtils';
 import { useTheme } from '../../context/ThemeContext';
 import { useFormStyles } from '../../hooks/useFormStyles';
@@ -30,9 +32,12 @@ export default function CreateStoreScreen({ navigation }) {
   const [step, setStep] = useState(0);
 
   const [nomeFantasia, setNomeFantasia] = useState('');
+  const [razaoSocial, setRazaoSocial] = useState('');
   const [cnpj, setCnpj] = useState('');
   const [telefone, setTelefone] = useState('');
   const [emailLoja, setEmailLoja] = useState('');
+  const [erroCnpj, setErroCnpj] = useState('');
+  const [confirmacaoCnpj, setConfirmacaoCnpj] = useState(null);
 
   const [cep, setCep] = useState('');
   const [logradouro, setLogradouro] = useState('');
@@ -49,36 +54,99 @@ export default function CreateStoreScreen({ navigation }) {
   const [loadingCnpj, setLoadingCnpj] = useState(false);
   const [loadingCoords, setLoadingCoords] = useState(false);
   const [cnpjVerificado, setCnpjVerificado] = useState(false);
+  const consultaRef = useRef({ digitos: '', dados: null, pedido: null });
+  const geracaoRef = useRef(0);
+  const camposRef = useRef({});
+  camposRef.current = {
+    nomeFantasia,
+    razaoSocial,
+    telefone,
+    email: emailLoja,
+    cep,
+    logradouro,
+    numero,
+    bairro,
+    cidade,
+    estado,
+  };
 
-  async function buscarDadosCnpj() {
-    if (!isCnpjValido(cnpj) || cnpjVerificado) return;
-    setLoadingCnpj(true);
-    try {
-      const data = await consultarCnpj(cnpj);
-      setCnpjVerificado(true);
-      if (data.nomeFantasia && !nomeFantasia.trim()) setNomeFantasia(data.nomeFantasia);
-      if (data.razaoSocial && !nomeFantasia.trim()) setNomeFantasia(data.razaoSocial);
-    } catch (error) {
+  function aplicarCampos(patch) {
+    if (patch.nomeFantasia) setNomeFantasia(patch.nomeFantasia);
+    if (patch.razaoSocial) setRazaoSocial(patch.razaoSocial);
+    if (patch.telefone) setTelefone(patch.telefone);
+    if (patch.email) setEmailLoja(patch.email);
+    if (patch.cep) setCep(patch.cep);
+    if (patch.logradouro) setLogradouro(patch.logradouro);
+    if (patch.numero) setNumero(patch.numero);
+    if (patch.bairro) setBairro(patch.bairro);
+    if (patch.cidade) setCidade(patch.cidade);
+    if (patch.estado) setEstado(patch.estado);
+  }
+
+  function oferecerDadosCnpj(data) {
+    const { vazios, conflitos } = planejarPreenchimento(data, camposRef.current);
+    aplicarCampos(vazios);
+    setConfirmacaoCnpj(Object.keys(conflitos).length ? conflitos : null);
+  }
+
+  function limparConsultaCnpj() {
+    geracaoRef.current += 1;
+    consultaRef.current = { digitos: '', dados: null, pedido: null };
+    setCnpjVerificado(false);
+    setErroCnpj('');
+    setConfirmacaoCnpj(null);
+    setLoadingCnpj(false);
+  }
+
+  async function buscarDadosCnpj(repetir = false) {
+    const digitos = apenasDigitosCnpj(cnpj);
+    if (digitos.length !== 14) return false;
+    if (!isCnpjValido(digitos)) {
+      setErroCnpj(FRASES.cnpj_invalido);
       setCnpjVerificado(false);
-      Alert.alert('CNPJ', formatApiError(error));
-    } finally {
-      setLoadingCnpj(false);
+      return false;
     }
+
+    const atual = consultaRef.current;
+    if (atual.digitos === digitos && atual.dados) {
+      if (repetir) oferecerDadosCnpj(atual.dados);
+      setCnpjVerificado(true);
+      setErroCnpj('');
+      return true;
+    }
+    if (atual.digitos === digitos && atual.pedido) return atual.pedido;
+
+    const geracao = ++geracaoRef.current;
+    setLoadingCnpj(true);
+    setErroCnpj('');
+    setConfirmacaoCnpj(null);
+
+    const pedido = consultarCnpj(digitos)
+      .then((data) => {
+        if (geracaoRef.current !== geracao) return false;
+        consultaRef.current = { digitos, dados: data, pedido: null };
+        setCnpjVerificado(true);
+        oferecerDadosCnpj(data);
+        return true;
+      })
+      .catch((error) => {
+        if (geracaoRef.current !== geracao) return false;
+        consultaRef.current = { digitos: '', dados: null, pedido: null };
+        setCnpjVerificado(false);
+        setErroCnpj(mensagemErroConsultaCnpj(error));
+        return false;
+      })
+      .finally(() => {
+        if (geracaoRef.current === geracao) setLoadingCnpj(false);
+      });
+
+    consultaRef.current = { digitos, dados: null, pedido };
+    return pedido;
   }
 
   async function garantirCnpjNaReceita() {
     if (cnpjVerificado) return true;
-    setLoadingCnpj(true);
-    try {
-      await consultarCnpj(cnpj);
-      setCnpjVerificado(true);
-      return true;
-    } catch (error) {
-      Alert.alert('CNPJ', formatApiError(error));
-      return false;
-    } finally {
-      setLoadingCnpj(false);
-    }
+    return buscarDadosCnpj();
   }
 
   function validarPassoLoja() {
@@ -260,6 +328,7 @@ export default function CreateStoreScreen({ navigation }) {
       // O backend define o usuário autenticado como dono e o promove a Lojista.
       await criarLoja({
         nomeFantasia: nomeFantasia.trim(),
+        razaoSocial: razaoSocial.trim() || null,
         cnpj: cnpj.trim(),
         telefone: telefone.trim() || null,
         email: emailLoja.trim() || session.perfil.email,
@@ -287,6 +356,7 @@ export default function CreateStoreScreen({ navigation }) {
   }
 
   const coordsOk = latitude !== null && longitude !== null;
+  const cnpjCompleto = apenasDigitosCnpj(cnpj).length === 14;
 
   return (
     <FormScreen
@@ -314,16 +384,72 @@ export default function CreateStoreScreen({ navigation }) {
             returnKeyType="next"
           />
           <FormField
+            label="Razão social"
+            value={razaoSocial}
+            onChangeText={setRazaoSocial}
+            returnKeyType="next"
+          />
+          <FormField
             label="CNPJ"
             value={cnpj}
             onChangeText={(value) => {
               setCnpj(value);
-              setCnpjVerificado(false);
+              limparConsultaCnpj();
             }}
-            onBlur={buscarDadosCnpj}
+            onBlur={() => buscarDadosCnpj(false)}
+            keyboardType="number-pad"
             returnKeyType="next"
+            rightAccessory={
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={loadingCnpj ? 'Buscando dados do CNPJ…' : 'Buscar dados do CNPJ'}
+                accessibilityState={{ disabled: !cnpjCompleto, busy: loadingCnpj }}
+                disabled={!cnpjCompleto}
+                onPress={() => buscarDadosCnpj(true)}
+                style={({ focused }) => [
+                  lupaBase,
+                  !cnpjCompleto && { opacity: 0.4 },
+                  focused && lupaFoco,
+                ]}
+              >
+                {loadingCnpj ? (
+                  <ActivityIndicator color={colors.primary} size="small" />
+                ) : (
+                  <Ionicons
+                    name="search-outline"
+                    size={20}
+                    color={cnpjCompleto ? colors.primary : colors.textMuted}
+                    accessible={false}
+                  />
+                )}
+              </Pressable>
+            }
           />
-          {loadingCnpj ? <ActivityIndicator color={colors.primary} style={{ marginBottom: 8 }} /> : null}
+          {erroCnpj ? (
+            <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={formStyles.dangerText}>
+              {erroCnpj}
+            </Text>
+          ) : null}
+          {confirmacaoCnpj ? (
+            <View accessibilityRole="alert">
+              <Text style={formStyles.sectionHint}>
+                Alguns campos já estão preenchidos. Substituir pelos dados do CNPJ?
+              </Text>
+              <SecondaryButton
+                label="Manter"
+                accessibilityLabel="Manter o que já digitei"
+                onPress={() => setConfirmacaoCnpj(null)}
+              />
+              <PrimaryButton
+                label="Substituir"
+                accessibilityLabel="Substituir pelos dados do CNPJ"
+                onPress={() => {
+                  aplicarCampos(confirmacaoCnpj);
+                  setConfirmacaoCnpj(null);
+                }}
+              />
+            </View>
+          ) : null}
           <FormField
             label="Telefone"
             value={telefone}
@@ -472,3 +598,14 @@ export default function CreateStoreScreen({ navigation }) {
     </FormScreen>
   );
 }
+
+const lupaBase = {
+  width: 44,
+  height: 44,
+  alignItems: 'center',
+  justifyContent: 'center',
+  flexShrink: 0,
+  ...(Platform.OS === 'web' ? { cursor: 'pointer' } : null),
+};
+
+const lupaFoco = Platform.OS === 'web' ? { boxShadow: '0 0 0 2px rgba(14, 124, 102, 0.45)' } : null;

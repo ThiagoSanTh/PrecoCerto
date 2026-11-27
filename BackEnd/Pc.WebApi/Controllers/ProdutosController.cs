@@ -17,11 +17,16 @@ namespace Pc.WebApi.Controllers
     {
         private readonly IProdutoServico _produtoServico;
         private readonly IIdCodificador _idCodificador;
+        private readonly ILojaAcesso _lojaAcesso;
 
-        public ProdutosController(IProdutoServico produtoServico, IIdCodificador idCodificador)
+        public ProdutosController(
+            IProdutoServico produtoServico,
+            IIdCodificador idCodificador,
+            ILojaAcesso lojaAcesso)
         {
             _produtoServico = produtoServico;
             _idCodificador = idCodificador;
+            _lojaAcesso = lojaAcesso;
         }
 
         [HttpGet]
@@ -66,7 +71,7 @@ namespace Pc.WebApi.Controllers
             if (!dto.LojaId.HasValue)
                 return BadRequest("LojaId � obrigat�rio.");
 
-            if (!Authz.OwnsLoja(this, dto.LojaId.Value))
+            if (!await Authz.PertenceAsync(User, dto.LojaId.Value, _lojaAcesso))
                 return Forbid();
 
             var produto = new Produto
@@ -93,7 +98,7 @@ namespace Pc.WebApi.Controllers
         [Authorize(Roles = "Lojista,Vendedor,Admin")]
         public async Task<IActionResult> Atualizar(Guid id, [FromBody] ProdutoAtualizarDto dto)
         {
-            if (!Authz.OwnsLoja(this, dto.LojaId))
+            if (!await Authz.PertenceAsync(User, dto.LojaId, _lojaAcesso))
                 return Forbid();
 
             try
@@ -126,7 +131,7 @@ namespace Pc.WebApi.Controllers
         [Authorize(Roles = "Lojista,Vendedor,Admin")]
         public async Task<IActionResult> Deletar(Guid id, [FromQuery] Guid lojaId)
         {
-            if (!Authz.OwnsLoja(this, lojaId))
+            if (!await Authz.PertenceAsync(User, lojaId, _lojaAcesso))
                 return Forbid();
 
             try

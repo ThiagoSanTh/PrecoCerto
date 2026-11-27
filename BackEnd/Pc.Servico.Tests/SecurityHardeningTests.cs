@@ -138,7 +138,7 @@ namespace Pc.Servico.Tests
                     TermoPesquisa = "arroz"
                 });
 
-            var controller = new HistoricoPesquisaController(servico.Object)
+            var controller = new HistoricoPesquisaController(servico.Object, Mock.Of<ILojaAcesso>())
             {
                 ControllerContext = new ControllerContext
                 {
@@ -164,7 +164,13 @@ namespace Pc.Servico.Tests
                     new() { Id = Guid.NewGuid(), ClienteId = donoId, TermoPesquisa = "arroz integral" }
                 });
 
-            var controller = new HistoricoPesquisaController(servico.Object);
+            var controller = new HistoricoPesquisaController(servico.Object, Mock.Of<ILojaAcesso>())
+            {
+                ControllerContext = new ControllerContext
+                {
+                    HttpContext = new DefaultHttpContext()
+                }
+            };
 
             var vazio = await controller.ObterSugestoes("   ");
             Assert.IsType<OkObjectResult>(vazio);

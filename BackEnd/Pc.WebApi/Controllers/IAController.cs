@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Pc.Servico.Interfaces;
 using Pc.Servico.Interfaces.MotorIA;
 using Pc.Servico.Modelos.MotorIA;
 using Pc.WebApi.Authorization;
@@ -22,11 +23,13 @@ namespace Pc.WebApi.Controllers
     {
         private readonly IMotorIA _motorIA;
         private readonly ILogger<IAController> _logger;
+        private readonly ILojaAcesso? _lojaAcesso;
 
-        public IAController(IMotorIA motorIA, ILogger<IAController> logger)
+        public IAController(IMotorIA motorIA, ILogger<IAController> logger, ILojaAcesso? lojaAcesso = null)
         {
             _motorIA = motorIA;
             _logger = logger;
+            _lojaAcesso = lojaAcesso;
         }
 
         [HttpPost("chat")]
@@ -116,7 +119,13 @@ namespace Pc.WebApi.Controllers
             if (modo == "loja" || request.LojaIdUsuario.HasValue)
             {
                 lojaAlvo = request.LojaIdUsuario ?? User.GetLojaId();
-                if (!lojaAlvo.HasValue || !Authz.OwnsLoja(this, lojaAlvo.Value))
+                if (!lojaAlvo.HasValue)
+                    return Forbid();
+
+                var pertence = _lojaAcesso is not null
+                    ? await Authz.PertenceAsync(User, lojaAlvo.Value, _lojaAcesso)
+                    : Authz.OwnsLoja(this, lojaAlvo.Value);
+                if (!pertence)
                     return Forbid();
             }
 

@@ -46,6 +46,10 @@ export function computeDeviceLayoutProfile({
   hasHoverCapability = false,
   maxTouchPoints = 0,
   isStandalone = false,
+  topInset = 0,
+  bottomInset = 0,
+  leftInset = 0,
+  rightInset = 0,
 } = {}) {
   const safeWidth = Math.max(0, Number(width) || 0);
   const safeHeight = Math.max(0, Number(height) || 0);
@@ -121,9 +125,18 @@ export function computeDeviceLayoutProfile({
             ? 1
             : 2;
 
+  const inset = (value) => Math.max(0, Number(value) || 0);
+
   return {
     width: safeWidth,
     height: safeHeight,
+    platform: platformOS,
+    insets: {
+      top: inset(topInset),
+      bottom: inset(bottomInset),
+      left: inset(leftInset),
+      right: inset(rightInset),
+    },
     os,
     isWeb,
     isNative,

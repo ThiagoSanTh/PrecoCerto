@@ -57,6 +57,7 @@ export default function ProductActionBar({
           ]}
           onPress={onFavorito}
           disabled={favoritoLoading}
+          accessibilityRole="button"
           accessibilityLabel={ehFavorito ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
         >
           {favoritoLoading ? (
@@ -74,6 +75,7 @@ export default function ProductActionBar({
       <Pressable
         style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
         onPress={onChat}
+        accessibilityRole="button"
         accessibilityLabel="Falar com a loja"
       >
         <Ionicons name="chatbubble-outline" size={22} color={colors.text} />
@@ -82,6 +84,7 @@ export default function ProductActionBar({
       <Pressable
         style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
         onPress={onCompartilhar}
+        accessibilityRole="button"
         accessibilityLabel="Compartilhar produto"
       >
         <Ionicons name="share-outline" size={22} color={colors.text} />

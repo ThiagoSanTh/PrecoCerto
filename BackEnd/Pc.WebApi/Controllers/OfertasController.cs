@@ -15,11 +15,19 @@ namespace Pc.WebApi.Controllers
     {
         private readonly IOfertaServico _ofertaServico;
         private readonly IIdCodificador _idCodificador;
+        private readonly IProdutoServico _produtoServico;
+        private readonly ILojaAcesso _lojaAcesso;
 
-        public OfertasController(IOfertaServico ofertaServico, IIdCodificador idCodificador)
+        public OfertasController(
+            IOfertaServico ofertaServico,
+            IIdCodificador idCodificador,
+            IProdutoServico produtoServico,
+            ILojaAcesso lojaAcesso)
         {
             _ofertaServico = ofertaServico;
             _idCodificador = idCodificador;
+            _produtoServico = produtoServico;
+            _lojaAcesso = lojaAcesso;
         }
 
         [HttpGet]
@@ -34,6 +42,7 @@ namespace Pc.WebApi.Controllers
 
         [HttpGet("{id:guid}")]
         [AllowAnonymous]
+        [EnableRateLimiting("catalogo")]
         public async Task<IActionResult> ObterPorId(Guid id)
         {
             var oferta = await _ofertaServico.ObterPorIdAsync(id);
@@ -57,8 +66,13 @@ namespace Pc.WebApi.Controllers
         [Authorize(Roles = "Lojista,Vendedor,Admin")]
         public async Task<IActionResult> Adicionar([FromBody] OfertaCriarDto dto)
         {
-            if (!Authz.OwnsLoja(this, dto.LojaId))
+            if (!await Authz.PertenceAsync(User, dto.LojaId, _lojaAcesso))
                 return Forbid();
+
+            var produtoInvalido = await RejeitarProdutoAsync(dto.ProdutoId, dto.LojaId);
+            if (produtoInvalido is not null)
+                return produtoInvalido;
+
             var oferta = new Oferta
             {
                 ProdutoId = dto.ProdutoId,
@@ -80,12 +94,18 @@ namespace Pc.WebApi.Controllers
         [Authorize(Roles = "Lojista,Vendedor,Admin")]
         public async Task<IActionResult> Atualizar(Guid id, [FromBody] OfertaCriarDto dto)
         {
-            if (!Authz.OwnsLoja(this, dto.LojaId))
-                return Forbid();
             var ofertaExistente = await _ofertaServico.ObterPorIdAsync(id);
 
             if (ofertaExistente == null)
                 return NotFound("Oferta n?o encontrada.");
+
+            if (dto.LojaId != ofertaExistente.LojaId
+                || !await Authz.PertenceAsync(User, ofertaExistente.LojaId, _lojaAcesso))
+                return Forbid();
+
+            var produtoInvalido = await RejeitarProdutoAsync(dto.ProdutoId, ofertaExistente.LojaId);
+            if (produtoInvalido is not null)
+                return produtoInvalido;
 
             ofertaExistente.ProdutoId = dto.ProdutoId;
             ofertaExistente.LojaId = dto.LojaId;
@@ -111,11 +131,21 @@ namespace Pc.WebApi.Controllers
             if (ofertaExistente == null)
                 return NotFound("Oferta n?o encontrada.");
 
-            if (!Authz.OwnsLoja(this, ofertaExistente.LojaId))
+            if (!await Authz.PertenceAsync(User, ofertaExistente.LojaId, _lojaAcesso))
                 return Forbid();
 
             await _ofertaServico.RemoverAsync(id);
             return NoContent();
+        }
+
+        private async Task<IActionResult?> RejeitarProdutoAsync(Guid produtoId, Guid lojaId)
+        {
+            var produto = await _produtoServico.ObterPorIdAsync(produtoId);
+            if (produto is null)
+                return NotFound("Produto não encontrado.");
+            if (produto.LojaId != lojaId)
+                return BadRequest("O produto não pertence à loja da oferta.");
+            return null;
         }
 
         private OfertaRespostaDto MapResposta(Oferta oferta) => new()

@@ -76,6 +76,7 @@ export async function removerFavoritoLoja(clienteId, lojaId) {
 }
 
 export async function verificarFavorito(clienteId, produtoId = null, lojaId = null) {
+  if (!clienteId) return false;
   const params = new URLSearchParams();
   if (produtoId) params.append('produtoId', produtoId);
   if (lojaId) params.append('lojaId', lojaId);

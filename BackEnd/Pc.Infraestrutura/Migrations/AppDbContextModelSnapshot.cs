@@ -667,6 +667,17 @@ namespace Pc.Infraestrutura.Migrations
                     b.Property<string>("Cargo")
                         .HasColumnType("text");
 
+                    b.Property<bool>("ChatAberto")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime?>("ChatAtivoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ChatFechadoEm")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime?>("DataAtualizacao")
                         .HasColumnType("timestamp with time zone");
 

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Pc.Dominio.Entities.Interacoes;
 using Pc.Servico.Interfaces;
 using Pc.WebApi.Authorization;
@@ -15,13 +16,17 @@ namespace Pc.WebApi.Controllers
     public class HistoricoPesquisaController : ControllerBase
     {
         private readonly IHistoricoPesquisaServico _historicoPesquisaServico;
+        private readonly ILojaAcesso _lojaAcesso;
 
         /// <summary>
         /// Injeta o serviço de histórico
         /// </summary>
-        public HistoricoPesquisaController(IHistoricoPesquisaServico historicoPesquisaServico)
+        public HistoricoPesquisaController(
+            IHistoricoPesquisaServico historicoPesquisaServico,
+            ILojaAcesso lojaAcesso)
         {
             _historicoPesquisaServico = historicoPesquisaServico;
+            _lojaAcesso = lojaAcesso;
         }
 
         /// <summary>
@@ -137,21 +142,36 @@ namespace Pc.WebApi.Controllers
         /// </summary>
         [HttpGet("sugestoes")]
         [AllowAnonymous]
+        [EnableRateLimiting("catalogo")]
         public async Task<IActionResult> ObterSugestoes([FromQuery] string? termo = null)
         {
+            if (termo is not null && termo.Contains('\0'))
+                return BadRequest(new { message = "Termo inválido." });
+
             var limpo = termo?.Trim();
-            if (string.IsNullOrWhiteSpace(limpo) || limpo.Length < 2 || limpo.Length > 100)
+            if (string.IsNullOrWhiteSpace(limpo) || limpo.Length > 100)
                 return Ok(Array.Empty<object>());
 
             var sugestoes = await _historicoPesquisaServico.ObterSugestoesAsync(limpo);
+            var autenticado = User.Identity?.IsAuthenticated == true;
 
             var resposta = sugestoes
                 .GroupBy(h => h.TermoPesquisa)
                 .Select(g => g.First())
-                .Select(h => new
-                {
-                    termoPesquisa = h.TermoPesquisa
-                });
+                .Select(h => autenticado
+                    ? (object)new HistoricoPesquisaRespostaDto
+                    {
+                        Id = h.Id,
+                        ClienteId = h.ClienteId,
+                        TermoPesquisa = h.TermoPesquisa,
+                        DataPesquisa = h.DataPesquisa
+                    }
+                    : new
+                    {
+                        h.Id,
+                        h.TermoPesquisa,
+                        h.DataPesquisa
+                    });
 
             return Ok(resposta);
         }
@@ -201,7 +221,7 @@ namespace Pc.WebApi.Controllers
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> ObterRelatorioLoja(Guid lojaId)
         {
-            if (!Authz.OwnsLoja(this, lojaId))
+            if (!await Authz.PertenceAsync(User, lojaId, _lojaAcesso))
                 return Forbid();
 
             var relatorio = await _historicoPesquisaServico.ObterRelatorioLojaAsync(lojaId);

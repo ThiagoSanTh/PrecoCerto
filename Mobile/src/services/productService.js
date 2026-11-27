@@ -1,4 +1,5 @@
 import api from './api';
+import { pageSizeSeguro } from './apiAccess';
 import { listarOfertas } from './ofertaService';
 import {
   mesclarProdutosDaLoja,
@@ -26,7 +27,7 @@ function normalizarPaginado(data) {
 }
 
 export async function listarProdutos(lojaId, page = 1, pageSize = 50) {
-  const params = { page, pageSize };
+  const params = { page, pageSize: pageSizeSeguro(pageSize) };
   if (lojaId) params.lojaId = lojaId;
   const { data } = await api.get('/Produtos', { params });
   return normalizarPaginado(data);
@@ -37,7 +38,7 @@ export async function buscarProdutosPorNome(nome, lojaId, page = 1, pageSize = 2
     nome: nome.trim(),
     lojaId: lojaId || null,
     page,
-    pageSize,
+    pageSize: pageSizeSeguro(pageSize),
   });
   return normalizarPaginado(data);
 }

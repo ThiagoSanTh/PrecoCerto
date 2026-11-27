@@ -4,10 +4,14 @@ namespace Pc.WebApi.DTOs.Comum
 {
     public class RedefinirSenhaDto
     {
-        [Required, MinLength(32), MaxLength(64)]
+        [Required(ErrorMessage = "Token é obrigatório.")]
+        [MinLength(32, ErrorMessage = "Token inválido.")]
+        [MaxLength(64, ErrorMessage = "Token inválido.")]
         public string Token { get; set; } = string.Empty;
 
-        [Required, MinLength(6), MaxLength(100)]
+        [Required(ErrorMessage = "Nova senha é obrigatória.")]
+        [MinLength(6, ErrorMessage = "Senha deve ter pelo menos 6 caracteres.")]
+        [MaxLength(100, ErrorMessage = "Senha deve ter no máximo 100 caracteres.")]
         public string NovaSenha { get; set; } = string.Empty;
     }
 }

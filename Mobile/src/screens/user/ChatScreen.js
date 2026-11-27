@@ -22,8 +22,9 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useChatBadge } from '../../context/ChatBadgeContext';
 import { useTheme } from '../../context/ThemeContext';
+import { usePresencaChat } from '../../hooks/usePresencaChat';
 import { FormScreen } from '../../components/form';
-import { fonts, radii, shadows } from '../../theme';
+import { fonts, inputFontSize, radii, shadows } from '../../theme';
 
 const PAPEL_POR_TIPO = { cliente: 1, lojista: 2, vendedor: 3 };
 
@@ -390,6 +391,7 @@ export function ChatThreadPanel({
 
 export default function ChatScreen({ route, navigation }) {
   const { conversaCodigo, titulo } = route.params || {};
+  usePresencaChat();
 
   return (
     <FormScreen
@@ -512,7 +514,7 @@ const styles = StyleSheet.create({
   inputField: {
     flex: 1,
     fontFamily: fonts.sans,
-    fontSize: 14,
+    fontSize: inputFontSize(14),
     paddingVertical: 6,
     minWidth: 0,
   },

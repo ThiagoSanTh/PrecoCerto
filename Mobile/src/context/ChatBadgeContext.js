@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { useAuth } from './AuthContext';
 import {
   calcularTotalNaoLidas,
@@ -8,6 +8,17 @@ import {
   listarConversas,
   verificarBadgeFallback,
 } from '../services/chatService';
+import {
+  desdeAtual,
+  presencaAoEntrar,
+  presencaBackground,
+  presencaEncerrar,
+  presencaForeground,
+  presencaOcultar,
+  presencaPageHide,
+  presencaRegistrarCheck,
+  presencaUsuario,
+} from '../services/chatPresencaRuntime';
 
 const BADGE_FALLBACK_INTERVAL_MS = 60_000;
 const SYNC_THROTTLE_MS = 5_000;
@@ -66,9 +77,10 @@ export function ChatBadgeProvider({ children }) {
 
     syncEmAndamentoRef.current = true;
     try {
-      const total = await verificarBadgeFallback();
-      setBadgeCount(total);
+      const resultado = await verificarBadgeFallback(desdeAtual());
+      setBadgeCount(resultado.total);
       ultimoSyncEmRef.current = Date.now();
+      if (resultado.consultouRemoto) presencaRegistrarCheck();
     } catch {
       // mantém valor atual
     } finally {
@@ -79,6 +91,10 @@ export function ChatBadgeProvider({ children }) {
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => {
       flagsRef.current.appForeground = next === 'active';
+      if (Platform.OS !== 'web') {
+        if (next === 'background') presencaBackground();
+        else if (next === 'active') presencaForeground();
+      }
       if (next === 'active' && sessionRef.current) {
         syncFallback();
       }
@@ -87,12 +103,39 @@ export function ChatBadgeProvider({ children }) {
   }, [syncFallback]);
 
   useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return undefined;
+    const aoMudarVisibilidade = () => {
+      if (document.visibilityState === 'hidden') presencaOcultar();
+      else presencaForeground();
+    };
+    document.addEventListener('visibilitychange', aoMudarVisibilidade);
+    window.addEventListener('pagehide', presencaPageHide);
+    return () => {
+      document.removeEventListener('visibilitychange', aoMudarVisibilidade);
+      window.removeEventListener('pagehide', presencaPageHide);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!sessionId) {
+      presencaEncerrar();
       setBadgeCount(0);
       setHubConectado(false);
-      return;
+      return undefined;
     }
-    syncFallback({ force: true });
+
+    let vivo = true;
+    (async () => {
+      if (presencaUsuario() !== String(sessionId)) {
+        await presencaAoEntrar(sessionId);
+      }
+      if (!vivo) return;
+      await syncFallback({ force: true });
+    })();
+
+    return () => {
+      vivo = false;
+    };
   }, [modoOperacional, syncFallback]);
 
   useEffect(() => {

@@ -2,11 +2,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pc.Dominio.Entities.Usuarios;
 using Pc.Dominio.Enums;
+using Pc.Servico.Excecoes;
 using Pc.Servico.Interfaces;
 using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Comum;
 using Pc.WebApi.DTOs.Usuarios;
 using Pc.WebApi.Extensions;
+using Pc.WebApi.Hubs;
 using Pc.WebApi.Services;
 
 namespace Pc.WebApi.Controllers
@@ -22,11 +24,19 @@ namespace Pc.WebApi.Controllers
     {
         private readonly IClienteServico _usuarioServico;
         private readonly IIdCodificador _idCodificador;
+        private readonly ILojaAcesso _lojaAcesso;
+        private readonly PresencaChat? _presenca;
 
-        public LojistasController(IClienteServico usuarioServico, IIdCodificador idCodificador)
+        public LojistasController(
+            IClienteServico usuarioServico,
+            IIdCodificador idCodificador,
+            ILojaAcesso lojaAcesso,
+            PresencaChat? presenca = null)
         {
             _usuarioServico = usuarioServico;
             _idCodificador = idCodificador;
+            _lojaAcesso = lojaAcesso;
+            _presenca = presenca;
         }
 
         [HttpGet("{id:guid}")]
@@ -76,7 +86,7 @@ namespace Pc.WebApi.Controllers
         [Authorize(Roles = "Admin,Lojista")]
         public async Task<IActionResult> ListarVendedores(Guid lojaId)
         {
-            if (!Authz.OwnsLoja(this, lojaId))
+            if (!await Authz.PertenceAsync(User, lojaId, _lojaAcesso))
                 return Forbid();
 
             var vendedores = await _usuarioServico.ListarVendedoresPorLojaAsync(lojaId);
@@ -88,7 +98,7 @@ namespace Pc.WebApi.Controllers
         [Authorize(Roles = "Admin,Lojista")]
         public async Task<IActionResult> PromoverVendedor(Guid lojaId, [FromBody] PromoverVendedorDto dto)
         {
-            if (!Authz.OwnsLoja(this, lojaId))
+            if (!await Authz.PertenceAsync(User, lojaId, _lojaAcesso))
                 return Forbid();
 
             Usuario? alvo = null;
@@ -104,6 +114,10 @@ namespace Pc.WebApi.Controllers
             {
                 await _usuarioServico.PromoverParaVendedorAsync(alvo.Id, lojaId, dto.Cargo);
             }
+            catch (VendedorDeOutraLojaException)
+            {
+                return Forbid();
+            }
             catch (Exception ex)
             {
                 return BadRequest(ex.Message);
@@ -118,17 +132,24 @@ namespace Pc.WebApi.Controllers
         [Authorize(Roles = "Admin,Lojista")]
         public async Task<IActionResult> RemoverVendedor(Guid lojaId, Guid usuarioId)
         {
-            if (!Authz.OwnsLoja(this, lojaId))
+            if (!await Authz.PertenceAsync(User, lojaId, _lojaAcesso))
                 return Forbid();
 
             try
             {
-                await _usuarioServico.RemoverVendedorAsync(usuarioId);
+                await _usuarioServico.RemoverVendedorAsync(usuarioId, lojaId);
+            }
+            catch (VendedorDeOutraLojaException)
+            {
+                return Forbid();
             }
             catch (Exception ex)
             {
                 return BadRequest(ex.Message);
             }
+
+            if (_presenca != null)
+                await _presenca.RevogarAsync(usuarioId, lojaId);
 
             return NoContent();
         }
@@ -147,6 +168,8 @@ namespace Pc.WebApi.Controllers
         public async Task<IActionResult> Remover(Guid id)
         {
             await _usuarioServico.RemoverAsync(id);
+            if (_presenca != null)
+                await _presenca.RevogarUsuarioAsync(id);
             return NoContent();
         }
 

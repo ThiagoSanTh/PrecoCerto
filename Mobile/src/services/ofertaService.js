@@ -1,4 +1,5 @@
 import api from './api';
+import { pageSizeSeguro } from './apiAccess';
 
 function normalizarPaginado(data) {
   if (Array.isArray(data)) {
@@ -14,7 +15,7 @@ function normalizarPaginado(data) {
 }
 
 export async function listarOfertas(page = 1, pageSize = 50) {
-  const { data } = await api.get('/Ofertas', { params: { page, pageSize } });
+  const { data } = await api.get('/Ofertas', { params: { page, pageSize: pageSizeSeguro(pageSize) } });
   return normalizarPaginado(data);
 }
 

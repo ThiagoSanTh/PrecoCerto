@@ -109,6 +109,7 @@ export function SegmentedControl({ options = [], value, onChange, style }) {
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
             onPress={() => onChange?.(optValue)}
+            hitSlop={8}
             style={[
               styles.segmentedBtn,
               active && { backgroundColor: colors.ink },
@@ -258,6 +259,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   segmentedBtn: {
+    minHeight: 44,
+    minWidth: 44,
     borderRadius: radii.sm - 2,
     paddingHorizontal: 12,
     paddingVertical: 6,

@@ -11,10 +11,13 @@ using Pc.Servico.Interfaces;
 namespace Pc.Servico.Implementacoes
 {
     /// <summary>
-    /// Consulta CNPJ na OpenCNPJ (primária, CDN estável) com fallback na BrasilAPI.
+    /// Consulta CNPJ na BrasilAPI (https://brasilapi.com.br/api/cnpj/v1/{cnpj}).
     /// </summary>
     public class ConsultaCnpjServico : IConsultaCnpjServico
     {
+        private const string Indisponivel =
+            "Consulta de CNPJ temporariamente indisponível. Tente novamente em instantes.";
+
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
             PropertyNameCaseInsensitive = true,
@@ -41,139 +44,105 @@ namespace Pc.Servico.Implementacoes
             if (_cache.TryGetValue(cacheKey, out CnpjConsultaResultado? cached))
                 return cached;
 
-            var open = await ConsultarOpenCnpjAsync(digitos, cancellationToken);
-            if (open.Resultado is not null)
-            {
-                Cachear(cacheKey, open.Resultado);
-                return open.Resultado;
-            }
-
-            var brasil = await ConsultarBrasilApiAsync(digitos, cancellationToken);
-            if (brasil.Resultado is not null)
-            {
-                Cachear(cacheKey, brasil.Resultado);
-                return brasil.Resultado;
-            }
-
-            if (open.IsNaoEncontrado && (brasil.IsNaoEncontrado || brasil.IsIndisponivel))
+            var json = await BuscarAsync(digitos, cancellationToken);
+            if (json is null || string.IsNullOrWhiteSpace(json.RazaoSocial))
                 return null;
 
-            if (brasil.IsNaoEncontrado && (open.IsNaoEncontrado || open.IsIndisponivel))
-                return null;
-
-            if (open.IsIndisponivel || brasil.IsIndisponivel)
+            var resultado = new CnpjConsultaResultado
             {
-                throw new CnpjConsultaIndisponivelException(
-                    "Consulta de CNPJ temporariamente indisponível. Tente novamente em instantes.");
-            }
-
-            return null;
-        }
-
-        private void Cachear(string cacheKey, CnpjConsultaResultado resultado)
-        {
+                Cnpj = digitos,
+                RazaoSocial = json.RazaoSocial.Trim(),
+                NomeFantasia = Texto(json.NomeFantasia),
+                SituacaoCadastral = json.DescricaoSituacaoCadastral?.Trim() ?? string.Empty,
+                Endereco = Endereco(json),
+                Email = Texto(json.Email),
+                Telefone = Digitos(json.DddTelefone1)
+            };
             _cache.Set(cacheKey, resultado, TimeSpan.FromMinutes(_settings.CacheMinutos));
+            return resultado;
         }
 
-        private async Task<ConsultaProvedorResultado> ConsultarOpenCnpjAsync(string digitos, CancellationToken cancellationToken)
+        private async Task<BrasilApiCnpj?> BuscarAsync(string digitos, CancellationToken cancellationToken)
         {
-            var url = $"{_settings.OpenCnpjBaseUrl.TrimEnd('/')}/{digitos}";
-
             try
             {
-                var response = await _http.GetAsync(url, cancellationToken);
+                var response = await _http.GetAsync(
+                    $"{_settings.BrasilApiBaseUrl.TrimEnd('/')}/cnpj/v1/{digitos}",
+                    cancellationToken);
 
                 if (response.StatusCode == HttpStatusCode.NotFound)
-                    return ConsultaProvedorResultado.NaoEncontrado();
-
-                if (response.StatusCode is HttpStatusCode.TooManyRequests or HttpStatusCode.ServiceUnavailable)
-                    return ConsultaProvedorResultado.Indisponivel();
+                    return null;
 
                 if (!response.IsSuccessStatusCode)
-                    return ConsultaProvedorResultado.Indisponivel();
+                    throw new CnpjConsultaIndisponivelException(Indisponivel);
 
-                var json = await response.Content.ReadFromJsonAsync<OpenCnpjResponse>(JsonOptions, cancellationToken);
-                if (json is null || string.IsNullOrWhiteSpace(json.RazaoSocial))
-                    return ConsultaProvedorResultado.NaoEncontrado();
-
-                return ConsultaProvedorResultado.Encontrado(new CnpjConsultaResultado
-                {
-                    Cnpj = digitos,
-                    RazaoSocial = json.RazaoSocial.Trim(),
-                    NomeFantasia = string.IsNullOrWhiteSpace(json.NomeFantasia) ? null : json.NomeFantasia.Trim(),
-                    SituacaoCadastral = json.SituacaoCadastral?.Trim() ?? string.Empty
-                });
+                return await response.Content.ReadFromJsonAsync<BrasilApiCnpj>(JsonOptions, cancellationToken);
+            }
+            catch (CnpjConsultaIndisponivelException)
+            {
+                throw;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch
             {
-                return ConsultaProvedorResultado.Indisponivel();
+                throw new CnpjConsultaIndisponivelException(Indisponivel);
             }
         }
 
-        private async Task<ConsultaProvedorResultado> ConsultarBrasilApiAsync(string digitos, CancellationToken cancellationToken)
+        private static CnpjEndereco? Endereco(BrasilApiCnpj json)
         {
-            var url = $"{_settings.BrasilApiBaseUrl.TrimEnd('/')}/cnpj/v1/{digitos}";
-
-            try
+            var endereco = new CnpjEndereco
             {
-                var response = await _http.GetAsync(url, cancellationToken);
+                Logradouro = Logradouro(json.DescricaoTipoDeLogradouro, json.Logradouro),
+                Numero = Texto(json.Numero),
+                Complemento = Texto(json.Complemento),
+                Bairro = Texto(json.Bairro),
+                Cidade = Texto(json.Municipio),
+                Uf = Texto(json.Uf),
+                Cep = Digitos(json.Cep)
+            };
 
-                if (response.StatusCode == HttpStatusCode.NotFound)
-                    return ConsultaProvedorResultado.NaoEncontrado();
-
-                if (response.StatusCode is HttpStatusCode.TooManyRequests or HttpStatusCode.ServiceUnavailable)
-                    return ConsultaProvedorResultado.Indisponivel();
-
-                if (!response.IsSuccessStatusCode)
-                    return ConsultaProvedorResultado.Indisponivel();
-
-                var json = await response.Content.ReadFromJsonAsync<BrasilApiCnpjResponse>(JsonOptions, cancellationToken);
-                if (json is null || string.IsNullOrWhiteSpace(json.RazaoSocial))
-                    return ConsultaProvedorResultado.NaoEncontrado();
-
-                return ConsultaProvedorResultado.Encontrado(new CnpjConsultaResultado
-                {
-                    Cnpj = digitos,
-                    RazaoSocial = json.RazaoSocial.Trim(),
-                    NomeFantasia = string.IsNullOrWhiteSpace(json.NomeFantasia) ? null : json.NomeFantasia.Trim(),
-                    SituacaoCadastral = json.DescricaoSituacaoCadastral?.Trim() ?? string.Empty
-                });
-            }
-            catch
+            if (endereco.Logradouro is null
+                && endereco.Numero is null
+                && endereco.Complemento is null
+                && endereco.Bairro is null
+                && endereco.Cidade is null
+                && endereco.Uf is null
+                && endereco.Cep is null)
             {
-                return ConsultaProvedorResultado.Indisponivel();
+                return null;
             }
+
+            return endereco;
         }
 
-        private sealed class ConsultaProvedorResultado
+        private static string? Logradouro(string? tipo, string? logradouro)
         {
-            public CnpjConsultaResultado? Resultado { get; init; }
-            public bool IsNaoEncontrado { get; init; }
-            public bool IsIndisponivel { get; init; }
-
-            public static ConsultaProvedorResultado Encontrado(CnpjConsultaResultado resultado) =>
-                new() { Resultado = resultado };
-
-            public static ConsultaProvedorResultado NaoEncontrado() =>
-                new() { IsNaoEncontrado = true };
-
-            public static ConsultaProvedorResultado Indisponivel() =>
-                new() { IsIndisponivel = true };
+            var nome = Texto(logradouro);
+            var prefixo = Texto(tipo);
+            if (prefixo is null || nome is null)
+                return nome;
+            if (nome.StartsWith(prefixo, StringComparison.OrdinalIgnoreCase))
+                return nome;
+            return $"{prefixo} {nome}";
         }
 
-        private sealed class OpenCnpjResponse
+        private static string? Texto(string? valor) =>
+            string.IsNullOrWhiteSpace(valor) ? null : valor.Trim();
+
+        private static string? Digitos(string? valor)
         {
-            [JsonPropertyName("razao_social")]
-            public string? RazaoSocial { get; set; }
+            if (string.IsNullOrWhiteSpace(valor))
+                return null;
 
-            [JsonPropertyName("nome_fantasia")]
-            public string? NomeFantasia { get; set; }
-
-            [JsonPropertyName("situacao_cadastral")]
-            public string? SituacaoCadastral { get; set; }
+            var digitos = new string(valor.Where(char.IsDigit).ToArray());
+            return digitos.Length == 0 ? null : digitos;
         }
 
-        private sealed class BrasilApiCnpjResponse
+        private sealed class BrasilApiCnpj
         {
             [JsonPropertyName("razao_social")]
             public string? RazaoSocial { get; set; }
@@ -183,6 +152,36 @@ namespace Pc.Servico.Implementacoes
 
             [JsonPropertyName("descricao_situacao_cadastral")]
             public string? DescricaoSituacaoCadastral { get; set; }
+
+            [JsonPropertyName("descricao_tipo_de_logradouro")]
+            public string? DescricaoTipoDeLogradouro { get; set; }
+
+            [JsonPropertyName("logradouro")]
+            public string? Logradouro { get; set; }
+
+            [JsonPropertyName("numero")]
+            public string? Numero { get; set; }
+
+            [JsonPropertyName("complemento")]
+            public string? Complemento { get; set; }
+
+            [JsonPropertyName("bairro")]
+            public string? Bairro { get; set; }
+
+            [JsonPropertyName("municipio")]
+            public string? Municipio { get; set; }
+
+            [JsonPropertyName("uf")]
+            public string? Uf { get; set; }
+
+            [JsonPropertyName("cep")]
+            public string? Cep { get; set; }
+
+            [JsonPropertyName("email")]
+            public string? Email { get; set; }
+
+            [JsonPropertyName("ddd_telefone_1")]
+            public string? DddTelefone1 { get; set; }
         }
     }
 }

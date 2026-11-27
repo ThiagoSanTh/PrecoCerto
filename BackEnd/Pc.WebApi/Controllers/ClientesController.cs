@@ -11,6 +11,7 @@ using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.Comum;
 using Pc.WebApi.DTOs.Usuarios;
 using Pc.WebApi.Extensions;
+using Pc.WebApi.Hubs;
 using Pc.WebApi.Services;
 
 namespace Pc.WebApi.Controllers
@@ -24,17 +25,20 @@ namespace Pc.WebApi.Controllers
         private readonly IJwtTokenService _jwtTokenService;
         private readonly IEmailService _emailService;
         private readonly IIdCodificador _idCodificador;
+        private readonly PresencaChat? _presenca;
 
         public ClientesController(
             IClienteServico clienteServico,
             IJwtTokenService jwtTokenService,
             IEmailService emailService,
-            IIdCodificador idCodificador)
+            IIdCodificador idCodificador,
+            PresencaChat? presenca = null)
         {
             _clienteServico = clienteServico;
             _jwtTokenService = jwtTokenService;
             _emailService = emailService;
             _idCodificador = idCodificador;
+            _presenca = presenca;
         }
 
         [HttpPost("registrar")]
@@ -104,23 +108,8 @@ namespace Pc.WebApi.Controllers
 
             var result = await _clienteServico.ValidarLoginDetalhadoAsync(dto.Email, dto.Senha);
 
-            if (result.Erro == LoginErroCodigo.EmailNaoEncontrado)
-            {
-                return Unauthorized(new
-                {
-                    code = "EMAIL_NOT_FOUND",
-                    message = "Este e-mail não existe. Por favor, insira um e-mail válido."
-                });
-            }
-
-            if (result.Erro == LoginErroCodigo.SenhaIncorreta)
-            {
-                return Unauthorized(new
-                {
-                    code = "WRONG_PASSWORD",
-                    message = "Senha incorreta."
-                });
-            }
+            if (result.Erro is LoginErroCodigo.EmailNaoEncontrado or LoginErroCodigo.SenhaIncorreta)
+                return CredenciaisInvalidas();
 
             var cliente = result.Usuario!;
 
@@ -256,8 +245,17 @@ namespace Pc.WebApi.Controllers
         public async Task<IActionResult> Remover(Guid id)
         {
             await _clienteServico.RemoverAsync(id);
+            if (_presenca != null)
+                await _presenca.RevogarUsuarioAsync(id);
             return NoContent();
         }
+
+        private static UnauthorizedObjectResult CredenciaisInvalidas() =>
+            new(new
+            {
+                code = "INVALID_CREDENTIALS",
+                message = "E-mail ou senha incorretos."
+            });
 
         private ClienteRespostaDto MapResposta(Usuario c) => new()
         {

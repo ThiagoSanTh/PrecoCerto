@@ -3,6 +3,9 @@ import { Platform } from 'react-native';
 import { getToken, clearToken } from './tokenStorage';
 import { getContextoOperacional } from '../utils/modoUsuario';
 import { normalizeApiBaseUrl } from '../utils/securityUtils';
+import { deveAbrirLoginNo401, deveEncaminharAoLogin, deveRepetirCatalogoSemToken } from './apiAccess';
+import { emitAuthFailure, peekPendingAuthAction, setPendingAuthAction } from '../navigation/authIntent';
+import { navigationRef } from '../navigation/navigationRef';
 
 const LOCAL_API_PORT = 5132;
 const LOCALHOST_PC = `http://localhost:${LOCAL_API_PORT}/api`;
@@ -48,10 +51,31 @@ const api = axios.create({
   },
 });
 
+function semAuthorization(headers) {
+  if (!headers) return;
+  if (typeof headers.delete === 'function') {
+    headers.delete('Authorization');
+    return;
+  }
+  delete headers.Authorization;
+}
+
+function redirecionarLoginSePrecisar() {
+  if (!navigationRef.isReady()) return;
+  const name = navigationRef.getCurrentRoute()?.name;
+  if (!name || !deveAbrirLoginNo401(401, { method: 'get', url: '/Conversas' }, name)) return;
+  if (!peekPendingAuthAction()) {
+    setPendingAuthAction({ type: 'route', name });
+  }
+  navigationRef.navigate('Login');
+}
+
 api.interceptors.request.use(async (config) => {
   const token = await getToken();
-  if (token) {
+  if (token && !config._semToken) {
     config.headers.Authorization = `Bearer ${token}`;
+  } else {
+    semAuthorization(config.headers);
   }
   config.headers['X-Contexto-Operacional'] = getContextoOperacional();
   return config;
@@ -60,15 +84,22 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const url = error.config?.url || '';
-    const isAuthRoute =
-      url.includes('/Auth/login') ||
-      url.includes('/Clientes/login') ||
-      url.includes('/Lojistas/login') ||
-      url.includes('/registrar');
-
-    if (error.response?.status === 401 && !isAuthRoute) {
+    const status = error.response?.status;
+    if (deveRepetirCatalogoSemToken(status, error.config)) {
       await clearToken();
+      emitAuthFailure();
+      const headers = { ...(error.config.headers || {}) };
+      delete headers.Authorization;
+      return api.request({ ...error.config, headers, _semToken: true });
+    }
+    const routeName = navigationRef.isReady() ? navigationRef.getCurrentRoute()?.name : null;
+    if (deveAbrirLoginNo401(status, error.config, routeName)) {
+      await clearToken();
+      emitAuthFailure();
+      redirecionarLoginSePrecisar();
+    } else if (deveEncaminharAoLogin(status, error.config)) {
+      await clearToken();
+      emitAuthFailure();
     }
     return Promise.reject(error);
   }

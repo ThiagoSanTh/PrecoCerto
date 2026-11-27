@@ -1,5 +1,13 @@
 namespace Pc.Dominio.Comum
 {
+    public sealed class PaginacaoInvalidaException : ArgumentOutOfRangeException
+    {
+        public PaginacaoInvalidaException()
+            : base("page", "Página fora do intervalo que a consulta aceita.")
+        {
+        }
+    }
+
     public readonly struct PaginacaoParametros
     {
         public int Page { get; }
@@ -10,7 +18,10 @@ namespace Pc.Dominio.Comum
         {
             Page = page < 1 ? 1 : page;
             PageSize = pageSize < 1 ? 20 : Math.Min(pageSize, maxPageSize);
-            Skip = (Page - 1) * PageSize;
+            var skip = (long)(Page - 1) * PageSize;
+            if (skip > int.MaxValue)
+                throw new PaginacaoInvalidaException();
+            Skip = (int)skip;
         }
 
         public static PaginacaoParametros De(int page = 1, int pageSize = 20, int maxPageSize = 100) =>

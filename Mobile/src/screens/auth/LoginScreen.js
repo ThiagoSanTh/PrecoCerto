@@ -1,15 +1,15 @@
-import { StatusBar } from 'expo-status-bar';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useState, useRef } from 'react';
-import { CommonActions } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { login as authLogin } from '../../services/authService';
 import { mapApiError } from '../../utils/apiErrorUtils';
+import { isEmailValido } from '../../utils/validacaoUtils';
 import { useAuth, podeUsarModoLoja } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { FormField, PrimaryButton } from '../../components/form';
 import AuthSplitLayout from '../../components/ui/AuthSplitLayout';
 import { fonts } from '../../theme';
+import { touchTarget } from '../../components/form/formStyles';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -27,6 +27,11 @@ export default function LoginScreen({ navigation }) {
       return;
     }
 
+    if (!isEmailValido(email)) {
+      setError({ title: 'E-mail inválido', message: 'Informe um e-mail válido.' });
+      return;
+    }
+
     setError(null);
     setLoading(true);
     try {
@@ -34,12 +39,7 @@ export default function LoginScreen({ navigation }) {
       const novaSessao = { tipo, perfil };
       const modo = podeUsarModoLoja(novaSessao) ? 'store' : 'user';
       await salvarSessao(novaSessao, modo);
-      navigation.dispatch(
-        CommonActions.reset({
-          index: 0,
-          routes: [{ name: 'Home' }],
-        })
-      );
+      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
 
       if (perfil?.id) {
         sincronizarGpsCliente(perfil.id, { force: true }).catch(() => {});
@@ -61,6 +61,9 @@ export default function LoginScreen({ navigation }) {
       }
     >
       <FormField
+        id="login-email"
+        name="email"
+        autoComplete="email"
         label="E-mail"
         placeholder="voce@email.com"
         value={email}
@@ -78,8 +81,11 @@ export default function LoginScreen({ navigation }) {
 
       <FormField
         ref={senhaRef}
+        id="login-senha"
+        name="password"
+        autoComplete="current-password"
         label="Senha"
-        placeholder="••••••••"
+        placeholder="Sua senha"
         value={senha}
         onChangeText={(v) => {
           setSenha(v);
@@ -98,6 +104,7 @@ export default function LoginScreen({ navigation }) {
           accessibilityRole="button"
           accessibilityLabel="Esqueci a senha"
           hitSlop={8}
+          style={touchTarget}
         >
           <Text style={[styles.forgotLink, { color: colors.primary }]}>
             Esqueci a senha
@@ -120,14 +127,13 @@ export default function LoginScreen({ navigation }) {
           onPress={() => navigation.navigate('Cadastro')}
           accessibilityRole="button"
           accessibilityLabel="Criar nova conta"
+          style={touchTarget}
         >
           <Text style={[styles.switchLink, { color: colors.primary }]}>
             Criar conta
           </Text>
         </Pressable>
       </View>
-
-      <StatusBar style="auto" />
     </AuthSplitLayout>
   );
 }

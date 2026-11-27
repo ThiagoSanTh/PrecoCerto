@@ -2,7 +2,9 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { atualizarLocalizacao } from '../services/clienteService';
 import { obterLocalizacaoAtual } from '../services/locationService';
+import { onAuthFailure } from '../navigation/authIntent';
 import { clearToken, getToken } from '../services/tokenStorage';
+import { tokenInutilizavel } from '../utils/jwtSessao';
 import { invalidarCache } from '../services/feedCache';
 import { isValidSessionObject, parseValidSession } from '../utils/securityUtils';
 import {
@@ -51,6 +53,14 @@ export function AuthProvider({ children }) {
   async function carregarSessao() {
     try {
       const token = await getToken();
+      if (token && tokenInutilizavel(token)) {
+        await clearToken();
+        await AsyncStorage.multiRemove([SESSION_KEY, MODE_KEY]);
+        gravarSessaoEmMemoria(null);
+        setAppModeState(aplicarModo(MODO_CLIENTE, null));
+        return;
+      }
+
       const raw = await AsyncStorage.getItem(SESSION_KEY);
       const savedMode = await AsyncStorage.getItem(MODE_KEY);
       const parsed = token && raw ? parseValidSession(raw) : null;
@@ -131,6 +141,13 @@ export function AuthProvider({ children }) {
     ultimoGpsSyncEmRef.current = 0;
   }
 
+  const logoutRef = useRef(logout);
+  logoutRef.current = logout;
+
+  useEffect(() => onAuthFailure(() => {
+    logoutRef.current();
+  }), []);
+
   const sincronizarGpsCliente = useCallback(async (clienteIdOverride = null, { force = false } = {}) => {
     const id = clienteIdOverride ?? sessionRef.current?.perfil?.id;
     if (!id) return null;
@@ -184,7 +201,7 @@ export function AuthProvider({ children }) {
         isAdmin: String(session?.tipo ?? '').toLowerCase() === 'admin',
       }}
     >
-      {children}
+      {loading ? null : children}
     </AuthContext.Provider>
   );
 }

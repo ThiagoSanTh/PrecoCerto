@@ -14,6 +14,9 @@ namespace Pc.Servico.Implementacoes
     /// </summary>
     public class ClienteServico : IClienteServico
     {
+        private const string HashFicticio =
+            "$2a$12$CBUL9OLbcu6PF0Nw1KIGQOfwfPBdz/PeITOcy8Qo55.ygW11oGbXW";
+
         private readonly IClienteRepositorio _clienteRepositorio;
         private readonly IPasswordHasher _passwordHasher;
         private readonly IValidadorEmail _validadorEmail;
@@ -72,7 +75,11 @@ namespace Pc.Servico.Implementacoes
             var cliente = await _clienteRepositorio.ObterPorEmailAsync(EmailValidator.Normalizar(email));
 
             if (cliente == null)
+            {
+                // Custo 12, igual ao hash real, para não distinguir e-mail inexistente pelo tempo.
+                _passwordHasher.Verify(senha, HashFicticio);
                 return LoginValidacaoResult.EmailNaoEncontrado();
+            }
 
             if (!await VerificarSenhaAsync(cliente, senha))
                 return LoginValidacaoResult.SenhaIncorreta();
@@ -257,6 +264,9 @@ namespace Pc.Servico.Implementacoes
             if (usuario.Papel == PapelUsuario.Lojista)
                 throw new Exception("Lojistas não podem ser promovidos a vendedores.");
 
+            if (usuario.LojaVinculadaId is Guid lojaAtual && lojaAtual != lojaId)
+                throw new VendedorDeOutraLojaException();
+
             usuario.Papel = PapelUsuario.Vendedor;
             usuario.Tipo = TipoUsuario.Vendedor;
             usuario.LojaVinculadaId = lojaId;
@@ -264,14 +274,19 @@ namespace Pc.Servico.Implementacoes
             await _clienteRepositorio.AtualizarAsync(usuario);
         }
 
-        public async Task RemoverVendedorAsync(Guid usuarioId)
+        public async Task RemoverVendedorAsync(Guid usuarioId, Guid lojaId)
         {
             var usuario = await _clienteRepositorio.ObterPorIdAsync(usuarioId);
             if (usuario == null)
                 throw new Exception("Usuário não encontrado.");
 
-            if (usuario.Papel != PapelUsuario.Vendedor)
-                throw new Exception("Usuário não é um vendedor.");
+            if (usuario.Papel == PapelUsuario.Vendedor
+                && usuario.LojaVinculadaId is Guid lojaAtual
+                && lojaAtual != lojaId)
+                throw new VendedorDeOutraLojaException();
+
+            if (usuario.Papel != PapelUsuario.Vendedor || usuario.LojaVinculadaId != lojaId)
+                throw new Exception("Vendedor não pertence a esta loja.");
 
             usuario.Papel = PapelUsuario.Cliente;
             usuario.Tipo = TipoUsuario.Cliente;

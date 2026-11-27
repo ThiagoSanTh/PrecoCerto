@@ -1,4 +1,5 @@
 import api from './api';
+import { pageSizeSeguro } from './apiAccess';
 import { obterCache, salvarCache, invalidarCache } from './feedCache';
 
 const NS = 'lojasMapa';
@@ -22,7 +23,7 @@ function normalizarPaginado(data) {
 }
 
 export async function listarLojas({ page = 1, pageSize = 100 } = {}) {
-  const { data } = await api.get('/Lojas', { params: { page, pageSize } });
+  const { data } = await api.get('/Lojas', { params: { page, pageSize: pageSizeSeguro(pageSize) } });
   return normalizarPaginado(data);
 }
 
@@ -88,7 +89,7 @@ export async function atualizarLoja(id, loja) {
 
 export async function buscarLojasPorNome(nome, page = 1, pageSize = 20) {
   const { data } = await api.post('/Lojas/buscar', JSON.stringify(nome), {
-    params: { page, pageSize },
+    params: { page, pageSize: pageSizeSeguro(pageSize) },
   });
   return normalizarPaginado(data);
 }
