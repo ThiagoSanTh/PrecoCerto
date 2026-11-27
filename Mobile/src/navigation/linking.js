@@ -10,6 +10,8 @@ export const PUBLIC_ROUTE_NAMES = new Set([
   'StoreCatalog',
 ]);
 
+// linkingScreens mapeia URLs web (SPA/Vercel) para a hierarquia real de Stacks e Tabs,
+// garantindo que links diretos e refresh (F5) abram a screen exata sem cair em NotFound.
 export const linkingScreens = {
   Home: {
     path: '',
@@ -19,13 +21,28 @@ export const linkingScreens = {
         path: '',
         screens: {
           Search: '',
+          // Rotas aninhadas da vitrine preservam a sidebar no desktop e os parâmetros no refresh.
+          ProductDetail: 'vitrine/produto',
+          StoreCatalog: 'vitrine/catalogo',
         },
       },
       IA: 'ia',
       Favoritos: 'favoritos',
       Histórico: 'historico',
-      Mensagens: 'mensagens',
+      // Mensagens usa MensagensStack (lista + conversa ativa), evitando URLs órfãs em /mensagens/ConversasLista.
+      Mensagens: {
+        path: 'mensagens',
+        screens: {
+          ConversasLista: '',
+          Chat: 'conversa',
+        },
+      },
       Perfil: 'perfil',
+      // Abas exclusivas do StoreTabs (modo lojista), protegidas pelo guard de sessão.
+      Painel: { path: 'painel', alias: ['Painel'] },
+      Produtos: { path: 'produtos', alias: ['Produtos'] },
+      Loja: { path: 'loja', alias: ['Loja'] },
+      Conta: { path: 'conta', alias: ['Conta'] },
     },
   },
   Login: { path: 'login', alias: ['Login'] },

@@ -6,6 +6,7 @@ import {
   Pressable,
   Share,
   ActivityIndicator,
+  Platform,
   StyleSheet,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -356,6 +357,7 @@ export default function ProductDetailScreen({ route, navigation }) {
     }
   }
 
+  // confirmarExclusao usa window.confirm na Web (onde Alert.alert multi-botão é limitado) e Alert nativo no iOS/Android.
   function confirmarExclusao() {
     if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.confirm === 'function') {
       if (window.confirm('Esta ação não pode ser desfeita. Deseja excluir este produto?')) {
