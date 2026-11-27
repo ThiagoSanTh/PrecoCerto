@@ -16,17 +16,23 @@ namespace Pc.Repositorio.Implementacoes
 
         public async Task<SessaoChat> ObterOuCriarAsync(Guid? sessaoId, Guid? usuarioId, CancellationToken ct = default)
         {
+            bool colisaoUsuarioAlheio = false;
             if (sessaoId is { } id && id != Guid.Empty)
             {
                 var existente = await _context.SessoesChat
                     .FirstOrDefaultAsync(s => s.Id == id && s.Ativo, ct);
                 if (existente is not null)
-                    return existente;
+                {
+                    if (!existente.UsuarioId.HasValue || existente.UsuarioId == usuarioId)
+                        return existente;
+
+                    colisaoUsuarioAlheio = true;
+                }
             }
 
             var nova = new SessaoChat
             {
-                Id = sessaoId is { } sid && sid != Guid.Empty ? sid : Guid.NewGuid(),
+                Id = !colisaoUsuarioAlheio && sessaoId is { } sid && sid != Guid.Empty ? sid : Guid.NewGuid(),
                 UsuarioId = usuarioId
             };
             _context.SessoesChat.Add(nova);

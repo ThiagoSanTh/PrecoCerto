@@ -11,12 +11,12 @@ export async function loginCliente(email, senha) {
 }
 
 export async function obterCliente(id) {
-  const { data } = await api.get(`/Clientes/${id}`);
+  const { data } = await api.get(`/Clientes/${encodeURIComponent(String(id))}`);
   return data;
 }
 
 export async function atualizarCliente(id, dados) {
-  const { data } = await api.put(`/Clientes/${id}`, {
+  const { data } = await api.put(`/Clientes/${encodeURIComponent(String(id))}`, {
     nomeUsuario: dados.nomeUsuario,
     email: dados.email || 'nao-alterar@placeholder.com',
     telefone: dados.telefone,
@@ -26,15 +26,15 @@ export async function atualizarCliente(id, dados) {
 }
 
 export async function alterarEmailCliente(id, senhaAtual, novoEmail) {
-  const { data } = await api.put(`/Clientes/${id}/email`, { senhaAtual, novoEmail });
+  const { data } = await api.put(`/Clientes/${encodeURIComponent(String(id))}/email`, { senhaAtual, novoEmail });
   return data;
 }
 
 /** Atualiza localização no servidor com coordenadas do GPS */
 export async function atualizarLocalizacao(clienteId, latitude, longitude) {
-  await api.put(`/Clientes/${clienteId}/localizacao`, { latitude, longitude });
+  await api.put(`/Clientes/${encodeURIComponent(String(clienteId))}/localizacao`, { latitude, longitude });
 }
 
 export async function alterarSenha(clienteId, senhaAtual, novaSenha) {
-  await api.put(`/Clientes/${clienteId}/senha`, { senhaAtual, novaSenha });
+  await api.put(`/Clientes/${encodeURIComponent(String(clienteId))}/senha`, { senhaAtual, novaSenha });
 }

@@ -19,6 +19,11 @@ namespace Pc.WebApi.Authorization
             return controller.Forbid();
         }
 
+        public static bool OwnsLoja(ControllerBase controller, Guid lojaId) =>
+            controller.User.IsAdmin() ||
+            ((controller.User.IsLojista() || controller.User.IsVendedor())
+                && controller.User.GetLojaId() == lojaId);
+
         /// <summary>
         /// Admin passa só com o papel ativo no banco. Os demais precisam do vínculo
         /// atual (dono por Loja.UsuarioId, vendedor por LojaVinculadaId). O claim não basta.

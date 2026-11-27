@@ -22,6 +22,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useLayoutProfile } from '../../hooks/useLayoutProfile';
+import { redirecionarParaCadastro } from '../../navigation/authGate';
 import { mapApiError } from '../../utils/apiErrorUtils';
 import ProductGridCard from '../../components/feed/ProductGridCard';
 import { FormScreen, ListCardText } from '../../components/form';
@@ -138,6 +139,10 @@ export default function StoreCatalogScreen({ route, navigation }) {
   );
 
   async function handleToggleFavoritoLoja() {
+    if (!session) {
+      redirecionarParaCadastro(navigation);
+      return;
+    }
     if (!clienteId || !lojaId) return;
     const anterior = lojaFavorita;
     setLojaFavorita(!anterior);
@@ -154,6 +159,10 @@ export default function StoreCatalogScreen({ route, navigation }) {
   }
 
   async function handleFavorito(item) {
+    if (!session) {
+      redirecionarParaCadastro(navigation);
+      return;
+    }
     if (!clienteId || !item?.id) return;
     const id = String(item.id);
     const jaFavorito = favoritosIds.has(id);
@@ -203,7 +212,7 @@ export default function StoreCatalogScreen({ route, navigation }) {
       scrollable={false}
       error={error}
     >
-      {clienteId && lojaId ? (
+      {(clienteId || !session) && lojaId ? (
         <View style={styles.storeFavBar}>
           <Pressable
             onPress={handleToggleFavoritoLoja}
@@ -266,7 +275,7 @@ export default function StoreCatalogScreen({ route, navigation }) {
                 emPromocao: item.emPromocao,
               }}
               ehFavorito={favoritosIds.has(String(item.id))}
-              mostrarFavorito={Boolean(clienteId)}
+              mostrarFavorito={Boolean(clienteId) || !session}
               onFavorito={() => handleFavorito(item)}
               onPress={() =>
                 navigation.navigate({

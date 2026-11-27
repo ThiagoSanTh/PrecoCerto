@@ -6,9 +6,9 @@ import {
   buildLojasMapHtml,
   normalizarLojaParaMapa,
   prepararDadosMapaLojas,
-  sanitizarLojasParaHtml,
 } from '../utils/leafletMapHtml';
-import { styles as appStyles } from '../theme';
+import { parseLojasMapMessage } from '../utils/securityUtils';
+import { colors, radii, styles as appStyles } from '../theme';
 
 /**
  * Mapa do feed com lojas.
@@ -85,7 +85,6 @@ export default function LojasMapView({
 
   const mapHtml = useMemo(() => {
     const dados = prepararDadosMapaLojas(null, lojasNoMapa);
-    dados.marcadores = sanitizarLojasParaHtml(dados.marcadores);
     return buildLojasMapHtml(dados);
   }, [lojasNoMapa]);
 
@@ -148,22 +147,19 @@ export default function LojasMapView({
   }, [mapKey]);
 
   function handleMessage(event) {
-    try {
-      const data = JSON.parse(event.nativeEvent.data);
-      if (data.type === 'ready') {
-        mapaProntoRef.current = true;
-        enviarDestaques();
-        enviarCliente();
-        enviarSelecaoRota();
-      } else if (data.type === 'storeSelected' && data.lojaId && onStoreSelect) {
-        onStoreSelect(data.lojaId);
-      } else if (data.type === 'product' && data.productId && onProductPress) {
-        onProductPress(data.productId);
-      } else if (data.type === 'store' && data.lojaId && onStorePress) {
-        onStorePress(data.lojaId);
-      }
-    } catch {
-      /* ignore */
+    const data = parseLojasMapMessage(event?.nativeEvent?.data);
+    if (!data) return;
+    if (data.type === 'ready') {
+      mapaProntoRef.current = true;
+      enviarDestaques();
+      enviarCliente();
+      enviarSelecaoRota();
+    } else if (data.type === 'storeSelected' && onStoreSelect) {
+      onStoreSelect(data.lojaId);
+    } else if (data.type === 'product' && onProductPress) {
+      onProductPress(data.productId);
+    } else if (data.type === 'store' && onStorePress) {
+      onStorePress(data.lojaId);
     }
   }
 
@@ -202,9 +198,9 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: radii.md,
     overflow: 'hidden',
-    backgroundColor: '#e2e8f0',
+    backgroundColor: colors.map,
   },
   mapEdgeToEdge: {
     borderRadius: 0,
@@ -215,13 +211,13 @@ const styles = StyleSheet.create({
     left: 12,
     right: 12,
     zIndex: 5,
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
-    borderRadius: 8,
+    backgroundColor: 'rgba(15, 29, 34, 0.8)',
+    borderRadius: radii.sm,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
   bannerText: {
-    color: '#fff',
+    color: colors.inkForeground,
     fontSize: 12,
     textAlign: 'center',
   },

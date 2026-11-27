@@ -65,6 +65,7 @@ export function ChatThreadPanel({
   const [mensagens, setMensagens] = useState([]);
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [inputFocused, setInputFocused] = useState(false);
   const ultimaDataRef = useRef(null);
   const pollRef = useRef(null);
   const listRef = useRef(null);
@@ -335,9 +336,13 @@ export function ChatThreadPanel({
           style={[
             styles.inputBox,
             {
-              borderColor: colors.border,
+              borderColor: inputFocused ? colors.primary : colors.border,
               backgroundColor: colors.surface,
             },
+            inputFocused &&
+              Platform.OS === 'web' && {
+                boxShadow: '0 0 0 2px rgba(14, 124, 102, 0.22)',
+              },
           ]}
         >
           <TextInput
@@ -346,11 +351,17 @@ export function ChatThreadPanel({
             placeholder="Escreva uma mensagem…"
             placeholderTextColor={colors.placeholder}
             returnKeyType="send"
+            onFocus={() => setInputFocused(true)}
+            onBlur={() => setInputFocused(false)}
             onSubmitEditing={handleEnviar}
             onKeyPress={handleKeyPress}
             blurOnSubmit={false}
             accessibilityLabel="Digite sua mensagem"
-            style={[styles.inputField, { color: colors.text }]}
+            style={[
+              styles.inputField,
+              { color: colors.text },
+              Platform.OS === 'web' ? { outlineStyle: 'none' } : null,
+            ]}
           />
           <Pressable
             onPress={handleEnviar}

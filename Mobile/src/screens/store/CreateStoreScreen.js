@@ -12,12 +12,12 @@ import {
   FormField,
   PrimaryButton,
   SecondaryButton,
-  formStyles,
 } from '../../components/form';
 import { apenasDigitosCnpj, isCnpjValido, isEmailValido, isTelefoneValido } from '../../utils/validacaoUtils';
 import { FRASES, mensagemErroConsultaCnpj, planejarPreenchimento } from '../../utils/cnpjLoja';
 import { formatApiError } from '../../utils/apiErrorUtils';
-import { colors } from '../../theme';
+import { useTheme } from '../../context/ThemeContext';
+import { useFormStyles } from '../../hooks/useFormStyles';
 
 const STEPS = [
   { key: 'loja', label: 'Loja' },
@@ -27,6 +27,8 @@ const STEPS = [
 
 export default function CreateStoreScreen({ navigation }) {
   const { session, logout } = useAuth();
+  const { colors } = useTheme();
+  const formStyles = useFormStyles();
   const [step, setStep] = useState(0);
 
   const [nomeFantasia, setNomeFantasia] = useState('');
@@ -491,7 +493,7 @@ export default function CreateStoreScreen({ navigation }) {
               accessibilityLabel="Buscar CEP"
             >
               {loadingCep ? (
-                <ActivityIndicator color="#fff" size="small" />
+                <ActivityIndicator color={colors.primaryForeground} size="small" />
               ) : (
                 <Text style={formStyles.cepButtonText}>Buscar</Text>
               )}

@@ -5,6 +5,7 @@ namespace Pc.WebApi.DTOs.IA
     public class IAChatRequestDto
     {
         [Required(ErrorMessage = "Informe a mensagem.")]
+        [MaxLength(500)]
         public string Mensagem { get; set; } = string.Empty;
 
         [Range(-90, 90)]

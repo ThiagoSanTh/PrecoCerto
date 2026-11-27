@@ -6,12 +6,13 @@ import { criarOferta } from '../../services/ofertaService';
 import { invalidarFeedCache } from '../../services/feedService';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useFormStyles } from '../../hooks/useFormStyles';
 import {
   FormScreen,
   FormField,
   PrimaryButton,
-  formStyles,
 } from '../../components/form';
+import { fonts, radii } from '../../theme';
 
 const MAX_LISTA = 20;
 
@@ -48,6 +49,7 @@ function ProdutoThumbnail({ produto, size, style }) {
 export default function CreateOfertaScreen({ navigation }) {
   const { session } = useAuth();
   const { colors } = useTheme();
+  const formStyles = useFormStyles();
   const lojaId = session?.perfil?.lojaId;
 
   const [produtos, setProdutos] = useState([]);
@@ -143,7 +145,11 @@ export default function CreateOfertaScreen({ navigation }) {
                 style={[
                   formStyles.listCard,
                   styles.cardRow,
-                  selected && styles.cardSelected,
+                  selected && {
+                    borderColor: colors.primary,
+                    borderWidth: 2,
+                    backgroundColor: colors.primarySoft,
+                  },
                 ]}
               >
                 <ProdutoThumbnail produto={p} size={56} />
@@ -214,10 +220,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-  },
-  cardSelected: {
-    borderColor: '#2DD4BF',
-    borderWidth: 2,
   },
   cardInfo: {
     flex: 1,

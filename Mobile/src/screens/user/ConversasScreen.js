@@ -7,6 +7,7 @@ import {
   Pressable,
   ActivityIndicator,
   RefreshControl,
+  Platform,
   StyleSheet,
 } from 'react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -56,7 +57,7 @@ export default function ConversasScreen({ navigation }) {
   const { session, emModoLoja } = useAuth();
   const { colors } = useTheme();
   const { atualizarFromConversas } = useChatBadge();
-  const { useSplitView } = useLayoutProfile();
+  const { useSplitView, useSidebarNav } = useLayoutProfile();
   usePresencaChat();
 
   const carregar = useCallback(
@@ -221,7 +222,10 @@ export default function ConversasScreen({ navigation }) {
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[
+              styles.listContent,
+              useSidebarNav && styles.listContentDesktop,
+            ]}
             ListEmptyComponent={
               <Text style={[styles.emptyText, { color: colors.textMuted }]}>
                 {busca.trim()
@@ -246,8 +250,9 @@ export default function ConversasScreen({ navigation }) {
               return (
                 <Pressable
                   onPress={() => handleSelectConversa(item)}
-                  style={[
+                  style={({ hovered }) => [
                     styles.conversaItem,
+                    hovered && !selecionada && { backgroundColor: colors.surfaceSubtle },
                     selecionada && {
                       backgroundColor: colors.primarySoft,
                     },
@@ -416,7 +421,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   listContent: {
-    paddingBottom: 90,
+    paddingBottom: 104,
+  },
+  listContentDesktop: {
+    paddingBottom: 16,
   },
   conversaItem: {
     flexDirection: 'row',

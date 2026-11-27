@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, Platform, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
+import { fonts, radii, tabularNums } from '../../theme';
 
 export const WEATHER_CARD_SLOT_HEIGHT = 64;
 
@@ -35,13 +36,20 @@ export default function WeatherCard({
   compact = false,
   style,
 }) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const [expanded, setExpanded] = useState(false);
   const isPill = compact && !expanded;
+  const cardBg =
+    Platform.OS === 'web'
+      ? isDark
+        ? 'rgba(28, 48, 56, 0.9)'
+        : 'rgba(255, 255, 255, 0.9)'
+      : colors.card;
   const cardStyle = [
     styles.card,
     isPill && styles.cardPill,
-    { backgroundColor: colors.card, borderColor: colors.border },
+    { backgroundColor: cardBg, borderColor: colors.border },
+    Platform.OS === 'web' ? { backdropFilter: 'blur(12px)' } : null,
     style,
   ];
 
@@ -104,12 +112,12 @@ export default function WeatherCard({
         accessibilityLabel={`Clima em ${cidade}: ${temp || ''}. Toque para expandir`}
       >
         <View style={styles.pillRow}>
-          <Ionicons name={icone} size={16} color={colors.primary} />
+          <Ionicons name={icone} size={17} color={colors.chart4 || colors.warning} />
           <Text style={[styles.pillCidade, { color: colors.text }]} numberOfLines={1}>
             {cidadeCurta}
           </Text>
           {temp ? (
-            <Text style={[styles.pillTemp, { color: colors.text }]}>{temp}</Text>
+            <Text style={[styles.pillTemp, tabularNums, { color: colors.text }]}>{temp}</Text>
           ) : null}
         </View>
       </Pressable>
@@ -132,12 +140,12 @@ export default function WeatherCard({
       accessibilityLabel={`Clima em ${cidade}`}
     >
       <View style={styles.row}>
-        <Ionicons name={icone} size={18} color={colors.primary} />
+        <Ionicons name={icone} size={19} color={colors.chart4 || colors.warning} />
         <Text style={[styles.cidade, { color: colors.text }]} numberOfLines={1}>
           {cidade}
         </Text>
         {temp ? (
-          <Text style={[styles.temp, { color: colors.text }]}>{temp}</Text>
+          <Text style={[styles.temp, tabularNums, { color: colors.text }]}>{temp}</Text>
         ) : null}
         {compact ? (
           <Ionicons name="chevron-up" size={14} color={colors.textMuted} />
@@ -160,51 +168,57 @@ export default function WeatherCard({
 const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    borderRadius: radii.xl,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     minHeight: 52,
     justifyContent: 'center',
   },
   cardPill: {
     minHeight: 36,
-    borderRadius: 999,
+    borderRadius: radii.full,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
   pillRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
   },
   pillCidade: {
+    fontFamily: fonts.sansSemiBold,
     fontSize: 12,
     fontWeight: '600',
     maxWidth: 110,
   },
   pillTemp: {
+    fontFamily: fonts.display,
     fontSize: 13,
     fontWeight: '700',
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   cidade: {
     flex: 1,
-    fontSize: 13,
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 12.5,
     fontWeight: '600',
   },
   temp: {
-    fontSize: 16,
+    fontFamily: fonts.display,
+    fontSize: 15,
     fontWeight: '700',
   },
   muted: {
-    fontSize: 11,
+    fontFamily: fonts.sans,
+    fontSize: 11.5,
     marginTop: 2,
   },
   stale: {
+    fontFamily: fonts.sans,
     fontSize: 10,
     marginTop: 2,
   },

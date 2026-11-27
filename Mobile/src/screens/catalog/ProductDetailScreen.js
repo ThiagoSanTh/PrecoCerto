@@ -34,6 +34,7 @@ import { useAuth } from '../../context/AuthContext';
 import { irParaLogin, setPendingAuthAction } from '../../navigation/authIntent';
 import { abrirConversa } from '../../services/chatService';
 import { navegarParaChat } from '../../navigation/chatNavigation';
+import { redirecionarParaCadastro } from '../../navigation/authGate';
 import { nomeProduto, produtoPertenceALoja } from '../../utils/produtoUtils';
 import { formatarPrecoBrl } from '../../utils/mapaUtils';
 import { formatarDataBr, parseDataBr } from '../../utils/dataUtils';
@@ -57,6 +58,7 @@ import { labelCategoria } from '../../utils/categoriasProduto';
 import { mapApiError } from '../../utils/apiErrorUtils';
 import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import { useTheme } from '../../context/ThemeContext';
+import { fonts } from '../../theme';
 
 function preencherFormularioProduto(prod, ofertaLoja) {
   return {
@@ -406,6 +408,10 @@ export default function ProductDetailScreen({ route, navigation }) {
   }
 
   async function handleChatLoja() {
+    if (!session) {
+      redirecionarParaCadastro(navigation);
+      return;
+    }
     if (!clienteId) {
       exigirLoginParaCompra();
       return;
@@ -434,6 +440,10 @@ export default function ProductDetailScreen({ route, navigation }) {
   }
 
   async function handleToggleFavorito() {
+    if (!session) {
+      redirecionarParaCadastro(navigation);
+      return;
+    }
     if (!clienteId) return;
 
     setFavoritoLoading(true);
@@ -516,7 +526,8 @@ export default function ProductDetailScreen({ route, navigation }) {
         label="Excluir produto"
         onPress={confirmarExclusao}
         disabled={salvando}
-        style={styles.botaoExcluir}
+        style={{ borderColor: colors.destructive }}
+        textStyle={{ color: colors.destructive }}
       />
     </View>
   ) : undefined;
@@ -526,7 +537,7 @@ export default function ProductDetailScreen({ route, navigation }) {
       ehFavorito={ehFavorito}
       onFavorito={handleToggleFavorito}
       favoritoLoading={favoritoLoading}
-      mostrarFavorito={Boolean(clienteId)}
+      mostrarFavorito={Boolean(clienteId) || !session}
       onChat={handleChatLoja}
       onCompartilhar={handleCompartilhar}
     />
@@ -673,17 +684,17 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   marca: {
+    fontFamily: fonts.sansSemiBold,
     fontSize: 13,
-    color: '#64748B',
     marginBottom: 4,
   },
   marcaWeb: {
     fontSize: 15,
   },
   nome: {
+    fontFamily: fonts.display,
     fontSize: 22,
-    fontWeight: '600',
-    color: '#0F172A',
+    fontWeight: '700',
     lineHeight: 28,
   },
   nomeWeb: {
@@ -691,34 +702,34 @@ const styles = StyleSheet.create({
     lineHeight: 34,
   },
   descricao: {
+    fontFamily: fonts.sans,
     fontSize: 15,
-    color: '#475569',
     marginTop: 12,
     lineHeight: 22,
   },
   descricaoWeb: {
-    fontSize: 18,
+    fontSize: 17,
     lineHeight: 26,
   },
   meta: {
+    fontFamily: fonts.sans,
     fontSize: 13,
-    color: '#64748B',
     marginTop: 12,
   },
   metaWeb: {
     fontSize: 15,
   },
   loja: {
+    fontFamily: fonts.sansSemiBold,
     fontSize: 14,
-    color: '#64748B',
     marginTop: 12,
   },
   lojaWeb: {
     fontSize: 16,
   },
   endereco: {
+    fontFamily: fonts.sans,
     fontSize: 13,
-    color: '#94A3B8',
     marginTop: 4,
   },
   enderecoWeb: {

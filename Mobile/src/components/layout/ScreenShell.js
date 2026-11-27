@@ -1,6 +1,7 @@
 import { View, StyleSheet, Platform } from 'react-native';
 import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import { useTheme } from '../../context/ThemeContext';
+import { radii, shadows } from '../../theme';
 
 export function authCanvasColor({ isWeb, isDesktopWeb, isDark, background }) {
   return (!isWeb || isDesktopWeb) && !isDark ? '#E2E8F0' : background;
@@ -20,7 +21,7 @@ export default function ScreenShell({ children, variant = 'default', fullBleed =
     authCardMaxWidth,
     contentFullWidth,
   } = useLayoutProfile();
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
 
   const shellVariant = fullBleed ? 'fullBleed' : variant;
   const isAuth = shellVariant === 'auth';
@@ -122,19 +123,9 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
     overflow: 'hidden',
-    borderRadius: 16,
+    borderRadius: radii.xl,
     borderWidth: 1,
     maxHeight: '92%',
-    ...(Platform.OS === 'web'
-      ? {
-          boxShadow: '0 8px 32px rgba(15, 23, 42, 0.12)',
-        }
-      : {
-          shadowColor: '#0F172A',
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.12,
-          shadowRadius: 16,
-          elevation: 8,
-        }),
+    ...shadows.soft,
   },
 });

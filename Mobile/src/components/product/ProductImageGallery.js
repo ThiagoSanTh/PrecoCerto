@@ -8,6 +8,8 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useLayoutProfile } from '../../hooks/useLayoutProfile';
+import { useTheme } from '../../context/ThemeContext';
+import { fonts, radii } from '../../theme';
 
 const WEB_HORIZONTAL_PADDING = 40;
 const WEB_MAX_GALLERY_WIDTH = 480;
@@ -42,6 +44,7 @@ function useGalleryDimensions() {
 
 export default function ProductImageGallery({ imagens = [] }) {
   const { galleryWidth, galleryHeight, resizeMode, containerStyle } = useGalleryDimensions();
+  const { colors } = useTheme();
   const [pagina, setPagina] = useState(0);
   const urls = imagens.filter(Boolean);
 
@@ -55,20 +58,27 @@ export default function ProductImageGallery({ imagens = [] }) {
   const imageStyle = {
     width: galleryWidth,
     height: galleryHeight,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.surfaceSubtle,
   };
 
   if (urls.length === 0) {
     return (
-      <View style={[styles.placeholder, frameStyle, containerStyle]}>
-        <Text style={styles.placeholderText}>Sem foto</Text>
+      <View
+        style={[
+          styles.placeholder,
+          frameStyle,
+          containerStyle,
+          { backgroundColor: colors.surfaceSubtle, borderColor: colors.border },
+        ]}
+      >
+        <Text style={[styles.placeholderText, { color: colors.textMuted }]}>Sem foto</Text>
       </View>
     );
   }
 
   if (urls.length === 1) {
     return (
-      <View style={[frameStyle, containerStyle]}>
+      <View style={[frameStyle, containerStyle, { borderColor: colors.border }]}>
         <Image
           source={{ uri: urls[0] }}
           style={imageStyle}
@@ -79,7 +89,7 @@ export default function ProductImageGallery({ imagens = [] }) {
   }
 
   return (
-    <View style={[frameStyle, containerStyle]}>
+    <View style={[frameStyle, containerStyle, { borderColor: colors.border }]}>
       <ScrollView
         horizontal
         pagingEnabled
@@ -102,7 +112,10 @@ export default function ProductImageGallery({ imagens = [] }) {
         {urls.map((_, index) => (
           <View
             key={index}
-            style={[styles.dot, index === pagina && styles.dotActive]}
+            style={[
+              styles.dot,
+              { backgroundColor: index === pagina ? colors.primary : colors.border },
+            ]}
           />
         ))}
       </View>
@@ -113,17 +126,17 @@ export default function ProductImageGallery({ imagens = [] }) {
 const styles = StyleSheet.create({
   webContainer: {
     alignSelf: 'center',
-    borderRadius: 12,
+    borderRadius: radii.xl,
+    borderWidth: 1,
     overflow: 'hidden',
   },
   placeholder: {
-    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
   },
   placeholderText: {
-    color: '#94A3B8',
-    fontSize: 16,
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 15,
     fontWeight: '600',
   },
   dots: {
@@ -139,9 +152,5 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#CBD5E1',
-  },
-  dotActive: {
-    backgroundColor: '#14B8A6',
   },
 });

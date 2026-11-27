@@ -15,6 +15,7 @@ import {
 import { navigationRef } from '../navigation/navigationRef';
 import { useLayoutProfile } from '../hooks/useLayoutProfile';
 import { BrandLogo } from './ui/DesignPrimitives';
+import { isGuestTabAllowed, redirecionarParaCadastro } from '../navigation/authGate';
 import { fonts, radii, shadows } from '../theme';
 
 const ICONS = {
@@ -32,6 +33,7 @@ const ICONS = {
 
 const MOBILE_USER_ROUTES = new Set(['Buscar', 'IA', 'Favoritos', 'Mensagens', 'Perfil']);
 const MOBILE_STORE_ROUTES = new Set(['Painel', 'Produtos', 'IA', 'Mensagens', 'Conta']);
+const HIDDEN_MOBILE_NESTED_ROUTES = new Set(['Chat', 'ProductDetail', 'StoreCatalog']);
 const ABAS_COM_SESSAO = new Set([
   'IA',
   'Favoritos',
@@ -105,9 +107,10 @@ function SidebarNavItem({
       accessibilityLabel={label}
       hitSlop={4}
       onPress={onPress}
-      style={[
+      style={({ hovered }) => [
         styles.sidebarItem,
         focused && { backgroundColor: colors.sidebarAccent },
+        !focused && hovered && { backgroundColor: 'rgba(26, 45, 51, 0.6)' },
       ]}
     >
       <Ionicons
@@ -169,7 +172,7 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
       ? 'Modo Cliente · Loja vinculada'
       : session
         ? 'Conta Cliente'
-        : 'Convidado';
+        : 'Entrar ou cadastrar';
 
   async function handleLogout() {
     clearPendingAuthAction();
@@ -197,9 +200,9 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
   }, [session, navigation]);
 
   function handleRoutePress(route, focused) {
-    if (!session && ABAS_COM_SESSAO.has(route.name)) {
+    if (!session && (!isGuestTabAllowed(route.name) || ABAS_COM_SESSAO.has(route.name))) {
       setPendingAuthAction({ type: 'route', name: route.name });
-      irParaLogin(navigation);
+      redirecionarParaCadastro(navigation);
       return;
     }
     const event = navigation.emit({
@@ -315,7 +318,13 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
           ) : null}
         </ScrollView>
 
-        <View
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={session ? 'Conta do usuário' : 'Cadastrar ou entrar'}
+          disabled={Boolean(session)}
+          onPress={() => {
+            if (!session) redirecionarParaCadastro(navigation);
+          }}
           style={[
             styles.userCard,
             { backgroundColor: colors.sidebarAccent },
@@ -356,43 +365,45 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
               {subtituloPerfil}
             </Text>
           </View>
-          {session ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Sair da conta"
-              onPress={handleLogout}
-              hitSlop={10}
-              style={styles.logoutBtn}
-            >
-              <Ionicons
-                name="log-out-outline"
-                size={18}
-                color="rgba(201, 216, 219, 0.7)"
-              />
-            </Pressable>
-          ) : (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Entrar"
-              onPress={entrar}
-              style={({ pressed, focused }) => [
-                styles.entrarSidebar,
-                pressed && { opacity: 0.85 },
-                focused && styles.focusRing,
-              ]}
-            >
-              <Text style={styles.entrarSidebarText}>Entrar</Text>
-            </Pressable>
-          )}
-        </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={session ? 'Sair da conta' : 'Cadastrar ou entrar'}
+            onPress={() => {
+              if (!session) {
+                redirecionarParaCadastro(navigation);
+                return;
+              }
+              handleLogout();
+            }}
+            hitSlop={10}
+            style={({ hovered }) => [
+              styles.logoutBtn,
+              hovered && { opacity: 0.9 },
+            ]}
+          >
+            <Ionicons
+              name={session ? 'log-out-outline' : 'log-in-outline'}
+              size={18}
+              color="rgba(201, 216, 219, 0.7)"
+            />
+          </Pressable>
+        </Pressable>
       </View>
     );
+  }
+
+  const activeRoute = state.routes[state.index];
+  const nestedState = activeRoute?.state;
+  const nestedName =
+    nestedState?.routes?.[nestedState?.index ?? -1]?.name ?? null;
+  if (nestedName && HIDDEN_MOBILE_NESTED_ROUTES.has(nestedName)) {
+    return null;
   }
 
   const allowedMobile = emModoLoja ? MOBILE_STORE_ROUTES : MOBILE_USER_ROUTES;
   const mobileRoutes = state.routes.filter((r) => allowedMobile.has(r.name));
   const safeBottom = Math.max(insets.bottom || 0, 12);
-  const safeHorizontal = Math.max(insets.left || 0, insets.right || 0, isCompactPhone ? 10 : 14);
+  const safeHorizontal = Math.max(insets.left || 0, insets.right || 0, isCompactPhone ? 10 : 12);
 
   return (
     <View
@@ -401,7 +412,6 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
         {
           paddingBottom: safeBottom,
           paddingHorizontal: safeHorizontal,
-          backgroundColor: colors.background,
         },
         Platform.OS === 'web'
           ? {
@@ -455,7 +465,12 @@ export default function CustomTabBar({ state, descriptors, navigation, badgeCoun
                       { backgroundColor: colors.primary },
                     ]}
                   >
-                    <Text style={styles.mobileBadgeText}>
+                    <Text
+                      style={[
+                        styles.mobileBadgeText,
+                        { color: colors.primaryForeground },
+                      ]}
+                    >
                       {badgeCount > 9 ? '9+' : badgeCount}
                     </Text>
                   </View>
@@ -597,7 +612,13 @@ const styles = StyleSheet.create({
     outlineOffset: 2,
   },
   mobileFloatWrap: {
-    paddingHorizontal: 14,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 30,
+    backgroundColor: 'transparent',
+    paddingHorizontal: 12,
     paddingBottom: 12,
     paddingTop: 6,
   },

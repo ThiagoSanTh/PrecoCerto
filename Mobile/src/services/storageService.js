@@ -1,11 +1,6 @@
 import { Platform } from 'react-native';
 import { supabase, BUCKET_PRODUTOS_IMAGENS } from './supabaseClient';
-
-function extensaoPorMime(mimeType) {
-  if (mimeType?.includes('png')) return 'png';
-  if (mimeType?.includes('webp')) return 'webp';
-  return 'jpg';
-}
+import { MAX_IMAGE_UPLOAD_BYTES, validateImageUpload } from '../utils/securityUtils';
 
 function base64ParaBytes(base64) {
   const binary = atob(base64);
@@ -56,12 +51,12 @@ export async function uploadImagemProduto({ uri, lojaId, fileName, mimeType }) {
     throw new Error('Loja não identificada para upload da imagem.');
   }
 
-  const ext = extensaoPorMime(mimeType);
-  const nomeArquivo = fileName || `${Date.now()}.${ext}`;
-  const path = `${lojaId}/${nomeArquivo}`;
-  const contentType = mimeType || `image/${ext === 'png' ? 'png' : 'jpeg'}`;
+  const { path, contentType } = validateImageUpload({ lojaId, fileName, mimeType });
 
   const fileData = await uriParaBytes(uri);
+  if (!fileData?.byteLength || fileData.byteLength > MAX_IMAGE_UPLOAD_BYTES) {
+    throw new Error('Imagem vazia ou acima do limite permitido de 10 MB.');
+  }
 
   const { error } = await supabase.storage
     .from(BUCKET_PRODUTOS_IMAGENS)

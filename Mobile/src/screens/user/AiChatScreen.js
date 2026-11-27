@@ -17,8 +17,9 @@ import { PillBadge } from '../../components/ui/DesignPrimitives';
 import { useAuth } from '../../context/AuthContext';
 import { irParaLogin, setPendingAuthAction } from '../../navigation/authIntent';
 import { useTheme } from '../../context/ThemeContext';
+import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import { enviarPerguntaIA, isAdminSession } from '../../services/iaService';
-import { fonts, inputFontSize, radii, shadows } from '../../theme';
+import { fonts, gradients, inputFontSize, radii, shadows, tabularNums } from '../../theme';
 
 const CHIPS_CLIENTE = [
   'Onde tem café mais barato perto de mim?',
@@ -171,7 +172,7 @@ function ResultadoCardsTable({ resultados, colors, navigation }) {
             </View>
 
             {precoFmt ? (
-              <Text style={[styles.resultItemPrice, { color: colors.text }]}>
+              <Text style={[styles.resultItemPrice, tabularNums, { color: colors.text }]}>
                 {precoFmt}
               </Text>
             ) : null}
@@ -261,6 +262,8 @@ function AdminDebugPanel({ item, colors }) {
 export default function AiChatScreen({ navigation, route }) {
   const { colors } = useTheme();
   const { session, emModoLoja } = useAuth();
+  const { useSidebarNav } = useLayoutProfile();
+  const [inputFocused, setInputFocused] = useState(false);
   const isAdmin = isAdminSession(session);
   const lojaId = session?.perfil?.lojaId || session?.perfil?.lojaVinculadaId || null;
   const modoLojistaAtivo = Boolean(emModoLoja && lojaId);
@@ -394,7 +397,7 @@ export default function AiChatScreen({ navigation, route }) {
             <Ionicons name="arrow-back" size={18} color={colors.text} />
           </Pressable>
         ) : null}
-        <View style={[styles.aiHeaderBadge, { backgroundColor: colors.ink }]}>
+        <View style={[styles.aiHeaderBadge, { backgroundColor: colors.ink }, gradients.aiWeb]}>
           <Ionicons name="sparkles" size={20} color={colors.highlight} />
         </View>
         <View style={{ flex: 1 }}>
@@ -461,15 +464,7 @@ export default function AiChatScreen({ navigation, route }) {
                 />
               </View>
               <View style={styles.aiContentCol}>
-                <View
-                  style={[
-                    styles.aiTextCard,
-                    {
-                      backgroundColor: colors.card,
-                      borderColor: colors.border,
-                    },
-                  ]}
-                >
+                <View style={styles.aiTextWrap}>
                   <Text style={[styles.aiMessageText, { color: colors.text }]}>
                     {item.texto}
                   </Text>
@@ -521,41 +516,77 @@ export default function AiChatScreen({ navigation, route }) {
       {/* Bottom Sticky Suggestions + Input Bar */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.bottomArea}
+        style={[
+          styles.bottomArea,
+          !useSidebarNav && isTabRoot && styles.bottomAreaMobileDock,
+        ]}
       >
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.suggestionsWrap}
-          keyboardShouldPersistTaps="handled"
-        >
-          {chipsSugestao.map((chip) => (
-            <Pressable
-              key={chip}
-              disabled={enviando}
-              onPress={() => handleChipPress(chip)}
-              style={[
-                styles.suggestionChip,
-                {
-                  backgroundColor: colors.card,
-                  borderColor: colors.border,
-                  opacity: enviando ? 0.6 : 1,
-                },
-              ]}
-            >
-              <Text
-                style={[styles.suggestionChipText, { color: colors.textMuted }]}
+        {useSidebarNav ? (
+          <View style={styles.suggestionsWrapDesktop}>
+            {chipsSugestao.map((chip) => (
+              <Pressable
+                key={chip}
+                disabled={enviando}
+                onPress={() => handleChipPress(chip)}
+                style={[
+                  styles.suggestionChip,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.border,
+                    opacity: enviando ? 0.6 : 1,
+                  },
+                ]}
               >
-                {chip}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+                <Text
+                  style={[styles.suggestionChipText, { color: colors.textMuted }]}
+                >
+                  {chip}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.suggestionsWrap}
+            keyboardShouldPersistTaps="handled"
+          >
+            {chipsSugestao.map((chip) => (
+              <Pressable
+                key={chip}
+                disabled={enviando}
+                onPress={() => handleChipPress(chip)}
+                style={[
+                  styles.suggestionChip,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.border,
+                    opacity: enviando ? 0.6 : 1,
+                  },
+                ]}
+              >
+                <Text
+                  style={[styles.suggestionChipText, { color: colors.textMuted }]}
+                >
+                  {chip}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
 
         <View
           style={[
             styles.inputBar,
-            { backgroundColor: colors.card, borderColor: colors.border },
+            {
+              backgroundColor: colors.card,
+              borderColor: inputFocused ? colors.primary : colors.border,
+            },
+            inputFocused &&
+              Platform.OS === 'web' && {
+                boxShadow: '0 0 0 2px rgba(14, 124, 102, 0.22), 0 20px 50px -20px rgba(15, 29, 34, 0.35)',
+              },
           ]}
         >
           <TextInput
@@ -566,11 +597,17 @@ export default function AiChatScreen({ navigation, route }) {
             editable={!enviando}
             maxLength={500}
             returnKeyType="send"
+            onFocus={() => setInputFocused(true)}
+            onBlur={() => setInputFocused(false)}
             onSubmitEditing={handleEnviar}
             onKeyPress={handleKeyPress}
             blurOnSubmit={false}
             accessibilityLabel="Digite sua pergunta para o assistente"
-            style={[styles.inputField, { color: colors.text }]}
+            style={[
+              styles.inputField,
+              { color: colors.text },
+              Platform.OS === 'web' ? { outlineStyle: 'none' } : null,
+            ]}
           />
           <Pressable
             onPress={handleEnviar}
@@ -672,17 +709,13 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 10,
   },
-  aiTextCard: {
-    borderRadius: radii.xl,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    ...shadows.soft,
+  aiTextWrap: {
+    paddingVertical: 4,
   },
   aiMessageText: {
     fontFamily: fonts.sans,
     fontSize: 14,
-    lineHeight: 21,
+    lineHeight: 22,
   },
   resultTableCard: {
     borderRadius: radii.xl,
@@ -804,6 +837,16 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingTop: 8,
     paddingBottom: 6,
+  },
+  bottomAreaMobileDock: {
+    paddingBottom: 92,
+  },
+  suggestionsWrapDesktop: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 2,
   },
   suggestionsWrap: {
     flexDirection: 'row',

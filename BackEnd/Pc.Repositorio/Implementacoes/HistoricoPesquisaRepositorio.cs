@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Pc.Dominio.Entities.Interacoes;
 using Pc.Infraestrutura;
+using Pc.Repositorio.Comum;
 using Pc.Repositorio.Interfaces;
 
 namespace Pc.Repositorio.Implementacoes
@@ -42,8 +43,12 @@ namespace Pc.Repositorio.Implementacoes
         /// </summary>
         public async Task<List<HistoricoPesquisa>> BuscarPorTermoAsync(string termo)
         {
+            if (string.IsNullOrWhiteSpace(termo))
+                return new List<HistoricoPesquisa>();
+
+            var pattern = $"%{SqlLikeHelper.EscapeLike(termo.Trim())}%";
             return await _context.HistoricosPesquisa
-                .Where(h => EF.Functions.ILike(h.TermoPesquisa, $"%{termo.Trim()}%"))
+                .Where(h => EF.Functions.ILike(h.TermoPesquisa, pattern, "\\"))
                 .OrderByDescending(h => h.DataPesquisa)
                 .Take(20)
                 .ToListAsync();

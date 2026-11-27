@@ -71,9 +71,9 @@ export async function criarProduto(produto) {
 }
 
 export async function atualizarProduto(id, produto) {
-  await api.put(`/Produtos/${id}`, produto);
+  await api.put(`/Produtos/${encodeURIComponent(String(id))}`, produto);
 }
 
 export async function removerProduto(id, lojaId) {
-  await api.delete(`/Produtos/${id}`, { params: { lojaId } });
+  await api.delete(`/Produtos/${encodeURIComponent(String(id))}`, { params: { lojaId } });
 }

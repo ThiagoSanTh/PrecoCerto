@@ -75,6 +75,9 @@ namespace Pc.WebApi.Controllers
             if (historico == null)
                 return NotFound("Histórico não encontrado.");
 
+            if (!Authz.IsSelfOrAdmin(this, historico.ClienteId))
+                return Forbid();
+
             var resposta = new HistoricoPesquisaRespostaDto
             {
                 Id = historico.Id,
@@ -140,15 +143,16 @@ namespace Pc.WebApi.Controllers
         [HttpGet("sugestoes")]
         [AllowAnonymous]
         [EnableRateLimiting("catalogo")]
-        public async Task<IActionResult> ObterSugestoes([FromQuery] string? termo)
+        public async Task<IActionResult> ObterSugestoes([FromQuery] string? termo = null)
         {
             if (termo is not null && termo.Contains('\0'))
                 return BadRequest(new { message = "Termo inválido." });
 
-            if (string.IsNullOrWhiteSpace(termo))
+            var limpo = termo?.Trim();
+            if (string.IsNullOrWhiteSpace(limpo) || limpo.Length > 100)
                 return Ok(Array.Empty<object>());
 
-            var sugestoes = await _historicoPesquisaServico.ObterSugestoesAsync(termo);
+            var sugestoes = await _historicoPesquisaServico.ObterSugestoesAsync(limpo);
             var autenticado = User.Identity?.IsAuthenticated == true;
 
             var resposta = sugestoes

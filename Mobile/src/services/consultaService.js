@@ -1,7 +1,7 @@
 import api from './api';
 
 export async function consultarCnpj(cnpj) {
-  const digitos = (cnpj || '').replace(/\D/g, '');
-  const { data } = await api.get(`/Consultas/cnpj/${digitos}`);
+  const digitos = String(cnpj || '').replace(/\D/g, '');
+  const { data } = await api.get(`/Consultas/cnpj/${encodeURIComponent(digitos)}`);
   return data;
 }

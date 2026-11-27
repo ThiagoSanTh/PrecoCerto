@@ -10,6 +10,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import { podeCriarLoja } from '../../utils/modoUsuario';
 import { listarFavoritosCliente } from '../../services/favoritoService';
 import { listarHistoricoCliente } from '../../services/historicoService';
@@ -18,7 +19,7 @@ import { navigationRef } from '../../navigation/navigationRef';
 import { clearPendingAuthAction } from '../../navigation/authIntent';
 import { FormScreen } from '../../components/form';
 import { SurfaceCard } from '../../components/ui/DesignPrimitives';
-import { fonts, radii } from '../../theme';
+import { fonts, gradients, radii, tabularNums } from '../../theme';
 
 function obterIniciais(nome) {
   const limpo = String(nome || '').trim();
@@ -39,6 +40,7 @@ export default function ProfileScreen({ navigation }) {
     sincronizarGpsCliente,
   } = useAuth();
   const { colors, isDark, alternarTema } = useTheme();
+  const { useSidebarNav } = useLayoutProfile();
   const perfil = session?.perfil;
   const clienteId = isCliente ? perfil?.id : null;
   const lojaId = perfil?.lojaId || perfil?.lojaVinculadaId || null;
@@ -122,6 +124,17 @@ export default function ProfileScreen({ navigation }) {
     },
     ...(!emModoLoja
       ? [
+          ...(!useSidebarNav
+            ? [
+                {
+                  key: 'historico',
+                  icon: 'time-outline',
+                  label: 'Histórico de buscas',
+                  value: totalBuscas ? `${totalBuscas} buscas` : 'Ver buscas',
+                  onPress: () => navigation.navigate('Histórico'),
+                },
+              ]
+            : []),
           {
             key: 'ai-assistant',
             icon: 'sparkles-outline',
@@ -156,9 +169,9 @@ export default function ProfileScreen({ navigation }) {
       scrollable
       maxContentWidth={780}
     >
-      <View style={styles.container}>
+      <View style={[styles.container, useSidebarNav && styles.containerDesktop]}>
         {/* Hero Ink Card */}
-        <View style={[styles.heroCard, { backgroundColor: colors.ink }]}>
+        <View style={[styles.heroCard, { backgroundColor: colors.ink }, gradients.aiWeb]}>
           <View style={styles.heroTopRow}>
             <View
               style={[
@@ -219,7 +232,7 @@ export default function ProfileScreen({ navigation }) {
               ]}
             >
               <Text
-                style={[styles.statValue, { color: colors.inkForeground }]}
+                style={[styles.statValue, tabularNums, { color: colors.inkForeground }]}
               >
                 {totalFavoritos}
               </Text>
@@ -238,7 +251,7 @@ export default function ProfileScreen({ navigation }) {
               ]}
             >
               <Text
-                style={[styles.statValue, { color: colors.inkForeground }]}
+                style={[styles.statValue, tabularNums, { color: colors.inkForeground }]}
               >
                 {totalBuscas}
               </Text>
@@ -455,7 +468,10 @@ export default function ProfileScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     gap: 18,
-    paddingBottom: 90,
+    paddingBottom: 108,
+  },
+  containerDesktop: {
+    paddingBottom: 32,
   },
   heroCard: {
     borderRadius: radii['2xl'],

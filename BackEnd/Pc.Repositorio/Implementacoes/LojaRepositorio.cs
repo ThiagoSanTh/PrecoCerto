@@ -47,20 +47,34 @@ namespace Pc.Repositorio.Implementacoes
 
         public async Task<List<Loja>> BuscarPorNomeAsync(string nome)
         {
-            var pattern = $"%{nome.Trim()}%";
+            if (string.IsNullOrWhiteSpace(nome))
+                return new List<Loja>();
+
+            var pattern = $"%{SqlLikeHelper.EscapeLike(nome.Trim())}%";
             return await QueryComEndereco()
-                .Where(l => EF.Functions.ILike(l.NomeFantasia, pattern))
+                .Where(l => EF.Functions.ILike(l.NomeFantasia, pattern, "\\"))
                 .ToListAsync();
         }
 
         public async Task<PaginacaoResultado<Loja>> BuscarPorNomePaginadoAsync(string nome, PaginacaoParametros paginacao)
         {
-            var pattern = $"%{nome.Trim()}%";
+            if (string.IsNullOrWhiteSpace(nome))
+            {
+                return new PaginacaoResultado<Loja>
+                {
+                    Items = Array.Empty<Loja>(),
+                    Page = paginacao.Page,
+                    PageSize = paginacao.PageSize,
+                    Total = 0
+                };
+            }
+
+            var pattern = $"%{SqlLikeHelper.EscapeLike(nome.Trim())}%";
             var filtrado = _context.Lojas.AsNoTracking()
-                .Where(l => EF.Functions.ILike(l.NomeFantasia, pattern));
+                .Where(l => EF.Functions.ILike(l.NomeFantasia, pattern, "\\"));
             var total = await filtrado.CountAsync();
             var items = await QueryComEndereco()
-                .Where(l => EF.Functions.ILike(l.NomeFantasia, pattern))
+                .Where(l => EF.Functions.ILike(l.NomeFantasia, pattern, "\\"))
                 .OrderBy(l => l.NomeFantasia)
                 .Skip(paginacao.Skip)
                 .Take(paginacao.PageSize)

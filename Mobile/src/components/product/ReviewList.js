@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import StarRating from './StarRating';
 import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import { useTheme } from '../../context/ThemeContext';
+import { fonts, radii } from '../../theme';
 
 function formatarData(data) {
   if (!data) return '';
@@ -16,9 +17,9 @@ const baseStyles = StyleSheet.create({
     marginTop: 8,
   },
   titulo: {
+    fontFamily: fonts.display,
     fontSize: 18,
     fontWeight: '700',
-    color: '#0F172A',
     marginBottom: 8,
   },
   resumo: {
@@ -28,21 +29,19 @@ const baseStyles = StyleSheet.create({
     marginBottom: 12,
   },
   quantidade: {
+    fontFamily: fonts.sans,
     fontSize: 13,
-    color: '#64748B',
   },
   vazio: {
+    fontFamily: fonts.sans,
     fontSize: 14,
-    color: '#64748B',
     marginBottom: 8,
   },
   card: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
+    borderRadius: radii.xl,
+    padding: 14,
+    marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -51,12 +50,12 @@ const baseStyles = StyleSheet.create({
     marginBottom: 4,
   },
   data: {
+    fontFamily: fonts.sans,
     fontSize: 12,
-    color: '#94A3B8',
   },
   comentario: {
+    fontFamily: fonts.sans,
     fontSize: 14,
-    color: '#475569',
     lineHeight: 20,
   },
 });

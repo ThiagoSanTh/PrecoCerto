@@ -1,6 +1,7 @@
 import { Platform, View, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import { colors, radii } from '../theme';
 
 /**
  * Mapa Leaflet: WebView no nativo, iframe no Expo Web (PWA).
@@ -32,6 +33,7 @@ const LeafletMapFrame = forwardRef(function LeafletMapFrame(
 
     function handleWindowMessage(event) {
       if (event.source !== iframeRef.current?.contentWindow) return;
+      if (event.origin !== 'null' && event.origin !== window.location.origin) return;
       onMessage?.({ nativeEvent: { data: event.data } });
     }
 
@@ -48,7 +50,7 @@ const LeafletMapFrame = forwardRef(function LeafletMapFrame(
           title="Mapa"
           srcDoc={html}
           style={styles.iframe}
-          sandbox="allow-scripts allow-same-origin"
+          sandbox="allow-scripts"
         />
       </View>
     );
@@ -59,7 +61,7 @@ const LeafletMapFrame = forwardRef(function LeafletMapFrame(
       ref={webViewRef}
       key={mapKey}
       style={[styles.frame, style]}
-      originWhitelist={['*']}
+      originWhitelist={['about:blank', 'https://*', 'http://*']}
       source={{ html }}
       javaScriptEnabled
       domStorageEnabled
@@ -75,9 +77,9 @@ export default LeafletMapFrame;
 const styles = StyleSheet.create({
   frame: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: radii.md,
     overflow: 'hidden',
-    backgroundColor: '#e2e8f0',
+    backgroundColor: colors.map,
   },
   iframe: {
     borderWidth: 0,

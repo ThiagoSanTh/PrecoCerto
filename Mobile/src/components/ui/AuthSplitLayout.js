@@ -1,12 +1,12 @@
 import { useRef, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Platform } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLayoutProfile } from '../../hooks/useLayoutProfile';
 import { useTheme } from '../../context/ThemeContext';
 import FormErrorBanner from '../form/FormErrorBanner';
 import { BrandLogo } from './DesignPrimitives';
-import { fonts, radii } from '../../theme';
+import { fonts, gradients, radii } from '../../theme';
 
 const FEATURES = [
   { icon: 'location-outline', text: 'Preços das lojas físicas da sua cidade' },
@@ -19,6 +19,8 @@ export default function AuthSplitLayout({
   subtitle,
   error,
   onErrorAction,
+  onBack,
+  backLabel = 'Voltar para busca',
   children,
 }) {
   const { isDesktopWeb, insets } = useLayoutProfile();
@@ -47,12 +49,7 @@ export default function AuthSplitLayout({
                 paddingTop: 48 + insets.top,
                 paddingBottom: 48 + insets.bottom,
               },
-              Platform.OS === 'web'
-                ? {
-                    backgroundImage:
-                      'linear-gradient(135deg, #0F1D22 0%, #103A35 100%)',
-                  }
-                : null,
+              gradients.aiWeb,
             ]}
           >
             <BrandLogo dark />
@@ -124,6 +121,21 @@ export default function AuthSplitLayout({
               <View style={styles.mobileLogoWrap}>
                 <BrandLogo dark={false} />
               </View>
+            ) : null}
+
+            {onBack ? (
+              <Pressable
+                onPress={onBack}
+                style={styles.backBtn}
+                accessibilityRole="button"
+                accessibilityLabel={backLabel}
+                hitSlop={8}
+              >
+                <Ionicons name="arrow-back" size={15} color={colors.primary} />
+                <Text style={[styles.backText, { color: colors.primary }]}>
+                  {backLabel}
+                </Text>
+              </Pressable>
             ) : null}
 
             <Text
@@ -219,6 +231,18 @@ const styles = StyleSheet.create({
   },
   mobileLogoWrap: {
     marginBottom: 28,
+  },
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    marginBottom: 14,
+  },
+  backText: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 13,
+    fontWeight: '600',
   },
   formTitle: {
     fontFamily: fonts.display,

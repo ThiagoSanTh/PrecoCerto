@@ -56,6 +56,9 @@ export default function LoginScreen({ navigation }) {
       title="Bem-vindo de volta"
       subtitle="Após entrar, sua localização é obtida pelo GPS para mostrar as lojas próximas."
       error={error}
+      onBack={() =>
+        navigation.canGoBack() ? navigation.goBack() : navigation.replace('Home')
+      }
     >
       <FormField
         id="login-email"

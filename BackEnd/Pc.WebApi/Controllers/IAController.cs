@@ -2,8 +2,10 @@ using System.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Pc.Servico.Interfaces;
 using Pc.Servico.Interfaces.MotorIA;
 using Pc.Servico.Modelos.MotorIA;
+using Pc.WebApi.Authorization;
 using Pc.WebApi.DTOs.IA;
 using Pc.WebApi.Extensions;
 
@@ -21,11 +23,13 @@ namespace Pc.WebApi.Controllers
     {
         private readonly IMotorIA _motorIA;
         private readonly ILogger<IAController> _logger;
+        private readonly ILojaAcesso? _lojaAcesso;
 
-        public IAController(IMotorIA motorIA, ILogger<IAController> logger)
+        public IAController(IMotorIA motorIA, ILogger<IAController> logger, ILojaAcesso? lojaAcesso = null)
         {
             _motorIA = motorIA;
             _logger = logger;
+            _lojaAcesso = lojaAcesso;
         }
 
         [HttpPost("chat")]
@@ -95,6 +99,9 @@ namespace Pc.WebApi.Controllers
             if (request is null || string.IsNullOrWhiteSpace(request.Mensagem))
                 return BadRequest(new { message = "Informe a mensagem." });
 
+            if (!ModelState.IsValid)
+                return ValidationProblem(ModelState);
+
             var mensagem = request.Mensagem.Trim();
             if (mensagem.Length > 500)
             {
@@ -107,21 +114,46 @@ namespace Pc.WebApi.Controllers
                 });
             }
 
+            var modo = request.ModoOperacional?.Trim().ToLowerInvariant();
+            Guid? lojaAlvo = null;
+            if (modo == "loja" || request.LojaIdUsuario.HasValue)
+            {
+                lojaAlvo = request.LojaIdUsuario ?? User.GetLojaId();
+                if (!lojaAlvo.HasValue)
+                    return Forbid();
+
+                var pertence = _lojaAcesso is not null
+                    ? await Authz.PertenceAsync(User, lojaAlvo.Value, _lojaAcesso)
+                    : Authz.OwnsLoja(this, lojaAlvo.Value);
+                if (!pertence)
+                    return Forbid();
+            }
+
+            var historicoSanitizado = request.Historico?
+                .Where(h => h is not null && !string.IsNullOrWhiteSpace(h.Texto))
+                .TakeLast(8)
+                .Select(h =>
+                {
+                    var limpo = h.Texto.Replace("\0", string.Empty).Trim();
+                    return new MensagemHistoricoIA
+                    {
+                        Papel = string.Equals(h.Papel, "user", StringComparison.OrdinalIgnoreCase) ? "user" : "ia",
+                        Texto = limpo.Length > 500 ? limpo[..500] : limpo
+                    };
+                })
+                .ToList() ?? new List<MensagemHistoricoIA>();
+
             var sw = Stopwatch.StartNew();
             var resultado = await _motorIA.AnalisarAsync(new PedidoAnaliseIA
             {
                 Mensagem = mensagem,
                 Latitude = request.Latitude,
                 Longitude = request.Longitude,
-                UsuarioId = request.UsuarioId ?? User.GetUserId(),
+                UsuarioId = User.GetUserId(),
                 SessaoId = request.SessaoId,
-                LojaIdUsuario = request.LojaIdUsuario,
-                ModoOperacional = request.ModoOperacional,
-                Historico = request.Historico?.Select(h => new MensagemHistoricoIA
-                {
-                    Papel = h.Papel,
-                    Texto = h.Texto
-                }).ToList() ?? new List<MensagemHistoricoIA>()
+                LojaIdUsuario = lojaAlvo,
+                ModoOperacional = modo == "loja" ? "loja" : "cliente",
+                Historico = historicoSanitizado
             }, cancellationToken);
             sw.Stop();
 

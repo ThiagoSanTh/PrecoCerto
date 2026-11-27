@@ -33,7 +33,7 @@ import {
 } from '../../utils/insights';
 import { calcularDistanciaKm, formatarDistancia } from '../../utils/geo';
 import { COORDENADAS_SAQUAREMA, formatarPrecoBrl } from '../../utils/mapaUtils';
-import { fonts, radii, shadows } from '../../theme';
+import { fonts, radii, shadows, tabularNums } from '../../theme';
 
 const PAGE_SIZE = 40;
 
@@ -53,6 +53,8 @@ export default function FavoritosScreen() {
 
   const contentWidth = useSidebarNav ? width - sidebarWidth : width;
   const numColumns = contentWidth >= 1100 ? 3 : contentWidth >= 680 ? 2 : 1;
+  const cardMaxWidth =
+    numColumns === 3 ? '32.4%' : numColumns === 2 ? '49%' : undefined;
 
   const coordsCliente = useMemo(
     () => ({
@@ -218,6 +220,7 @@ export default function FavoritosScreen() {
         onPress={() => abrirProdutoFavorito(item)}
         style={[
           styles.favCard,
+          cardMaxWidth ? { maxWidth: cardMaxWidth } : null,
           { backgroundColor: colors.card, borderColor: colors.border },
         ]}
       >
@@ -270,11 +273,11 @@ export default function FavoritosScreen() {
 
         <View style={styles.cardBottomRow}>
           <View>
-            <Text style={[styles.priceText, { color: colors.text }]}>
+            <Text style={[styles.priceText, tabularNums, { color: colors.text }]}>
               {formatarPrecoBrl(preco)}
             </Text>
             {precoAnt && Number(precoAnt) > Number(preco) ? (
-              <Text style={[styles.oldPriceText, { color: colors.textMuted }]}>
+              <Text style={[styles.oldPriceText, tabularNums, { color: colors.textMuted }]}>
                 {formatarPrecoBrl(precoAnt)}
               </Text>
             ) : null}
@@ -304,6 +307,7 @@ export default function FavoritosScreen() {
         onPress={() => abrirLojaFavorita(item)}
         style={[
           styles.favCard,
+          cardMaxWidth ? { maxWidth: cardMaxWidth } : null,
           { backgroundColor: colors.card, borderColor: colors.border },
         ]}
       >
@@ -399,7 +403,7 @@ export default function FavoritosScreen() {
           ]}
         >
           <Ionicons
-            name="pricetag-outline"
+            name="notifications-outline"
             size={18}
             color={colors.primary}
           />

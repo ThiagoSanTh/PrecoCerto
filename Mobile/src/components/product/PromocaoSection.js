@@ -1,6 +1,7 @@
 import { View, Text, Switch, StyleSheet } from 'react-native';
 import { FormField } from '../form';
 import { useTheme } from '../../context/ThemeContext';
+import { fonts, radii } from '../../theme';
 
 function aplicarMascaraDataBr(valor = '') {
   const digitos = String(valor).replace(/\D/g, '').slice(0, 8);
@@ -45,7 +46,7 @@ export default function PromocaoSection({
           value={emPromocao}
           onValueChange={onTogglePromocao}
           trackColor={{ false: colors.border, true: colors.primary }}
-          thumbColor="#fff"
+          thumbColor={colors.primaryForeground}
         />
       </View>
 
@@ -97,21 +98,19 @@ const styles = StyleSheet.create({
   container: {
     marginTop: 8,
     marginBottom: 16,
-    padding: 14,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 10,
+    padding: 16,
+    borderRadius: radii.xl,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   titulo: {
-    fontSize: 18,
+    fontFamily: fonts.display,
+    fontSize: 17,
     fontWeight: '700',
-    color: '#0F172A',
     marginBottom: 4,
   },
   hint: {
+    fontFamily: fonts.sans,
     fontSize: 13,
-    color: '#64748B',
     marginBottom: 12,
   },
   switchRow: {
@@ -121,9 +120,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   switchLabel: {
-    fontSize: 15,
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 14.5,
     fontWeight: '600',
-    color: '#0F172A',
     flex: 1,
     marginRight: 8,
   },

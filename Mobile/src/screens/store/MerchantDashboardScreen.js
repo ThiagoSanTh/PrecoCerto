@@ -5,7 +5,6 @@ import {
   Pressable,
   ActivityIndicator,
   StyleSheet,
-  Platform,
 } from 'react-native';
 import { useCallback, useState, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
@@ -28,12 +27,12 @@ import {
 } from '../../utils/insights';
 import { FormScreen, PrimaryButton, ListCardText } from '../../components/form';
 import { PageHeader, SurfaceCard, PillBadge } from '../../components/ui/DesignPrimitives';
-import { fonts, radii } from '../../theme';
+import { fonts, gradients, radii, tabularNums } from '../../theme';
 
 export default function MerchantDashboardScreen({ navigation }) {
   const { session, isLojista } = useAuth();
   const { colors } = useTheme();
-  const { isDesktopWeb, isTabletWeb, height } = useLayoutProfile();
+  const { isDesktopWeb, isTabletWeb, useSidebarNav, height } = useLayoutProfile();
   const lojaId = session?.perfil?.lojaId || session?.perfil?.lojaVinculadaId || null;
   const listMaxHeight = Math.max(220, Math.min(300, Math.round((height || 760) * 0.36)));
 
@@ -230,7 +229,7 @@ export default function MerchantDashboardScreen({ navigation }) {
       hideHeader
       scrollable
     >
-      <View style={styles.pageWrap}>
+      <View style={[styles.pageWrap, !useSidebarNav && styles.pageWrapMobileDock]}>
         <PageHeader
           eyebrow={loja?.nomeFantasia || session?.perfil?.nomeLoja || 'Painel do Lojista'}
           title="Inteligência de vendas"
@@ -289,7 +288,7 @@ export default function MerchantDashboardScreen({ navigation }) {
                       variant={k.positive ? 'soft' : 'destructive'}
                     />
                   </View>
-                  <Text style={[styles.kpiValue, { color: colors.text }]}>{k.value}</Text>
+                  <Text style={[styles.kpiValue, isWide && styles.kpiValueWide, tabularNums, { color: colors.text }]}>{k.value}</Text>
                   <Text style={[styles.kpiLabel, { color: colors.textMuted }]}>{k.label}</Text>
                 </SurfaceCard>
               ))}
@@ -306,7 +305,7 @@ export default function MerchantDashboardScreen({ navigation }) {
                       Volume real de pesquisas por termo vinculadas à sua loja
                     </Text>
                   </View>
-                  <Text style={[styles.totalBuscasBadge, { color: colors.primary }]}>
+                  <Text style={[styles.totalBuscasBadge, tabularNums, { color: colors.primary }]}>
                     {totalBuscasLoja} buscas
                   </Text>
                 </View>
@@ -351,12 +350,7 @@ export default function MerchantDashboardScreen({ navigation }) {
                   styles.aiInsightsCard,
                   isWide && { flex: 1 },
                   { backgroundColor: colors.ink },
-                  Platform.OS === 'web'
-                    ? {
-                        backgroundImage:
-                          'linear-gradient(135deg, #0F1D22 0%, #103A35 100%)',
-                      }
-                    : null,
+                  gradients.aiWeb,
                 ]}
               >
                 <View style={styles.aiHeaderRow}>
@@ -454,10 +448,10 @@ export default function MerchantDashboardScreen({ navigation }) {
                             ) : null}
                           </View>
                           <View style={[styles.compNumbers, !isWide && styles.compNumbersMobile]}>
-                            <Text style={[styles.compAvg, { color: colors.textMuted }]}>
+                            <Text style={[styles.compAvg, tabularNums, { color: colors.textMuted }]}>
                               Média {formatarPrecoBrl(item.mediaMercado)}
                             </Text>
-                            <Text style={[styles.compMe, { color: colors.text }]}>
+                            <Text style={[styles.compMe, tabularNums, { color: colors.text }]}>
                               {formatarPrecoBrl(item.meuPreco)}
                             </Text>
                             {isWide ? (
@@ -557,7 +551,10 @@ export default function MerchantDashboardScreen({ navigation }) {
 const styles = StyleSheet.create({
   pageWrap: {
     gap: 20,
-    paddingBottom: 24,
+    paddingBottom: 28,
+  },
+  pageWrapMobileDock: {
+    paddingBottom: 104,
   },
   headerActions: {
     flexDirection: 'row',
@@ -593,7 +590,8 @@ const styles = StyleSheet.create({
   },
   kpiCardWide: {
     flex: 1,
-    minWidth: 190,
+    flexBasis: '22%',
+    minWidth: 180,
     padding: 18,
   },
   kpiTopRow: {
@@ -614,6 +612,9 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
     marginTop: 10,
+  },
+  kpiValueWide: {
+    fontSize: 28,
   },
   kpiLabel: {
     fontFamily: fonts.sans,

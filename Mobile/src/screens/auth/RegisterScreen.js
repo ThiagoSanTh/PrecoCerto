@@ -35,7 +35,8 @@ async function loginComRetry(email, senha) {
   throw lastError;
 }
 
-export default function RegisterScreen({ navigation }) {
+export default function RegisterScreen({ navigation, route }) {
+  const authNotice = route?.params?.authNotice || null;
   const [nomeUsuario, setNomeUsuario] = useState('');
   const [email, setEmail] = useState('');
   const [telefone, setTelefone] = useState('');
@@ -167,12 +168,25 @@ export default function RegisterScreen({ navigation }) {
     }
   }
 
+  const bannerError =
+    error ||
+    (authNotice
+      ? {
+          title: 'Cadastro necessário',
+          message: authNotice,
+          variant: 'info',
+        }
+      : null);
+
   return (
     <AuthSplitLayout
       title="Crie sua conta"
       subtitle="Após entrar, sua localização é obtida pelo GPS para mostrar as lojas próximas."
-      error={error}
+      error={bannerError}
       onErrorAction={() => navigation.navigate('Login')}
+      onBack={() =>
+        navigation.canGoBack() ? navigation.goBack() : navigation.replace('Home')
+      }
     >
       <FormField
         id="cadastro-nome"

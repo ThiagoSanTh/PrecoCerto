@@ -8,6 +8,7 @@ import {
   Image,
   ScrollView,
   Linking,
+  Platform,
   StyleSheet,
   Alert,
 } from 'react-native';
@@ -27,6 +28,7 @@ import {
 } from '../../services/favoritoService';
 import { abrirConversa } from '../../services/chatService';
 import { navegarParaChat } from '../../navigation/chatNavigation';
+import { redirecionarParaCadastro } from '../../navigation/authGate';
 import { obterLocalizacaoAtual } from '../../services/locationService';
 import { obterClima, normalizarCoordenadasClima } from '../../services/weatherService';
 import { useAuth } from '../../context/AuthContext';
@@ -57,7 +59,7 @@ import {
   calcularEconomiaBusca,
   enriquecerEOrdenarResultadosBusca,
 } from '../../utils/insights';
-import { fonts, inputFontSize, radii, shadows } from '../../theme';
+import { fonts, inputFontSize, radii, shadows, tabularNums } from '../../theme';
 
 const DEBOUNCE_BUSCA_MS = 400;
 const DEBOUNCE_HISTORICO_MS = 1200;
@@ -83,6 +85,7 @@ export default function SearchScreen() {
   const [ordenarPor, setOrdenarPor] = useState('preco');
   const [apenasPromocao, setApenasPromocao] = useState(false);
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [focoRotaKey, setFocoRotaKey] = useState(0);
   const [cardMapaRecolhido, setCardMapaRecolhido] = useState(false);
@@ -526,6 +529,10 @@ export default function SearchScreen() {
 
   async function handleAbrirChatItem(item) {
     if (!item) return;
+    if (!session) {
+      redirecionarParaCadastro(navigation);
+      return;
+    }
     if (!clienteId) {
       Alert.alert(
         'Chat',
@@ -561,6 +568,10 @@ export default function SearchScreen() {
   }
 
   async function handleFavorito(item) {
+    if (!session) {
+      redirecionarParaCadastro(navigation);
+      return;
+    }
     if (!clienteId || !item?.id) return;
     const id = String(item.id);
     const jaFavorito = favoritosIds.has(id);
@@ -631,13 +642,22 @@ export default function SearchScreen() {
             abrirProduto(item.id, item);
           }
         }}
-        style={[
+        style={({ hovered }) => [
           styles.resultCard,
           {
             backgroundColor: colors.card,
-            borderColor: isSelected ? colors.primary : colors.border,
+            borderColor: isSelected
+              ? colors.primary
+              : hovered
+                ? 'rgba(14, 124, 102, 0.45)'
+                : colors.border,
           },
           isSelected && styles.resultCardSelected,
+          isSelected &&
+            Platform.OS === 'web' && {
+              boxShadow:
+                '0 0 0 1px #0E7C66, 0 8px 24px -8px rgba(15, 29, 34, 0.12)',
+            },
         ]}
       >
         <View style={styles.resultRow}>
@@ -703,12 +723,26 @@ export default function SearchScreen() {
 
               {item.notaLoja != null ? (
                 <View style={styles.metaItem}>
-                  <Ionicons name="star" size={12} color={colors.warning} />
-                  <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                  <Ionicons name="star" size={12} color={colors.chart4 || colors.warning} />
+                  <Text style={[styles.metaText, tabularNums, { color: colors.textMuted }]}>
                     {Number(item.notaLoja).toFixed(1)}
                   </Text>
                 </View>
               ) : null}
+
+              <Text
+                style={[
+                  styles.metaStatus,
+                  {
+                    color:
+                      item.disponivel === false
+                        ? colors.destructive
+                        : colors.success,
+                  },
+                ]}
+              >
+                {item.disponivel === false ? 'Indisponível' : 'Disponível'}
+              </Text>
 
               <Pressable
                 onPress={(e) => {
@@ -728,15 +762,15 @@ export default function SearchScreen() {
           </View>
 
           <View style={styles.priceColumn}>
-            <Text style={[styles.priceValue, { color: colors.text }]}>
+            <Text style={[styles.priceValue, tabularNums, { color: colors.text }]}>
               {formatarPrecoBrl(item.preco)}
             </Text>
             {temDesconto ? (
-              <Text style={[styles.oldPriceValue, { color: colors.textMuted }]}>
+              <Text style={[styles.oldPriceValue, tabularNums, { color: colors.textMuted }]}>
                 {formatarPrecoBrl(item.precoAnterior)}
               </Text>
             ) : null}
-            {clienteId ? (
+            {clienteId || !session ? (
               <Pressable
                 onPress={(e) => {
                   e?.stopPropagation?.();
@@ -871,7 +905,7 @@ export default function SearchScreen() {
                 <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
               </Pressable>
             ) : null}
-            <Text style={[styles.floatingPrice, { color: colors.text }]}>
+            <Text style={[styles.floatingPrice, tabularNums, { color: colors.text }]}>
               {formatarPrecoBrl(selectedItem.preco)}
             </Text>
           </View>
@@ -882,7 +916,7 @@ export default function SearchScreen() {
             onPress={() => focarRotaNoMapa(selectedItem)}
             style={[styles.routeBtn, { backgroundColor: colors.primary }]}
             accessibilityRole="button"
-            accessibilityLabel="Traçar rota no mapa"
+            accessibilityLabel="Como chegar"
           >
             <Ionicons
               name="navigate-outline"
@@ -895,7 +929,7 @@ export default function SearchScreen() {
                 { color: colors.primaryForeground },
               ]}
             >
-              Traçar rota
+              Como chegar
             </Text>
           </Pressable>
 
@@ -911,19 +945,7 @@ export default function SearchScreen() {
             <Ionicons name="compass-outline" size={17} color={colors.text} />
           </Pressable>
 
-          <Pressable
-            onPress={() => abrirProduto(selectedItem.id, selectedItem)}
-            style={[
-              styles.iconActionBtn,
-              { borderColor: colors.border, backgroundColor: colors.surface },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Ver produto"
-          >
-            <Ionicons name="pricetag-outline" size={17} color={colors.text} />
-          </Pressable>
-
-          {clienteId ? (
+          {clienteId || !session ? (
             <Pressable
               onPress={() => handleFavorito(selectedItem)}
               style={[
@@ -1044,26 +1066,26 @@ export default function SearchScreen() {
             ) : (
               <View style={{ flex: 1 }} />
             )}
-            {!session ? (
-              <Pressable
-                onPress={() => {
-                  clearPendingAuthAction();
-                  irParaLogin(navigation);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="Entrar"
-                style={({ pressed, focused }) => [
-                  styles.entrarBtn,
-                  { backgroundColor: colors.primary },
-                  pressed && { opacity: 0.88 },
-                  focused && styles.focusRing,
-                ]}
-              >
-                <Text style={[styles.entrarBtnText, { color: colors.primaryForeground }]}>
-                  Entrar
-                </Text>
-              </Pressable>
-            ) : null}
+            <Pressable
+              onPress={() => {
+                if (!session) {
+                  redirecionarParaCadastro(navigation);
+                  return;
+                }
+                navigation.navigate('Favoritos');
+              }}
+              style={[
+                styles.bellBtn,
+                { backgroundColor: colors.card, borderColor: colors.border },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Alertas de preço nos favoritos"
+            >
+              <Ionicons name="notifications-outline" size={18} color={colors.text} />
+              {favoritosIds.size > 0 ? (
+                <View style={[styles.bellDot, { backgroundColor: colors.primary }]} />
+              ) : null}
+            </Pressable>
           </View>
         ) : null}
 
@@ -1071,7 +1093,14 @@ export default function SearchScreen() {
         <View
           style={[
             styles.searchBox,
-            { backgroundColor: colors.card, borderColor: colors.border },
+            {
+              backgroundColor: colors.card,
+              borderColor: searchFocused ? colors.primary : colors.border,
+            },
+            searchFocused &&
+              Platform.OS === 'web' && {
+                boxShadow: '0 0 0 2px rgba(14, 124, 102, 0.22)',
+              },
           ]}
         >
           <Ionicons name="search-outline" size={20} color={colors.textMuted} />
@@ -1081,8 +1110,14 @@ export default function SearchScreen() {
             placeholder="Buscar produtos, marcas ou lojas"
             placeholderTextColor={colors.placeholder}
             onSubmitEditing={handleSearch}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
             returnKeyType="search"
-            style={[styles.searchInput, { color: colors.text }]}
+            style={[
+              styles.searchInput,
+              { color: colors.text },
+              Platform.OS === 'web' ? { outlineStyle: 'none' } : null,
+            ]}
           />
           {termoBusca.length > 0 ? (
             <Pressable
@@ -1325,7 +1360,11 @@ export default function SearchScreen() {
           keyExtractor={(item) => String(item.id)}
           renderItem={renderResultCard}
           ListHeaderComponent={renderSearchHeaderControls()}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            useSplitView && styles.listContentDesktop,
+            !useSidebarNav && styles.listContentMobileDock,
+          ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           onEndReached={carregarMais}
@@ -1379,7 +1418,7 @@ export default function SearchScreen() {
           {renderMapPanel()}
         </View>
       ) : modoVisualizacao === MODO_MAPA ? (
-        <View style={styles.mobileSplitWrap}>
+        <View style={[styles.mobileSplitWrap, !useSidebarNav && styles.mobileSplitWrapDock]}>
           <View style={styles.mobileTopControls}>
             {renderSearchHeaderControls({ compactMapMode: true })}
           </View>
@@ -1412,8 +1451,14 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 16,
-    paddingBottom: 110,
+    paddingBottom: 32,
     gap: 12,
+  },
+  listContentDesktop: {
+    padding: 22,
+  },
+  listContentMobileDock: {
+    paddingBottom: 110,
   },
   controlsSection: {
     gap: 14,
@@ -1428,6 +1473,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
+  },
+  bellBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.soft,
+  },
+  bellDot: {
+    position: 'absolute',
+    top: 9,
+    right: 9,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
   },
   entrarBtn: {
     minHeight: 44,
@@ -1648,6 +1710,11 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sansMedium,
     fontSize: 12,
   },
+  metaStatus: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 12,
+    fontWeight: '600',
+  },
   verDetalhesBtn: {
     minHeight: 44,
     minWidth: 44,
@@ -1829,6 +1896,9 @@ const styles = StyleSheet.create({
   },
   mobileSplitWrap: {
     flex: 1,
+  },
+  mobileSplitWrapDock: {
+    paddingBottom: 88,
   },
   mobileTopControls: {
     paddingHorizontal: 16,

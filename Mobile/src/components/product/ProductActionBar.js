@@ -2,6 +2,7 @@ import { View, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { useMemo } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
+import { shadows } from '../../theme';
 
 export default function ProductActionBar({
   ehFavorito,
@@ -26,20 +27,16 @@ export default function ProductActionBar({
           width: 44,
           height: 44,
           borderRadius: 22,
-          backgroundColor: colors.surface,
+          backgroundColor: colors.card,
           borderWidth: 1,
           borderColor: colors.border,
           alignItems: 'center',
           justifyContent: 'center',
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.06,
-          shadowRadius: 4,
-          elevation: 2,
+          ...shadows.soft,
         },
         btnFavorito: {
-          backgroundColor: '#FEF2F2',
-          borderColor: '#FECACA',
+          backgroundColor: colors.destructiveSoft,
+          borderColor: colors.destructive,
         },
         btnPressed: {
           opacity: 0.75,
@@ -64,12 +61,12 @@ export default function ProductActionBar({
           accessibilityLabel={ehFavorito ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
         >
           {favoritoLoading ? (
-            <ActivityIndicator size="small" color="#EF4444" />
+            <ActivityIndicator size="small" color={colors.destructive} />
           ) : (
             <Ionicons
               name={ehFavorito ? 'heart' : 'heart-outline'}
               size={22}
-              color={ehFavorito ? '#EF4444' : colors.textMuted}
+              color={ehFavorito ? colors.destructive : colors.textMuted}
             />
           )}
         </Pressable>

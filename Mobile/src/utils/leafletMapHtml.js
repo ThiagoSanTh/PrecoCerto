@@ -6,25 +6,15 @@ import {
   SAQUAREMA_ZOOM,
 } from './mapaUtils.js';
 import { nomeProduto } from './produtoUtils.js';
-
-const FALLBACK_MAPBOX_TOKEN =
-  (typeof atob === 'function'
-    ? atob(
-        'cGsuZXlKMUlqb2lkR2hwWVdkdmMyRnVkR2dpTENKaElqb2lZMjEzTlc0eGFXWXlNREZ6YnpKNWNIYzNNV1k0TTNobGFDSjkuVm54RHZQeDRweXVBODI4NHJnNTBhQQ=='
-      )
-    : '') || '';
+import {
+  escapeHtml,
+  safeJsonForScript,
+  sanitizeHttpImageUrl,
+} from './securityUtils.js';
 
 export const MAPBOX_PUBLIC_TOKEN =
   (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_MAPBOX_TOKEN) ||
-  FALLBACK_MAPBOX_TOKEN;
-
-function escapeHtml(text) {
-  return String(text ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
+  '';
 
 /** Minúsculas, sem acento, espaços colapsados. */
 export function normalizarEnderecoMapa(texto) {
@@ -131,7 +121,7 @@ export function prepararDadosMapaLeaflet(localizacaoCliente, produtos) {
       preco: formatarPrecoBrl(p.preco),
       loja: p.lojaNomeFantasia || '',
       endereco: [p.logradouro, p.cidade].filter(Boolean).join(' — '),
-      imagemUrl: p.imagemUrl || null,
+      imagemUrl: sanitizeHttpImageUrl(p.imagemUrl),
       inicial: inicialPlaceholder(nome),
     };
   });
@@ -187,7 +177,7 @@ export function prepararDadosMapaLeaflet(localizacaoCliente, produtos) {
 
 export function buildLeafletMapHtml(dadosMapa) {
   const mapboxToken = dadosMapa?.mapboxToken || MAPBOX_PUBLIC_TOKEN;
-  const payload = JSON.stringify({ ...dadosMapa, mapboxToken });
+  const payload = safeJsonForScript({ ...dadosMapa, mapboxToken });
 
   return `<!DOCTYPE html>
 <html>
@@ -196,9 +186,10 @@ export function buildLeafletMapHtml(dadosMapa) {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- Google Fonts gera CSS dinamico por User-Agent; SRI estatico nao se aplica -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Sora:wght@600;700&display=swap" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin=""></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body, #map { width: 100%; height: 100%; background: #EFF3E8; font-family: 'Manrope', system-ui, sans-serif; }
@@ -267,6 +258,22 @@ export function buildLeafletMapHtml(dadosMapa) {
   <script>
     const DATA = ${payload};
 
+    function esc(text) {
+      return String(text == null ? '' : text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function safeImgUrl(url) {
+      if (typeof url !== 'string') return null;
+      var trimmed = url.trim();
+      if (!/^https?:\/\//i.test(trimmed) || /[\s"'<>\\]/.test(trimmed)) return null;
+      return trimmed;
+    }
+
     function postToApp(data) {
       var json = JSON.stringify(data);
       if (window.ReactNativeWebView) {
@@ -290,7 +297,7 @@ export function buildLeafletMapHtml(dadosMapa) {
     var mapboxToken = DATA.mapboxToken;
     var tileLayer;
     if (mapboxToken) {
-      tileLayer = L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/512/{z}/{x}/{y}@2x?access_token=' + mapboxToken, {
+      tileLayer = L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/512/{z}/{x}/{y}@2x?access_token=' + encodeURIComponent(mapboxToken), {
         maxZoom: 19,
         tileSize: 512,
         zoomOffset: -1,
@@ -312,23 +319,23 @@ export function buildLeafletMapHtml(dadosMapa) {
 
     function popupHtml(m) {
       const parts = [
-        '<div class="popup-title">' + m.nome + '</div>',
-        '<div class="popup-price">' + m.preco + '</div>'
+        '<div class="popup-title">' + esc(m.nome) + '</div>',
+        '<div class="popup-price">' + esc(m.preco) + '</div>'
       ];
-      if (m.loja) parts.push('<div class="popup-meta">' + m.loja + '</div>');
-      if (m.endereco) parts.push('<div class="popup-meta">' + m.endereco + '</div>');
+      if (m.loja) parts.push('<div class="popup-meta">' + esc(m.loja) + '</div>');
+      if (m.endereco) parts.push('<div class="popup-meta">' + esc(m.endereco) + '</div>');
       parts.push(
-        '<button type="button" class="popup-btn" data-id="' + m.id + '">Mais informações</button>'
+        '<button type="button" class="popup-btn" data-id="' + esc(m.id) + '">Mais informações</button>'
       );
       return parts.join('');
     }
 
     function pinHtml(m) {
-      if (m.imagemUrl) {
-        var src = encodeURI(m.imagemUrl);
-        return '<div class="pin pin-img"><img src="' + src + '" alt="" width="38" height="38" /></div>';
+      var src = safeImgUrl(m.imagemUrl);
+      if (src) {
+        return '<div class="pin pin-img"><img src="' + esc(src) + '" alt="" width="38" height="38" /></div>';
       }
-      return '<div class="pin">' + m.inicial + '</div>';
+      return '<div class="pin">' + esc(m.inicial) + '</div>';
     }
 
     DATA.marcadores.forEach(function(m) {
@@ -344,13 +351,15 @@ export function buildLeafletMapHtml(dadosMapa) {
         .bindPopup(popupHtml(m));
 
       marker.on('popupopen', function() {
-        var btn = document.querySelector('.popup-btn[data-id="' + m.id + '"]');
-        if (btn) {
-          btn.onclick = function(e) {
-            e.stopPropagation();
-            postToApp({ type: 'product', productId: m.id });
-          };
-        }
+        var btns = document.querySelectorAll('.popup-btn');
+        btns.forEach(function(btn) {
+          if (btn.getAttribute('data-id') === String(m.id)) {
+            btn.onclick = function(e) {
+              e.stopPropagation();
+              postToApp({ type: 'product', productId: m.id });
+            };
+          }
+        });
       });
     });
 
@@ -450,7 +459,7 @@ export function buildLojasMapHtml(dadosMapa) {
     lng: g.lng,
     ids: g.lojas.map((l) => l.id),
   }));
-  const payload = JSON.stringify({ ...dadosMapa, mapboxToken, marcadores, grupos });
+  const payload = safeJsonForScript({ ...dadosMapa, mapboxToken, marcadores, grupos });
 
   return `<!DOCTYPE html>
 <html>
@@ -459,6 +468,7 @@ export function buildLojasMapHtml(dadosMapa) {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- Google Fonts gera CSS dinamico por User-Agent; SRI estatico nao se aplica -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Sora:wght@600;700&display=swap" />
   ${LEAFLET_ASSETS}
   <style>
@@ -848,7 +858,15 @@ export function buildLojasMapHtml(dadosMapa) {
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function safeImgUrl(url) {
+      if (typeof url !== 'string') return null;
+      var trimmed = url.trim();
+      if (!/^https?:\/\//i.test(trimmed) || /[\s"'<>\\]/.test(trimmed)) return null;
+      return trimmed;
     }
 
     function postToApp(data) {
@@ -874,7 +892,7 @@ export function buildLojasMapHtml(dadosMapa) {
     var mapboxToken = DATA.mapboxToken;
     var mainTiles;
     if (mapboxToken) {
-      mainTiles = L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/512/{z}/{x}/{y}@2x?access_token=' + mapboxToken, {
+      mainTiles = L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/512/{z}/{x}/{y}@2x?access_token=' + encodeURIComponent(mapboxToken), {
         maxZoom: 19,
         tileSize: 512,
         zoomOffset: -1,
@@ -945,11 +963,11 @@ export function buildLojasMapHtml(dadosMapa) {
         precoTag = '<div class="pin-price-tag">' + esc(preco) + '</div>';
       }
       var circleHtml = '';
-      if (imagemUrl) {
-        var src = encodeURI(imagemUrl);
-        circleHtml = '<div class="' + classe + ' pin-loja-feed-img"><img src="' + src + '" alt="" width="44" height="44" /></div>';
+      var src = safeImgUrl(imagemUrl);
+      if (src) {
+        circleHtml = '<div class="' + classe + ' pin-loja-feed-img"><img src="' + esc(src) + '" alt="" width="44" height="44" /></div>';
       } else {
-        circleHtml = '<div class="' + classe + '">' + m.inicial + '</div>';
+        circleHtml = '<div class="' + classe + '">' + esc(m.inicial) + '</div>';
       }
       return '<div class="pin-wrap">' + precoTag + circleHtml + '</div>';
     }
@@ -1110,7 +1128,7 @@ export function buildLojasMapHtml(dadosMapa) {
           origem.lng + ',' + origem.lat + ';' +
           destino.lng + ',' + destino.lat +
           '?geometries=geojson&overview=full&access_token=' +
-          DATA.mapboxToken;
+          encodeURIComponent(DATA.mapboxToken);
 
         routePromise = fetch(mapboxUrl)
           .then(function(res) {
@@ -1188,16 +1206,17 @@ export function buildLojasMapHtml(dadosMapa) {
       var parts = [
         '<div class="map-card">',
         '<div class="map-card-eyebrow">Saquarema · RJ</div>',
-        '<div class="map-card-title">' + m.nome + '</div>'
+        '<div class="map-card-title">' + esc(m.nome) + '</div>'
       ];
 
       if (produto) {
-        if (produto.imagemUrl) {
-          parts.push('<img class="map-card-img" src="' + encodeURI(produto.imagemUrl) + '" alt="" width="230" height="88" />');
+        var prodImg = safeImgUrl(produto.imagemUrl);
+        if (prodImg) {
+          parts.push('<img class="map-card-img" src="' + esc(prodImg) + '" alt="" width="230" height="88" />');
         }
         parts.push('<div class="map-card-produto">' + esc(produto.nome) + '</div>');
         parts.push('<div class="map-card-preco">' + esc(produto.preco) + '</div>');
-        if (dist) parts.push('<div class="map-card-meta">📍 ' + dist + ' de você</div>');
+        if (dist) parts.push('<div class="map-card-meta">📍 ' + esc(dist) + ' de você</div>');
         parts.push(
           '<div class="popup-actions">' +
             '<button type="button" class="popup-btn popup-btn-route" data-action="route" data-loja-id="' + esc(String(m.id)) + '">Traçar rota</button>' +
@@ -1206,7 +1225,7 @@ export function buildLojasMapHtml(dadosMapa) {
         );
       } else if (destaques.buscaAtiva) {
         parts.push('<div class="map-card-empty">Esta loja não possui resultado para sua busca atual.</div>');
-        if (dist) parts.push('<div class="map-card-meta">📍 ' + dist + '</div>');
+        if (dist) parts.push('<div class="map-card-meta">📍 ' + esc(dist) + '</div>');
         parts.push(
           '<div class="popup-actions">' +
             '<button type="button" class="popup-btn popup-btn-route" data-action="route" data-loja-id="' + esc(String(m.id)) + '">Traçar rota</button>' +
@@ -1214,8 +1233,8 @@ export function buildLojasMapHtml(dadosMapa) {
           '</div>'
         );
       } else {
-        if (m.endereco) parts.push('<div class="map-card-meta">' + m.endereco + '</div>');
-        if (dist) parts.push('<div class="map-card-meta">📍 ' + dist + '</div>');
+        if (m.endereco) parts.push('<div class="map-card-meta">' + esc(m.endereco) + '</div>');
+        if (dist) parts.push('<div class="map-card-meta">📍 ' + esc(dist) + '</div>');
         parts.push(
           '<div class="popup-actions">' +
             '<button type="button" class="popup-btn popup-btn-route" data-action="route" data-loja-id="' + esc(String(m.id)) + '">Traçar rota</button>' +
@@ -1453,6 +1472,7 @@ export function buildLojasMapHtml(dadosMapa) {
     };
 
     window.addEventListener('message', function(event) {
+      if (window.parent && window.parent !== window && event.source !== window.parent) return;
       window.__onAppMessage(event.data);
     });
 
@@ -1480,16 +1500,17 @@ export function sanitizarMarcadoresParaHtml(marcadores) {
     preco: escapeHtml(m.preco),
     loja: escapeHtml(m.loja),
     endereco: escapeHtml(m.endereco),
+    imagemUrl: sanitizeHttpImageUrl(m.imagemUrl),
     inicial: escapeHtml(m.inicial),
   }));
 }
 
 const LEAFLET_ASSETS = `
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin="" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" integrity="sha384-pmjIAcz2bAn0xukfxADbZIb3t8oRT9Sv0rvO+BR5Csr6Dhqq+nZs59P0pPKQJkEV" crossorigin="" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" integrity="sha384-wgw+aLYNQ7dlhK47ZPK7FRACiq7ROZwgFNg0m04avm4CaXS+Z9Y7nMu8yNjBKYC+" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" integrity="sha384-eXVCORTRlv4FUUgS/xmOyr66XBVraen8ATNLMESp92FKXLAMiKkerixTiBvXriZr" crossorigin=""></script>
 `;
 
 const LEAFLET_BASE_CSS = `
@@ -1520,7 +1541,7 @@ export function buildLeafletPickerMapHtml({ latitude, longitude, titulo, mapboxT
     titulo: escapeHtml(titulo || 'Local da loja'),
     mapboxToken: mapboxToken || MAPBOX_PUBLIC_TOKEN,
   };
-  const payload = JSON.stringify(data);
+  const payload = safeJsonForScript(data);
 
   return `<!DOCTYPE html>
 <html>
@@ -1571,7 +1592,7 @@ export function buildLeafletPickerMapHtml({ latitude, longitude, titulo, mapboxT
     var mapboxToken = DATA.mapboxToken;
     var pickerTiles;
     if (mapboxToken) {
-      pickerTiles = L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/512/{z}/{x}/{y}@2x?access_token=' + mapboxToken, {
+      pickerTiles = L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/512/{z}/{x}/{y}@2x?access_token=' + encodeURIComponent(mapboxToken), {
         maxZoom: 19,
         tileSize: 512,
         zoomOffset: -1,
