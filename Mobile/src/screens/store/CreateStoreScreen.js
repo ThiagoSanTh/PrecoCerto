@@ -1,8 +1,9 @@
-import { View, Text, Pressable, Alert, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, Platform } from 'react-native';
 import { useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { criarLoja } from '../../services/lojaService';
 import { useAuth } from '../../context/AuthContext';
+import { clearPendingAuthAction } from '../../navigation/authIntent';
 import { buscarEnderecoPorCep, geocodificarEndereco } from '../../services/enderecoService';
 import { consultarCnpj } from '../../services/consultaService';
 import { obterLocalizacaoAtual } from '../../services/locationService';
@@ -13,9 +14,16 @@ import {
   PrimaryButton,
   SecondaryButton,
 } from '../../components/form';
-import { apenasDigitosCnpj, isCnpjValido, isEmailValido, isTelefoneValido } from '../../utils/validacaoUtils';
-import { FRASES, mensagemErroConsultaCnpj, planejarPreenchimento } from '../../utils/cnpjLoja';
-import { formatApiError } from '../../utils/apiErrorUtils';
+import { apenasDigitosCnpj, isCnpjValido } from '../../utils/validacaoUtils';
+import {
+  FRASES,
+  mensagemErroConsultaCnpj,
+  montarPayloadCriarLoja,
+  planejarPreenchimento,
+  validarDadosEndereco,
+  validarDadosLoja,
+} from '../../utils/cnpjLoja';
+import { formatApiError, mapApiError } from '../../utils/apiErrorUtils';
 import { useTheme } from '../../context/ThemeContext';
 import { useFormStyles } from '../../hooks/useFormStyles';
 
@@ -38,6 +46,8 @@ export default function CreateStoreScreen({ navigation }) {
   const [emailLoja, setEmailLoja] = useState('');
   const [erroCnpj, setErroCnpj] = useState('');
   const [confirmacaoCnpj, setConfirmacaoCnpj] = useState(null);
+  // Feedback visual unificado (Web + Mobile) via FormErrorBanner, evitando Alert.alert no-op no react-native-web.
+  const [feedback, setFeedback] = useState(null);
 
   const [cep, setCep] = useState('');
   const [logradouro, setLogradouro] = useState('');
@@ -150,60 +160,36 @@ export default function CreateStoreScreen({ navigation }) {
   }
 
   function validarPassoLoja() {
-    if (!nomeFantasia.trim()) {
-      Alert.alert('Loja', 'Informe o nome fantasia.');
-      return false;
-    }
-    // Abrir loja exige CNPJ válido — é o que torna o usuário um lojista.
-    if (!cnpj.trim()) {
-      Alert.alert('Loja', 'Informe o CNPJ da loja.');
-      return false;
-    }
-    if (!isCnpjValido(cnpj)) {
-      Alert.alert('Loja', 'CNPJ inválido. Verifique os números informados.');
-      return false;
-    }
-    if (telefone.trim() && !isTelefoneValido(telefone)) {
-      Alert.alert(
-        'Loja',
-        'Telefone inválido. Informe 8 dígitos (fixo) ou 9 dígitos (celular), com DDD opcional.'
-      );
-      return false;
-    }
-    if (emailLoja.trim() && !isEmailValido(emailLoja)) {
-      Alert.alert('Loja', 'E-mail da loja inválido.');
+    const erro = validarDadosLoja({
+      nomeFantasia,
+      cnpj,
+      telefone,
+      email: emailLoja,
+    });
+    if (erro) {
+      setFeedback(erro);
       return false;
     }
     return true;
   }
 
   function validarPassoEndereco() {
-    const cepLimpo = cep.replace(/\D/g, '');
-    if (cepLimpo.length !== 8 || !logradouro.trim() || !numero.trim() || !cidade.trim() || !estado.trim()) {
-      Alert.alert('Endereço', 'Preencha CEP, logradouro, número, cidade e estado.');
+    const erro = validarDadosEndereco({
+      cep,
+      logradouro,
+      numero,
+      cidade,
+      estado,
+    });
+    if (erro) {
+      setFeedback(erro);
       return false;
     }
     return true;
   }
 
-  function montarEnderecoPayload(lat, lng) {
-    const cepLimpo = cep.replace(/\D/g, '');
-    const estadoSigla = estado.trim().toUpperCase().slice(0, 2);
-    const bairroNormalizado = bairro.trim() || 'Centro';
-
-    return {
-      cep: cepLimpo,
-      logradouro: logradouro.trim(),
-      numero: numero.trim(),
-      bairro: bairroNormalizado,
-      cidade: cidade.trim(),
-      estado: estadoSigla,
-      latitude: lat,
-      longitude: lng,
-    };
-  }
-
   async function avancar() {
+    setFeedback(null);
     if (step === 0) {
       if (!validarPassoLoja()) return;
       if (!(await garantirCnpjNaReceita())) return;
@@ -213,13 +199,15 @@ export default function CreateStoreScreen({ navigation }) {
   }
 
   function voltar() {
+    setFeedback(null);
     if (step > 0) setStep((s) => s - 1);
     else navigation.goBack();
   }
 
   async function handleBuscarCep() {
+    setFeedback(null);
     if (cep.replace(/\D/g, '').length < 8) {
-      Alert.alert('CEP', 'Informe um CEP válido com 8 dígitos.');
+      setFeedback({ title: 'CEP', message: 'Informe um CEP válido com 8 dígitos.' });
       return;
     }
 
@@ -234,13 +222,14 @@ export default function CreateStoreScreen({ navigation }) {
       setLatitude(null);
       setLongitude(null);
     } catch (error) {
-      Alert.alert('CEP', error.message);
+      setFeedback({ title: 'CEP', message: error.message });
     } finally {
       setLoadingCep(false);
     }
   }
 
   async function handleGeocodificar() {
+    setFeedback(null);
     if (!validarPassoEndereco()) return;
 
     setLoadingCoords(true);
@@ -256,20 +245,21 @@ export default function CreateStoreScreen({ navigation }) {
       setLatitude(coords.latitude);
       setLongitude(coords.longitude);
     } catch (error) {
-      Alert.alert('Coordenadas', error.message);
+      setFeedback({ title: 'Coordenadas', message: error.message });
     } finally {
       setLoadingCoords(false);
     }
   }
 
   async function handleUsarGpsAtual() {
+    setFeedback(null);
     setLoadingCoords(true);
     try {
       const coords = await obterLocalizacaoAtual({ allowCached: false });
       setLatitude(coords.latitude);
       setLongitude(coords.longitude);
     } catch (error) {
-      Alert.alert('GPS', error.message);
+      setFeedback({ title: 'GPS', message: error.message });
     } finally {
       setLoadingCoords(false);
     }
@@ -293,24 +283,46 @@ export default function CreateStoreScreen({ navigation }) {
     return coords;
   }
 
+  /**
+   * Conclui a promoção da conta para lojista em Web e Mobile:
+   * navega primeiro para Login com o aviso de confirmação (evitando que o guard sobrescreva params)
+   * e em seguida limpa a sessão antiga de cliente para obter novo JWT com papel Lojista.
+   */
+  async function concluirCriacaoLoja(notice) {
+    clearPendingAuthAction();
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Login', params: { authNotice: notice } }],
+    });
+    await logout();
+  }
+
   async function handleCreateStore() {
-    if (!validarPassoLoja() || !validarPassoEndereco()) {
-      setStep(!nomeFantasia.trim() ? 0 : 1);
+    if (loading) return;
+    setFeedback(null);
+
+    if (!validarPassoLoja()) {
+      setStep(0);
+      return;
+    }
+    if (!validarPassoEndereco()) {
+      setStep(1);
       return;
     }
 
     if (!session?.perfil?.id) {
-      Alert.alert('Erro', 'Faça login para abrir uma loja.');
-      return;
-    }
-
-    if (!(await garantirCnpjNaReceita())) {
-      setStep(0);
+      setFeedback({ title: 'Sessão necessária', message: 'Faça login para abrir uma loja.' });
       return;
     }
 
     setLoading(true);
+    let finalizou = false;
     try {
+      if (!(await garantirCnpjNaReceita())) {
+        setStep(0);
+        return;
+      }
+
       let lat = latitude;
       let lng = longitude;
 
@@ -326,32 +338,46 @@ export default function CreateStoreScreen({ navigation }) {
       }
 
       // O backend define o usuário autenticado como dono e o promove a Lojista.
-      await criarLoja({
-        nomeFantasia: nomeFantasia.trim(),
-        razaoSocial: razaoSocial.trim() || null,
-        cnpj: cnpj.trim(),
-        telefone: telefone.trim() || null,
-        email: emailLoja.trim() || session.perfil.email,
-        endereco: montarEnderecoPayload(lat, lng),
-      });
-
-      Alert.alert(
-        'Loja criada!',
-        'Sua conta agora é de lojista. Entre novamente para acessar o painel da loja.',
-        [{ text: 'OK', onPress: () => logout() }]
+      await criarLoja(
+        montarPayloadCriarLoja({
+          nomeFantasia,
+          razaoSocial,
+          cnpj,
+          telefone,
+          emailLoja,
+          sessionEmail: session.perfil.email,
+          endereco: {
+            cep,
+            logradouro,
+            numero,
+            bairro,
+            cidade,
+            estado,
+            latitude: lat,
+            longitude: lng,
+          },
+        })
       );
+
+      finalizou = true;
+      await concluirCriacaoLoja({
+        title: 'Loja criada!',
+        message: 'Sua conta agora é de lojista. Entre novamente para acessar o painel da loja.',
+        variant: 'success',
+      });
     } catch (error) {
       if (error.response?.status === 409) {
-        Alert.alert(
-          'Loja já cadastrada',
-          formatApiError(error),
-          [{ text: 'OK', onPress: () => logout() }]
-        );
+        finalizou = true;
+        await concluirCriacaoLoja({
+          title: 'Loja já cadastrada',
+          message: formatApiError(error),
+          variant: 'info',
+        });
         return;
       }
-      Alert.alert('Erro', formatApiError(error));
+      setFeedback(mapApiError(error));
     } finally {
-      setLoading(false);
+      if (!finalizou) setLoading(false);
     }
   }
 
@@ -365,6 +391,7 @@ export default function CreateStoreScreen({ navigation }) {
       backLabel={step === 0 ? 'Voltar' : 'Anterior'}
       steps={STEPS}
       currentStep={step}
+      error={feedback}
       footer={
         step < STEPS.length - 1 ? (
           <PrimaryButton label="Continuar" onPress={avancar} loading={loadingCnpj} />

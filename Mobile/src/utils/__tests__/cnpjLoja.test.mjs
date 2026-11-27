@@ -6,7 +6,10 @@ import {
   FRASE_LIMITE,
   mapearRespostaCnpj,
   mensagemErroConsultaCnpj,
+  montarPayloadCriarLoja,
   planejarPreenchimento,
+  validarDadosEndereco,
+  validarDadosLoja,
 } from '../cnpjLoja.js';
 
 test('mapeia completa, parcial, antiga e endereco null, com cep e telefone mascarados', () => {
@@ -105,3 +108,105 @@ test('sem code no corpo usa o header; 429 e o resto usam frases próprias', () =
   }), FRASE_LIMITE);
   assert.equal(mensagemErroConsultaCnpj({ request: {} }), FRASE_GENERICA);
 });
+
+test('validarDadosLoja valida nome fantasia (>=2), CNPJ, telefone e e-mail', () => {
+  const cnpjValido = '11.222.333/0001-81';
+
+  assert.equal(validarDadosLoja({ nomeFantasia: '', cnpj: cnpjValido })?.title, 'Loja');
+  assert.equal(validarDadosLoja({ nomeFantasia: 'A', cnpj: cnpjValido })?.title, 'Loja');
+  assert.equal(validarDadosLoja({ nomeFantasia: 'Padaria', cnpj: '' })?.title, 'Loja');
+  assert.equal(validarDadosLoja({ nomeFantasia: 'Padaria', cnpj: '11111111111111' })?.title, 'Loja');
+  assert.equal(
+    validarDadosLoja({ nomeFantasia: 'Padaria', cnpj: cnpjValido, telefone: '123' })?.title,
+    'Loja'
+  );
+  assert.equal(
+    validarDadosLoja({ nomeFantasia: 'Padaria', cnpj: cnpjValido, email: 'invalido' })?.title,
+    'Loja'
+  );
+  assert.equal(
+    validarDadosLoja({
+      nomeFantasia: 'Padaria Central',
+      cnpj: cnpjValido,
+      telefone: '(22) 99999-9999',
+      email: 'contato@padaria.com',
+    }),
+    null
+  );
+});
+
+test('validarDadosEndereco exige CEP de 8 dígitos, campos obrigatórios e UF com 2 letras', () => {
+  assert.equal(
+    validarDadosEndereco({ cep: '28990', logradouro: 'Rua A', numero: '10', cidade: 'Saquarema', estado: 'RJ' })?.title,
+    'Endereço'
+  );
+  assert.equal(
+    validarDadosEndereco({ cep: '28990-000', logradouro: 'Rua A', numero: '10', cidade: 'Saquarema', estado: 'R' })?.title,
+    'Endereço'
+  );
+  assert.equal(
+    validarDadosEndereco({ cep: '28990-000', logradouro: 'Rua A', numero: '10', cidade: 'Saquarema', estado: 'rj' }),
+    null
+  );
+});
+
+test('montarPayloadCriarLoja normaliza CNPJ, e-mail opcional, bairro padrão, UF e coordenadas', () => {
+  const payload = montarPayloadCriarLoja({
+    nomeFantasia: '  Mercado Central ',
+    razaoSocial: '  ',
+    cnpj: '11.222.333/0001-81',
+    telefone: ' (22) 99999-9999 ',
+    emailLoja: '   ',
+    sessionEmail: 'dono@empresa.com',
+    endereco: {
+      cep: '28990-000',
+      logradouro: ' Rua das Flores ',
+      numero: ' 120 ',
+      bairro: ' ',
+      cidade: ' Saquarema ',
+      estado: 'rj',
+      latitude: -22.92,
+      longitude: -42.51,
+    },
+  });
+
+  assert.deepEqual(payload, {
+    nomeFantasia: 'Mercado Central',
+    razaoSocial: null,
+    cnpj: '11222333000181',
+    telefone: '(22) 99999-9999',
+    email: 'dono@empresa.com',
+    endereco: {
+      cep: '28990000',
+      logradouro: 'Rua das Flores',
+      numero: '120',
+      bairro: 'Centro',
+      cidade: 'Saquarema',
+      estado: 'RJ',
+      latitude: -22.92,
+      longitude: -42.51,
+    },
+  });
+
+  const semEmailNemCoords = montarPayloadCriarLoja({
+    nomeFantasia: 'Loja X',
+    cnpj: '11.222.333/0001-81',
+    emailLoja: '',
+    sessionEmail: '',
+    endereco: {
+      cep: '28990000',
+      logradouro: 'Av 1',
+      numero: '1',
+      bairro: 'Bacaxá',
+      cidade: 'Saquarema',
+      estado: 'RJ',
+      latitude: Number.NaN,
+      longitude: null,
+    },
+  });
+
+  assert.equal(semEmailNemCoords.email, null);
+  assert.equal(semEmailNemCoords.endereco.latitude, null);
+  assert.equal(semEmailNemCoords.endereco.longitude, null);
+});
+

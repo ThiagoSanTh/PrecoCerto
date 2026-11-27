@@ -1,4 +1,10 @@
-import { apenasDigitos } from './validacaoUtils.js';
+import {
+  apenasDigitos,
+  apenasDigitosCnpj,
+  isCnpjValido,
+  isEmailValido,
+  isTelefoneValido,
+} from './validacaoUtils.js';
 
 export const FRASES = {
   cnpj_invalido: 'CNPJ inválido. Confira os números.',
@@ -73,4 +79,101 @@ export function mensagemErroConsultaCnpj(error) {
   if (FRASES[code]) return FRASES[code];
   if (error?.response?.status === 429) return FRASE_LIMITE;
   return FRASE_GENERICA;
+}
+
+/**
+ * Valida os campos do passo "Loja" antes de avançar ou enviar à API.
+ * Centralizar aqui evita divergência entre os passos e o DTO do backend.
+ */
+export function validarDadosLoja({ nomeFantasia, cnpj, telefone: tel, email } = {}) {
+  const nome = texto(nomeFantasia);
+  if (!nome) {
+    return { title: 'Loja', message: 'Informe o nome fantasia.' };
+  }
+  if (nome.length < 2) {
+    return { title: 'Loja', message: 'O nome fantasia deve ter pelo menos 2 caracteres.' };
+  }
+  // Abrir loja exige CNPJ válido — é o que torna o usuário um lojista.
+  const cnpjLimpo = texto(cnpj);
+  if (!cnpjLimpo) {
+    return { title: 'Loja', message: 'Informe o CNPJ da loja.' };
+  }
+  if (!isCnpjValido(cnpjLimpo)) {
+    return { title: 'Loja', message: 'CNPJ inválido. Verifique os números informados.' };
+  }
+  const telLimpo = texto(tel);
+  if (telLimpo && !isTelefoneValido(telLimpo)) {
+    return {
+      title: 'Loja',
+      message: 'Telefone inválido. Informe 8 dígitos (fixo) ou 9 dígitos (celular), com DDD opcional.',
+    };
+  }
+  const emailLimpo = texto(email);
+  if (emailLimpo && !isEmailValido(emailLimpo)) {
+    return { title: 'Loja', message: 'E-mail da loja inválido.' };
+  }
+  return null;
+}
+
+/**
+ * Valida os campos obrigatórios do passo "Endereço" em alinhamento com EnderecoDto.
+ */
+export function validarDadosEndereco({ cep: cepVal, logradouro, numero, cidade, estado } = {}) {
+  const cepSomenteDigitos = digitos(cepVal);
+  const uf = texto(estado).toUpperCase();
+  if (
+    cepSomenteDigitos.length !== 8 ||
+    !texto(logradouro) ||
+    !texto(numero) ||
+    !texto(cidade) ||
+    uf.length !== 2
+  ) {
+    return {
+      title: 'Endereço',
+      message: 'Preencha CEP (8 dígitos), logradouro, número, cidade e UF (2 letras).',
+    };
+  }
+  return null;
+}
+
+function coordenadaValida(valor) {
+  if (valor === null || valor === undefined || valor === '') return null;
+  const num = Number(valor);
+  return Number.isFinite(num) ? num : null;
+}
+
+/**
+ * Monta o payload normalizado para POST /Lojas.
+ * Envia CNPJ só com dígitos e e-mail nulo quando vazio para não falhar em DataAnnotations.
+ */
+export function montarPayloadCriarLoja({
+  nomeFantasia,
+  razaoSocial,
+  cnpj,
+  telefone: tel,
+  emailLoja,
+  sessionEmail,
+  endereco = {},
+} = {}) {
+  const cepSomenteDigitos = digitos(endereco.cep);
+  const estadoSigla = texto(endereco.estado).toUpperCase().slice(0, 2);
+  const bairroNormalizado = texto(endereco.bairro) || 'Centro';
+
+  return {
+    nomeFantasia: texto(nomeFantasia),
+    razaoSocial: texto(razaoSocial) || null,
+    cnpj: apenasDigitosCnpj(cnpj),
+    telefone: texto(tel) || null,
+    email: texto(emailLoja) || texto(sessionEmail) || null,
+    endereco: {
+      cep: cepSomenteDigitos,
+      logradouro: texto(endereco.logradouro),
+      numero: texto(endereco.numero),
+      bairro: bairroNormalizado,
+      cidade: texto(endereco.cidade),
+      estado: estadoSigla,
+      latitude: coordenadaValida(endereco.latitude),
+      longitude: coordenadaValida(endereco.longitude),
+    },
+  };
 }

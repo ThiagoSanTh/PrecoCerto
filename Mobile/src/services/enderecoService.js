@@ -1,5 +1,23 @@
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 const NOMINATIM_USER_AGENT = 'PrecoCerto-Mobile/1.0 (cadastro-loja)';
+const FETCH_TIMEOUT_MS = 6000;
+
+/**
+ * Executa fetch com limite de tempo para impedir travamento indefinido no cadastro da loja
+ * quando algum provedor externo de CEP ou geocodificação não responder.
+ */
+async function fetchComTimeout(url, options = {}, timeoutMs = FETCH_TIMEOUT_MS) {
+  if (typeof AbortController === 'undefined') {
+    return fetch(url, options);
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 /**
  * Consulta o ViaCEP para preencher endereço a partir do CEP informado.
@@ -11,7 +29,9 @@ export async function buscarEnderecoPorCep(cep) {
     throw new Error('CEP deve ter 8 dígitos.');
   }
 
-  const response = await fetch(`https://viacep.com.br/ws/${encodeURIComponent(cepLimpo)}/json/`);
+  const response = await fetchComTimeout(
+    `https://viacep.com.br/ws/${encodeURIComponent(cepLimpo)}/json/`
+  );
   const data = await response.json();
 
   if (data.erro) {
@@ -69,14 +89,15 @@ async function nominatimBuscar(params) {
     }
   });
 
-  const response = await fetch(
+  // Navegadores bloqueiam/ignoram o cabeçalho User-Agent e disparam preflight CORS desnecessário.
+  const emNavegador = typeof window !== 'undefined' && typeof document !== 'undefined';
+  const headers = emNavegador
+    ? { Accept: 'application/json' }
+    : { 'User-Agent': NOMINATIM_USER_AGENT, Accept: 'application/json' };
+
+  const response = await fetchComTimeout(
     `https://nominatim.openstreetmap.org/search?${query.toString()}`,
-    {
-      headers: {
-        'User-Agent': NOMINATIM_USER_AGENT,
-        Accept: 'application/json',
-      },
-    }
+    { headers }
   );
 
   if (!response.ok) {
@@ -99,7 +120,9 @@ async function nominatimBuscar(params) {
 
 /** BrasilAPI CEP v2 — boa cobertura no Brasil, retorna coordenadas. */
 async function geocodificarPorCepBrasilApi(cep) {
-  const response = await fetch(`https://brasilapi.com.br/api/cep/v2/${encodeURIComponent(cep)}`);
+  const response = await fetchComTimeout(
+    `https://brasilapi.com.br/api/cep/v2/${encodeURIComponent(cep)}`
+  );
   if (!response.ok) {
     return null;
   }
@@ -167,7 +190,7 @@ async function geocodificarGoogle(endereco) {
     `${textoEndereco}, Brasil`
   )}&region=br&key=${GOOGLE_MAPS_API_KEY}`;
 
-  const response = await fetch(url);
+  const response = await fetchComTimeout(url);
   const data = await response.json();
 
   if (data.status !== 'OK' || !data.results?.length) {

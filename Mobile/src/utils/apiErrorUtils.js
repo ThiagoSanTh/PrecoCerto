@@ -50,7 +50,8 @@ function resolveErrorCode(error) {
 
   const status = error?.response?.status;
   if (status === 404 && error?.config?.url?.includes('/Produtos')) return 'PRODUCT_NOT_FOUND';
-  if (status === 409) return 'EMAIL_ALREADY_REGISTERED';
+  // Só assume e-mail duplicado no 409 quando o backend não trouxe mensagem específica (ex.: conflito de loja).
+  if (status === 409 && !raw) return 'EMAIL_ALREADY_REGISTERED';
   if (status === 401) return 'INVALID_CREDENTIALS';
 
   return null;
